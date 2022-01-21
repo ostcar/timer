@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+
+option go_package = "github.com/ostcar/timer/grpc/proto";
+
+service Timer {
+    rpc Start(StartRequest) returns (StartResponse);
+    rpc Stop(StopRequest) returns (StopResponse);
+}
+
+message StartRequest {
+    string comment = 1;
+}
+
+message StartResponse {}
+
+message StopRequest {
+    string comment = 1;
+    bool hasComment = 2;
+}
+
+message StopResponse {
+    int64 id = 1;
+}

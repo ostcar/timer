@@ -1,4 +1,4 @@
-package server
+package model
 
 import (
 	"strings"
@@ -8,9 +8,9 @@ import (
 func TestModelLoad(t *testing.T) {
 	events := `
 	{"type":"start","time":"2022-01-02 15:16:00","payload":{"comment":"lets go"}}
-	{"type":"stop","time":"2022-01-02 15:20:00","payload":{}}
+	{"type":"stop","time":"2022-01-02 15:20:00","payload":{"id":1}}
 	{"type":"start","time":"2022-01-02 15:30:00","payload":{"comment":"here again"}}
-	{"type":"stop","time":"2022-01-02 15:40:00","payload":{"comment":"here again!"}}
+	{"type":"stop","time":"2022-01-02 15:40:00","payload":{"id":2,"comment":"here again!"}}
 	`
 
 	m, err := loadDatabase(strings.NewReader(events))

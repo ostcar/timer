@@ -1,8 +1,10 @@
-package server
+package model
 
 import (
 	"fmt"
 	"time"
+
+	"github.com/ostcar/timer/maybe"
 )
 
 func getEvent(eventType string) Event {
@@ -51,11 +53,12 @@ func (e eventStart) execute(model *Model, time time.Time) error {
 }
 
 type eventStop struct {
-	Comment maybeString `json:"comment"`
+	ID      int          `json:"id"`
+	Comment maybe.String `json:"comment"`
 }
 
 func (e eventStop) String() string {
-	comment, ok := e.Comment.value()
+	comment, ok := e.Comment.Value()
 	if ok {
 		return fmt.Sprintf("End with comment `%s`", comment)
 	}
@@ -67,6 +70,14 @@ func (e eventStop) Name() string {
 }
 
 func (e eventStop) validate(model *Model) error {
+	if e.ID == 0 {
+		return validationError{"ID is required"}
+	}
+
+	if _, ok := model.periodes[e.ID]; ok {
+		return validationError{"ID is already used"}
+	}
+
 	if model.current.start.IsZero() {
 		return validationError{"Timer is not started"}
 	}
@@ -75,7 +86,7 @@ func (e eventStop) validate(model *Model) error {
 
 func (e eventStop) execute(model *Model, eventTime time.Time) error {
 	comment := model.current.comment
-	c, ok := e.Comment.value()
+	c, ok := e.Comment.Value()
 	if ok {
 		comment = c
 	}
@@ -85,8 +96,8 @@ func (e eventStop) execute(model *Model, eventTime time.Time) error {
 		end:     eventTime,
 		comment: comment,
 	}
-	model.maxID++
-	model.periodes[model.maxID] = p
+
+	model.periodes[e.ID] = p
 	model.current.start = time.Time{}
 	model.current.comment = ""
 	return nil

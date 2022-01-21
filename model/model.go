@@ -1,4 +1,4 @@
-package server
+package model
 
 import (
 	"bufio"
@@ -10,13 +10,15 @@ import (
 	"os"
 	"sync"
 	"time"
+
+	"github.com/ostcar/timer/maybe"
 )
 
 const timeFormat = "2006-01-02 15:04:05"
 
 // Model holds the data in memory and saves them to disk.
 type Model struct {
-	sync.RWMutex
+	mu   sync.RWMutex
 	file string
 
 	current struct {
@@ -24,7 +26,6 @@ type Model struct {
 		comment string
 	}
 
-	maxID    int
 	periodes map[int]periode
 }
 
@@ -111,8 +112,8 @@ func loadDatabase(r io.Reader) (*Model, error) {
 }
 
 func (m *Model) writeEvent(e Event) (err error) {
-	m.Lock()
-	defer m.Unlock()
+	m.mu.Lock()
+	defer m.mu.Unlock()
 
 	if err := e.validate(m); err != nil {
 		return fmt.Errorf("validating event: %w", err)
@@ -160,9 +161,6 @@ func (m *Model) writeEvent(e Event) (err error) {
 
 // Start starts the timer.
 func (m *Model) Start(comment string) error {
-	m.Lock()
-	defer m.Unlock()
-
 	if err := m.writeEvent(eventStart{Comment: comment}); err != nil {
 		return fmt.Errorf("writing event: %w", err)
 	}
@@ -170,11 +168,17 @@ func (m *Model) Start(comment string) error {
 }
 
 // Stop stops the timer.
-func (m *Model) Stop(comment maybeString) error {
-	m.Lock()
-	defer m.Unlock()
+func (m *Model) Stop(comment maybe.String) error {
+	nextID := 1
+	m.mu.RLock()
+	for id := range m.periodes {
+		if nextID <= id {
+			nextID = id + 1
+		}
+	}
+	m.mu.RUnlock()
 
-	if err := m.writeEvent(eventStop{Comment: comment}); err != nil {
+	if err := m.writeEvent(eventStop{Comment: comment, ID: nextID}); err != nil {
 		return fmt.Errorf("writing event: %w", err)
 	}
 	return nil
