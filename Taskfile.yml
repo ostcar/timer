@@ -1,0 +1,65 @@
+version: '3'
+
+tasks:
+  default:
+    cmds:
+      - task --list
+
+  proto:
+    cmds:
+      - protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=require_unimplemented_servers=false:. --go-grpc_opt=paths=source_relative grpc/proto/timer.proto
+    sources:
+      - grpc/proto/timer.proto
+    generates:
+      - grpc/proto/timer_grpc.pb.go
+      - grpc/proto/timer.pb.go
+
+  timeme:
+    cmds:
+      - CGO_ENABLED=0 go build ./cmd/timeme
+    sources:
+      - cmd/timeme/*
+      - grpc/*
+    generates:
+      - timeme
+  
+  server:
+    cmds:
+      - CGO_ENABLED=0 go build
+    sources:
+      - main.go
+      - maybe/*
+      - grpc/*
+      - model/*
+      - main.go
+    generates:
+      - timer
+
+  build:
+    deps:
+      - timeme
+      - server
+
+  start:
+    desc: |
+      Starts the server. 
+      
+        Use --watch to restart the server if the source changes.
+
+        task start --watch
+
+    deps: 
+      - server
+
+    cmds:
+    - ./timer
+
+    method: none
+
+    ignore_error: true
+
+
+  clean:
+    desc: Removes all generated files
+    cmds:
+      - git clean -xf

@@ -131,5 +131,5 @@ var Timer_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "proto/timer.proto",
+	Metadata: "grpc/proto/timer.proto",
 }
