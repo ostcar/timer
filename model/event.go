@@ -91,10 +91,11 @@ func (e eventStop) execute(model *Model, eventTime time.Time) error {
 		comment = c
 	}
 
-	p := periode{
-		start:   model.current.start,
-		end:     eventTime,
-		comment: comment,
+	p := Periode{
+		ID:      e.ID,
+		Start:   model.current.start,
+		Stop:    eventTime,
+		Comment: comment,
 	}
 
 	model.periodes[e.ID] = p

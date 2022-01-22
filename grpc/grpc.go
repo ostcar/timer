@@ -60,3 +60,17 @@ func (s grpcServer) Stop(ctx context.Context, req *proto.StopRequest) (*proto.St
 	}
 	return new(proto.StopResponse), nil
 }
+
+func (s grpcServer) List(ctx context.Context, req *proto.ListRequest) (*proto.ListResponse, error) {
+	modelPeriodes := s.model.List()
+	protoPeriodes := make([]*proto.Periode, len(modelPeriodes))
+	for i, p := range modelPeriodes {
+		protoPeriodes[i] = &proto.Periode{
+			Id:      int32(p.ID),
+			Start:   p.Start.Unix(),
+			Stop:    p.Stop.Unix(),
+			Comment: p.Comment,
+		}
+	}
+	return &proto.ListResponse{Periodes: protoPeriodes}, nil
+}

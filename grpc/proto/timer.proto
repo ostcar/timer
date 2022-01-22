@@ -6,6 +6,7 @@ option go_package = "github.com/ostcar/timer/grpc/proto";
 service Timer {
     rpc Start(StartRequest) returns (StartResponse);
     rpc Stop(StopRequest) returns (StopResponse);
+    rpc List(ListRequest) returns (ListResponse);
 }
 
 message StartRequest {
@@ -20,5 +21,18 @@ message StopRequest {
 }
 
 message StopResponse {
-    int64 id = 1;
+    int32 id = 1;
+}
+
+message ListRequest {}
+
+message ListResponse {
+    repeated Periode periodes = 1;
+}
+
+message Periode {
+    int32 id = 1;
+    int64 start = 2;
+    int64 stop = 3;
+    string comment = 4;
 }

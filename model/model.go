@@ -26,13 +26,15 @@ type Model struct {
 		comment string
 	}
 
-	periodes map[int]periode
+	periodes map[int]Periode
 }
 
-type periode struct {
-	start   time.Time
-	end     time.Time
-	comment string
+// Periode is a duration of time.
+type Periode struct {
+	ID      int
+	Start   time.Time
+	Stop    time.Time
+	Comment string
 }
 
 // NewModel load the db from file.
@@ -64,7 +66,7 @@ func openDB(file string) (*Model, error) {
 }
 
 func emptyDatabase() *Model {
-	return &Model{periodes: make(map[int]periode)}
+	return &Model{periodes: make(map[int]Periode)}
 }
 
 func loadDatabase(r io.Reader) (*Model, error) {
@@ -182,4 +184,14 @@ func (m *Model) Stop(comment maybe.String) error {
 		return fmt.Errorf("writing event: %w", err)
 	}
 	return nil
+}
+
+// List returns all periodes.
+func (m *Model) List() []Periode {
+	m.mu.RLock()
+	periodes := make([]Periode, 0, len(m.periodes))
+	for _, p := range m.periodes {
+		periodes = append(periodes, p)
+	}
+	return periodes
 }

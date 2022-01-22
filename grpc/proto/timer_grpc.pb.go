@@ -20,6 +20,7 @@ const _ = grpc.SupportPackageIsVersion7
 type TimerClient interface {
 	Start(ctx context.Context, in *StartRequest, opts ...grpc.CallOption) (*StartResponse, error)
 	Stop(ctx context.Context, in *StopRequest, opts ...grpc.CallOption) (*StopResponse, error)
+	List(ctx context.Context, in *ListRequest, opts ...grpc.CallOption) (*ListResponse, error)
 }
 
 type timerClient struct {
@@ -48,12 +49,22 @@ func (c *timerClient) Stop(ctx context.Context, in *StopRequest, opts ...grpc.Ca
 	return out, nil
 }
 
+func (c *timerClient) List(ctx context.Context, in *ListRequest, opts ...grpc.CallOption) (*ListResponse, error) {
+	out := new(ListResponse)
+	err := c.cc.Invoke(ctx, "/Timer/List", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // TimerServer is the server API for Timer service.
 // All implementations should embed UnimplementedTimerServer
 // for forward compatibility
 type TimerServer interface {
 	Start(context.Context, *StartRequest) (*StartResponse, error)
 	Stop(context.Context, *StopRequest) (*StopResponse, error)
+	List(context.Context, *ListRequest) (*ListResponse, error)
 }
 
 // UnimplementedTimerServer should be embedded to have forward compatible implementations.
@@ -65,6 +76,9 @@ func (UnimplementedTimerServer) Start(context.Context, *StartRequest) (*StartRes
 }
 func (UnimplementedTimerServer) Stop(context.Context, *StopRequest) (*StopResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Stop not implemented")
+}
+func (UnimplementedTimerServer) List(context.Context, *ListRequest) (*ListResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method List not implemented")
 }
 
 // UnsafeTimerServer may be embedded to opt out of forward compatibility for this service.
@@ -114,6 +128,24 @@ func _Timer_Stop_Handler(srv interface{}, ctx context.Context, dec func(interfac
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Timer_List_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TimerServer).List(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Timer/List",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TimerServer).List(ctx, req.(*ListRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Timer_ServiceDesc is the grpc.ServiceDesc for Timer service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -128,6 +160,10 @@ var Timer_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Stop",
 			Handler:    _Timer_Stop_Handler,
+		},
+		{
+			MethodName: "List",
+			Handler:    _Timer_List_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -26,11 +26,11 @@ func TestModelLoad(t *testing.T) {
 		t.Errorf("there are %d periodes, expected 2", got)
 	}
 
-	if got := m.periodes[1].comment; got != "lets go" {
+	if got := m.periodes[1].Comment; got != "lets go" {
 		t.Errorf("got first comment %q, expected `lets go`", got)
 	}
 
-	if got := m.periodes[2].comment; got != "here again!" {
+	if got := m.periodes[2].Comment; got != "here again!" {
 		t.Errorf("got second comment %q, expected `here again!`", got)
 	}
 }
