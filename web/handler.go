@@ -3,6 +3,7 @@ package web
 import (
 	"encoding/json"
 	"errors"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
@@ -19,10 +20,18 @@ const (
 )
 
 func registerHandlers(router *mux.Router, model *model.Model, defaultFiles DefaultFiles) {
+	fileSystem := MultiFS{
+		fs: []fs.FS{
+			os.DirFS("./static"),
+			defaultFiles.Static,
+		},
+	}
+
 	router.Use(loggingMiddleware)
 
 	handleElmJS(router, defaultFiles.Elm)
 	handleIndex(router, defaultFiles.Index)
+	handleStatic(router, fileSystem)
 
 	handleList(router, model)
 }
@@ -38,7 +47,6 @@ func (r *responselogger) WriteHeader(h int) {
 }
 
 func loggingMiddleware(next http.Handler) http.Handler {
-
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		writer := responselogger{w, 200}
 		next.ServeHTTP(w, r)
@@ -91,6 +99,14 @@ func handleElmJS(router *mux.Router, defaultContent []byte) {
 	router.Path("/elm.js").HandlerFunc(handler)
 }
 
+// handleStatic returns static files.
+//
+// It looks for each file in a directory "static/". It the file does not exist
+// there, it looks in the default static files, the binary was creaded with.
+func handleStatic(router *mux.Router, fileSystem fs.FS) {
+	router.PathPrefix(pathPrefixStatic).Handler(http.StripPrefix(pathPrefixStatic, http.FileServer(http.FS(fileSystem))))
+}
+
 func handleList(router *mux.Router, model *model.Model) {
 	type periode struct {
 		ID      int          `json:"id"`
@@ -111,7 +127,21 @@ func handleList(router *mux.Router, model *model.Model) {
 			}
 		}
 
-		if err := json.NewEncoder(w).Encode(outPeriodes); err != nil {
+		start, comment, isRunning := model.Running()
+
+		data := struct {
+			Running  bool         `json:"running"`
+			Start    int64        `json:"start"`
+			Comment  maybe.String `json:"comment"`
+			Periodes []periode    `json:"periodes"`
+		}{
+			isRunning,
+			start.Unix(),
+			comment,
+			outPeriodes,
+		}
+
+		if err := json.NewEncoder(w).Encode(data); err != nil {
 			log.Println(err)
 			http.Error(w, "Internal", 500)
 		}

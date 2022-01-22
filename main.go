@@ -4,6 +4,7 @@ import (
 	"context"
 	"embed"
 	"fmt"
+	"io/fs"
 	"log"
 	"os"
 	"os/signal"
@@ -25,7 +26,7 @@ var defaultIndex []byte
 //go:embed client/elm.js
 var defaultElm []byte
 
-//go:embed static/*
+//go:embed static
 var defaultStatic embed.FS
 
 func main() {
@@ -55,10 +56,15 @@ func run() error {
 	})
 
 	group.Go(func() error {
+		static, err := fs.Sub(defaultStatic, "static")
+		if err != nil {
+			return fmt.Errorf("open static folder: %w", err)
+		}
+
 		defaultFiles := web.DefaultFiles{
 			Index:  defaultIndex,
 			Elm:    defaultElm,
-			Static: defaultStatic,
+			Static: static,
 		}
 
 		if err := web.Run(ctx, model, httpAddr, defaultFiles); err != nil {

@@ -4530,7 +4530,145 @@ function _Http_track(router, xhr, tracker)
 			size: event.lengthComputable ? $elm$core$Maybe$Just(event.total) : $elm$core$Maybe$Nothing
 		}))));
 	});
-}var $elm$core$Basics$EQ = {$: 'EQ'};
+}
+
+// CREATE
+
+var _Regex_never = /.^/;
+
+var _Regex_fromStringWith = F2(function(options, string)
+{
+	var flags = 'g';
+	if (options.multiline) { flags += 'm'; }
+	if (options.caseInsensitive) { flags += 'i'; }
+
+	try
+	{
+		return $elm$core$Maybe$Just(new RegExp(string, flags));
+	}
+	catch(error)
+	{
+		return $elm$core$Maybe$Nothing;
+	}
+});
+
+
+// USE
+
+var _Regex_contains = F2(function(re, string)
+{
+	return string.match(re) !== null;
+});
+
+
+var _Regex_findAtMost = F3(function(n, re, str)
+{
+	var out = [];
+	var number = 0;
+	var string = str;
+	var lastIndex = re.lastIndex;
+	var prevLastIndex = -1;
+	var result;
+	while (number++ < n && (result = re.exec(string)))
+	{
+		if (prevLastIndex == re.lastIndex) break;
+		var i = result.length - 1;
+		var subs = new Array(i);
+		while (i > 0)
+		{
+			var submatch = result[i];
+			subs[--i] = submatch
+				? $elm$core$Maybe$Just(submatch)
+				: $elm$core$Maybe$Nothing;
+		}
+		out.push(A4($elm$regex$Regex$Match, result[0], result.index, number, _List_fromArray(subs)));
+		prevLastIndex = re.lastIndex;
+	}
+	re.lastIndex = lastIndex;
+	return _List_fromArray(out);
+});
+
+
+var _Regex_replaceAtMost = F4(function(n, re, replacer, string)
+{
+	var count = 0;
+	function jsReplacer(match)
+	{
+		if (count++ >= n)
+		{
+			return match;
+		}
+		var i = arguments.length - 3;
+		var submatches = new Array(i);
+		while (i > 0)
+		{
+			var submatch = arguments[i];
+			submatches[--i] = submatch
+				? $elm$core$Maybe$Just(submatch)
+				: $elm$core$Maybe$Nothing;
+		}
+		return replacer(A4($elm$regex$Regex$Match, match, arguments[arguments.length - 2], count, _List_fromArray(submatches)));
+	}
+	return string.replace(re, jsReplacer);
+});
+
+var _Regex_splitAtMost = F3(function(n, re, str)
+{
+	var string = str;
+	var out = [];
+	var start = re.lastIndex;
+	var restoreLastIndex = re.lastIndex;
+	while (n--)
+	{
+		var result = re.exec(string);
+		if (!result) break;
+		out.push(string.slice(start, result.index));
+		start = re.lastIndex;
+	}
+	out.push(string.slice(start));
+	re.lastIndex = restoreLastIndex;
+	return _List_fromArray(out);
+});
+
+var _Regex_infinity = Infinity;
+
+
+
+var _Bitwise_and = F2(function(a, b)
+{
+	return a & b;
+});
+
+var _Bitwise_or = F2(function(a, b)
+{
+	return a | b;
+});
+
+var _Bitwise_xor = F2(function(a, b)
+{
+	return a ^ b;
+});
+
+function _Bitwise_complement(a)
+{
+	return ~a;
+};
+
+var _Bitwise_shiftLeftBy = F2(function(offset, a)
+{
+	return a << offset;
+});
+
+var _Bitwise_shiftRightBy = F2(function(offset, a)
+{
+	return a >> offset;
+});
+
+var _Bitwise_shiftRightZfBy = F2(function(offset, a)
+{
+	return a >>> offset;
+});
+var $elm$core$Basics$EQ = {$: 'EQ'};
 var $elm$core$Basics$GT = {$: 'GT'};
 var $elm$core$Basics$LT = {$: 'LT'};
 var $elm$core$List$cons = _List_cons;
@@ -5319,9 +5457,10 @@ var $elm$core$Task$perform = F2(
 				A2($elm$core$Task$map, toMessage, task)));
 	});
 var $elm$browser$Browser$element = _Browser_element;
-var $author$project$Main$ReceivePeriodes = function (a) {
-	return {$: 'ReceivePeriodes', a: a};
+var $author$project$Main$ReceiveState = function (a) {
+	return {$: 'ReceiveState', a: a};
 };
+var $author$project$Periode$Stopped = {$: 'Stopped'};
 var $elm$json$Json$Decode$decodeString = _Json_runOnString;
 var $elm$http$Http$BadStatus_ = F2(
 	function (a, b) {
@@ -6109,16 +6248,11 @@ var $elm$http$Http$get = function (r) {
 	return $elm$http$Http$request(
 		{body: $elm$http$Http$emptyBody, expect: r.expect, headers: _List_Nil, method: 'GET', timeout: $elm$core$Maybe$Nothing, tracker: $elm$core$Maybe$Nothing, url: r.url});
 };
-var $elm$json$Json$Decode$list = _Json_decodeList;
-var $author$project$Periode$Periode = F4(
-	function (id, start, stop, comment) {
-		return {comment: comment, id: id, start: start, stop: stop};
+var $author$project$Periode$ServerState = F4(
+	function (running, start, comment, periodes) {
+		return {comment: comment, periodes: periodes, running: running, start: start};
 	});
-var $author$project$Periode$ID = function (a) {
-	return {$: 'ID', a: a};
-};
-var $elm$json$Json$Decode$int = _Json_decodeInt;
-var $author$project$Periode$idDecoder = A2($elm$json$Json$Decode$map, $author$project$Periode$ID, $elm$json$Json$Decode$int);
+var $elm$json$Json$Decode$bool = _Json_decodeBool;
 var $NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$custom = $elm$json$Json$Decode$map2($elm$core$Basics$apR);
 var $elm$json$Json$Decode$andThen = _Json_andThen;
 var $elm$json$Json$Decode$field = _Json_decodeField;
@@ -6178,6 +6312,16 @@ var $NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$optional = F4(
 				fallback),
 			decoder);
 	});
+var $elm$json$Json$Decode$list = _Json_decodeList;
+var $author$project$Periode$Periode = F4(
+	function (id, start, stop, comment) {
+		return {comment: comment, id: id, start: start, stop: stop};
+	});
+var $author$project$Periode$ID = function (a) {
+	return {$: 'ID', a: a};
+};
+var $elm$json$Json$Decode$int = _Json_decodeInt;
+var $author$project$Periode$idDecoder = A2($elm$json$Json$Decode$map, $author$project$Periode$ID, $elm$json$Json$Decode$int);
 var $NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required = F3(
 	function (key, valDecoder, decoder) {
 		return A2(
@@ -6186,6 +6330,16 @@ var $NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required = F3(
 			decoder);
 	});
 var $elm$json$Json$Decode$string = _Json_decodeString;
+var $elm$time$Time$Posix = function (a) {
+	return {$: 'Posix', a: a};
+};
+var $elm$time$Time$millisToPosix = $elm$time$Time$Posix;
+var $author$project$Periode$timeDecoder = A2(
+	$elm$json$Json$Decode$map,
+	function (n) {
+		return $elm$time$Time$millisToPosix(n * 1000);
+	},
+	$elm$json$Json$Decode$int);
 var $author$project$Periode$periodeDecoder = A4(
 	$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$optional,
 	'comment',
@@ -6194,28 +6348,57 @@ var $author$project$Periode$periodeDecoder = A4(
 	A3(
 		$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
 		'stop',
-		$elm$json$Json$Decode$int,
+		$author$project$Periode$timeDecoder,
 		A3(
 			$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
 			'start',
-			$elm$json$Json$Decode$int,
+			$author$project$Periode$timeDecoder,
 			A3(
 				$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
 				'id',
 				$author$project$Periode$idDecoder,
 				$elm$json$Json$Decode$succeed($author$project$Periode$Periode)))));
 var $author$project$Periode$periodeListDecoder = $elm$json$Json$Decode$list($author$project$Periode$periodeDecoder);
+var $author$project$Periode$Started = function (a) {
+	return {$: 'Started', a: a};
+};
+var $author$project$Periode$serverStateToState = function (data) {
+	var current = data.running ? $author$project$Periode$Started(
+		_Utils_Tuple2(data.start, data.comment)) : $author$project$Periode$Stopped;
+	return {current: current, periodes: data.periodes};
+};
+var $author$project$Periode$stateDecoder = A2(
+	$elm$json$Json$Decode$map,
+	$author$project$Periode$serverStateToState,
+	A3(
+		$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
+		'periodes',
+		$author$project$Periode$periodeListDecoder,
+		A4(
+			$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$optional,
+			'comment',
+			A2($elm$json$Json$Decode$map, $elm$core$Maybe$Just, $elm$json$Json$Decode$string),
+			$elm$core$Maybe$Nothing,
+			A3(
+				$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
+				'start',
+				$author$project$Periode$timeDecoder,
+				A3(
+					$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
+					'running',
+					$elm$json$Json$Decode$bool,
+					$elm$json$Json$Decode$succeed($author$project$Periode$ServerState))))));
 var $author$project$Periode$fetch = function (result) {
 	return $elm$http$Http$get(
 		{
-			expect: A2($elm$http$Http$expectJson, result, $author$project$Periode$periodeListDecoder),
+			expect: A2($elm$http$Http$expectJson, result, $author$project$Periode$stateDecoder),
 			url: '/api/periode'
 		});
 };
 var $author$project$Main$init = function (_v0) {
 	return _Utils_Tuple2(
-		{fetchErrMsg: $elm$core$Maybe$Nothing, periodes: _List_Nil},
-		$author$project$Periode$fetch($author$project$Main$ReceivePeriodes));
+		{current: $author$project$Periode$Stopped, fetchErrMsg: $elm$core$Maybe$Nothing, periodes: _List_Nil},
+		$author$project$Periode$fetch($author$project$Main$ReceiveState));
 };
 var $elm$core$Platform$Sub$batch = _Platform_batch;
 var $elm$core$Platform$Sub$none = $elm$core$Platform$Sub$batch(_List_Nil);
@@ -6246,7 +6429,7 @@ var $author$project$Main$update = F2(
 			return _Utils_Tuple2(
 				_Utils_update(
 					model,
-					{fetchErrMsg: $elm$core$Maybe$Nothing, periodes: a}),
+					{current: a.current, fetchErrMsg: $elm$core$Maybe$Nothing, periodes: a.periodes}),
 				$elm$core$Platform$Cmd$none);
 		} else {
 			var e = response.a;
@@ -6254,6 +6437,7 @@ var $author$project$Main$update = F2(
 				_Utils_update(
 					model,
 					{
+						current: $author$project$Periode$Stopped,
 						fetchErrMsg: $elm$core$Maybe$Just(
 							$author$project$Main$buildErrorMessage(e)),
 						periodes: _List_Nil
@@ -6262,11 +6446,135 @@ var $author$project$Main$update = F2(
 		}
 	});
 var $elm$html$Html$div = _VirtualDom_node('div');
-var $elm$virtual_dom$VirtualDom$text = _VirtualDom_text;
-var $elm$html$Html$text = $elm$virtual_dom$VirtualDom$text;
-var $elm$html$Html$ul = _VirtualDom_node('ul');
-var $elm$html$Html$li = _VirtualDom_node('li');
-var $elm$html$Html$span = _VirtualDom_node('span');
+var $elm$json$Json$Encode$string = _Json_wrap;
+var $elm$html$Html$Attributes$stringProperty = F2(
+	function (key, string) {
+		return A2(
+			_VirtualDom_property,
+			key,
+			$elm$json$Json$Encode$string(string));
+	});
+var $elm$html$Html$Attributes$class = $elm$html$Html$Attributes$stringProperty('className');
+var $elm$time$Time$Mon = {$: 'Mon'};
+var $CoderDennis$elm_time_format$Time$Format$I18n$I_de_de$dayName = function (day) {
+	switch (day.$) {
+		case 'Mon':
+			return 'Montag';
+		case 'Tue':
+			return 'Dienstag';
+		case 'Wed':
+			return 'Mittwoch';
+		case 'Thu':
+			return 'Donnerstag';
+		case 'Fri':
+			return 'Freitag';
+		case 'Sat':
+			return 'Samstag';
+		default:
+			return 'Sonntag';
+	}
+};
+var $CoderDennis$elm_time_format$Time$Format$I18n$I_de_de$dayOfMonthWithSuffix = F2(
+	function (_v0, day) {
+		return $elm$core$String$fromInt(day) + '.';
+	});
+var $CoderDennis$elm_time_format$Time$Format$I18n$I_de_de$dayShort = function (day) {
+	switch (day.$) {
+		case 'Mon':
+			return 'Mo';
+		case 'Tue':
+			return 'Di';
+		case 'Wed':
+			return 'Mi';
+		case 'Thu':
+			return 'Do';
+		case 'Fri':
+			return 'Fr';
+		case 'Sat':
+			return 'Sa';
+		default:
+			return 'So';
+	}
+};
+var $CoderDennis$elm_time_format$Time$Format$I18n$I_de_de$monthName = function (month) {
+	switch (month.$) {
+		case 'Jan':
+			return 'Januar';
+		case 'Feb':
+			return 'Februar';
+		case 'Mar':
+			return 'März';
+		case 'Apr':
+			return 'April';
+		case 'May':
+			return 'Mai';
+		case 'Jun':
+			return 'Juni';
+		case 'Jul':
+			return 'Juli';
+		case 'Aug':
+			return 'August';
+		case 'Sep':
+			return 'September';
+		case 'Oct':
+			return 'Oktober';
+		case 'Nov':
+			return 'November';
+		default:
+			return 'Dezember';
+	}
+};
+var $CoderDennis$elm_time_format$Time$Format$I18n$I_de_de$monthShort = function (month) {
+	switch (month.$) {
+		case 'Jan':
+			return 'Jan';
+		case 'Feb':
+			return 'Feb';
+		case 'Mar':
+			return 'Mär';
+		case 'Apr':
+			return 'Apr';
+		case 'May':
+			return 'Mai';
+		case 'Jun':
+			return 'Jun';
+		case 'Jul':
+			return 'Jul';
+		case 'Aug':
+			return 'Aug';
+		case 'Sep':
+			return 'Sep';
+		case 'Oct':
+			return 'Okt';
+		case 'Nov':
+			return 'Nov';
+		default:
+			return 'Dez';
+	}
+};
+var $CoderDennis$elm_time_format$Time$Format$I18n$I_default$twelveHourPeriod = function (period) {
+	if (period.$ === 'AM') {
+		return 'AM';
+	} else {
+		return 'PM';
+	}
+};
+var $CoderDennis$elm_time_format$Time$Format$Config$Config_de_de$config = {
+	format: {date: '%-d. %B %Y', dateTime: '%a, %-d. %b %Y. %-H:%M:%S', firstDayOfWeek: $elm$time$Time$Mon, longDate: '%A, %-d. %B %Y', longTime: '%-H:%M:%S', time: '%-H:%M'},
+	i18n: {dayName: $CoderDennis$elm_time_format$Time$Format$I18n$I_de_de$dayName, dayOfMonthWithSuffix: $CoderDennis$elm_time_format$Time$Format$I18n$I_de_de$dayOfMonthWithSuffix, dayShort: $CoderDennis$elm_time_format$Time$Format$I18n$I_de_de$dayShort, monthName: $CoderDennis$elm_time_format$Time$Format$I18n$I_de_de$monthName, monthShort: $CoderDennis$elm_time_format$Time$Format$I18n$I_de_de$monthShort, twelveHourPeriod: $CoderDennis$elm_time_format$Time$Format$I18n$I_default$twelveHourPeriod}
+};
+var $elm$regex$Regex$Match = F4(
+	function (match, index, number, submatches) {
+		return {index: index, match: match, number: number, submatches: submatches};
+	});
+var $elm$regex$Regex$fromStringWith = _Regex_fromStringWith;
+var $elm$regex$Regex$fromString = function (string) {
+	return A2(
+		$elm$regex$Regex$fromStringWith,
+		{caseInsensitive: false, multiline: false},
+		string);
+};
+var $elm$regex$Regex$never = _Regex_never;
 var $elm$core$Maybe$withDefault = F2(
 	function (_default, maybe) {
 		if (maybe.$ === 'Just') {
@@ -6276,30 +6584,590 @@ var $elm$core$Maybe$withDefault = F2(
 			return _default;
 		}
 	});
+var $CoderDennis$elm_time_format$Time$Format$formatRegex = A2(
+	$elm$core$Maybe$withDefault,
+	$elm$regex$Regex$never,
+	$elm$regex$Regex$fromString('%(y|Y|m|_m|-m|B|^B|b|^b|d|-d|-@d|e|@e|A|^A|a|^a|H|-H|k|I|-I|l|p|P|M|S|%|L)'));
+var $elm$core$Maybe$andThen = F2(
+	function (callback, maybeValue) {
+		if (maybeValue.$ === 'Just') {
+			var value = maybeValue.a;
+			return callback(value);
+		} else {
+			return $elm$core$Maybe$Nothing;
+		}
+	});
+var $CoderDennis$elm_time_format$Time$Format$collapse = function (m) {
+	return A2($elm$core$Maybe$andThen, $elm$core$Basics$identity, m);
+};
+var $elm$core$List$head = function (list) {
+	if (list.b) {
+		var x = list.a;
+		var xs = list.b;
+		return $elm$core$Maybe$Just(x);
+	} else {
+		return $elm$core$Maybe$Nothing;
+	}
+};
+var $elm$core$Basics$modBy = _Basics_modBy;
+var $CoderDennis$elm_time_format$Time$Format$hourMod12 = function (h) {
+	return (!A2($elm$core$Basics$modBy, 12, h)) ? 12 : A2($elm$core$Basics$modBy, 12, h);
+};
+var $CoderDennis$elm_time_format$Time$Format$Core$monthToInt = function (month) {
+	switch (month.$) {
+		case 'Jan':
+			return 1;
+		case 'Feb':
+			return 2;
+		case 'Mar':
+			return 3;
+		case 'Apr':
+			return 4;
+		case 'May':
+			return 5;
+		case 'Jun':
+			return 6;
+		case 'Jul':
+			return 7;
+		case 'Aug':
+			return 8;
+		case 'Sep':
+			return 9;
+		case 'Oct':
+			return 10;
+		case 'Nov':
+			return 11;
+		default:
+			return 12;
+	}
+};
+var $elm$core$Basics$composeL = F3(
+	function (g, f, x) {
+		return g(
+			f(x));
+	});
+var $elm$core$String$cons = _String_cons;
+var $elm$core$String$fromChar = function (_char) {
+	return A2($elm$core$String$cons, _char, '');
+};
+var $elm$core$Bitwise$and = _Bitwise_and;
+var $elm$core$Bitwise$shiftRightBy = _Bitwise_shiftRightBy;
+var $elm$core$String$repeatHelp = F3(
+	function (n, chunk, result) {
+		return (n <= 0) ? result : A3(
+			$elm$core$String$repeatHelp,
+			n >> 1,
+			_Utils_ap(chunk, chunk),
+			(!(n & 1)) ? result : _Utils_ap(result, chunk));
+	});
+var $elm$core$String$repeat = F2(
+	function (n, chunk) {
+		return A3($elm$core$String$repeatHelp, n, chunk, '');
+	});
+var $elm$core$String$padLeft = F3(
+	function (n, _char, string) {
+		return _Utils_ap(
+			A2(
+				$elm$core$String$repeat,
+				n - $elm$core$String$length(string),
+				$elm$core$String$fromChar(_char)),
+			string);
+	});
+var $CoderDennis$elm_time_format$Time$Format$padWith = function (c) {
+	return A2(
+		$elm$core$Basics$composeL,
+		A2($elm$core$String$padLeft, 2, c),
+		$elm$core$String$fromInt);
+};
+var $CoderDennis$elm_time_format$Time$Format$padWithN = F2(
+	function (n, c) {
+		return A2(
+			$elm$core$Basics$composeL,
+			A2($elm$core$String$padLeft, n, c),
+			$elm$core$String$fromInt);
+	});
+var $elm$core$Basics$negate = function (n) {
+	return -n;
+};
+var $elm$core$String$right = F2(
+	function (n, string) {
+		return (n < 1) ? '' : A3(
+			$elm$core$String$slice,
+			-n,
+			$elm$core$String$length(string),
+			string);
+	});
+var $elm$time$Time$flooredDiv = F2(
+	function (numerator, denominator) {
+		return $elm$core$Basics$floor(numerator / denominator);
+	});
+var $elm$time$Time$posixToMillis = function (_v0) {
+	var millis = _v0.a;
+	return millis;
+};
+var $elm$time$Time$toAdjustedMinutesHelp = F3(
+	function (defaultOffset, posixMinutes, eras) {
+		toAdjustedMinutesHelp:
+		while (true) {
+			if (!eras.b) {
+				return posixMinutes + defaultOffset;
+			} else {
+				var era = eras.a;
+				var olderEras = eras.b;
+				if (_Utils_cmp(era.start, posixMinutes) < 0) {
+					return posixMinutes + era.offset;
+				} else {
+					var $temp$defaultOffset = defaultOffset,
+						$temp$posixMinutes = posixMinutes,
+						$temp$eras = olderEras;
+					defaultOffset = $temp$defaultOffset;
+					posixMinutes = $temp$posixMinutes;
+					eras = $temp$eras;
+					continue toAdjustedMinutesHelp;
+				}
+			}
+		}
+	});
+var $elm$time$Time$toAdjustedMinutes = F2(
+	function (_v0, time) {
+		var defaultOffset = _v0.a;
+		var eras = _v0.b;
+		return A3(
+			$elm$time$Time$toAdjustedMinutesHelp,
+			defaultOffset,
+			A2(
+				$elm$time$Time$flooredDiv,
+				$elm$time$Time$posixToMillis(time),
+				60000),
+			eras);
+	});
+var $elm$core$Basics$ge = _Utils_ge;
+var $elm$time$Time$toCivil = function (minutes) {
+	var rawDay = A2($elm$time$Time$flooredDiv, minutes, 60 * 24) + 719468;
+	var era = (((rawDay >= 0) ? rawDay : (rawDay - 146096)) / 146097) | 0;
+	var dayOfEra = rawDay - (era * 146097);
+	var yearOfEra = ((((dayOfEra - ((dayOfEra / 1460) | 0)) + ((dayOfEra / 36524) | 0)) - ((dayOfEra / 146096) | 0)) / 365) | 0;
+	var dayOfYear = dayOfEra - (((365 * yearOfEra) + ((yearOfEra / 4) | 0)) - ((yearOfEra / 100) | 0));
+	var mp = (((5 * dayOfYear) + 2) / 153) | 0;
+	var month = mp + ((mp < 10) ? 3 : (-9));
+	var year = yearOfEra + (era * 400);
+	return {
+		day: (dayOfYear - ((((153 * mp) + 2) / 5) | 0)) + 1,
+		month: month,
+		year: year + ((month <= 2) ? 1 : 0)
+	};
+};
+var $elm$time$Time$toDay = F2(
+	function (zone, time) {
+		return $elm$time$Time$toCivil(
+			A2($elm$time$Time$toAdjustedMinutes, zone, time)).day;
+	});
+var $elm$time$Time$toHour = F2(
+	function (zone, time) {
+		return A2(
+			$elm$core$Basics$modBy,
+			24,
+			A2(
+				$elm$time$Time$flooredDiv,
+				A2($elm$time$Time$toAdjustedMinutes, zone, time),
+				60));
+	});
+var $elm$time$Time$toMillis = F2(
+	function (_v0, time) {
+		return A2(
+			$elm$core$Basics$modBy,
+			1000,
+			$elm$time$Time$posixToMillis(time));
+	});
+var $elm$time$Time$toMinute = F2(
+	function (zone, time) {
+		return A2(
+			$elm$core$Basics$modBy,
+			60,
+			A2($elm$time$Time$toAdjustedMinutes, zone, time));
+	});
+var $elm$time$Time$Apr = {$: 'Apr'};
+var $elm$time$Time$Aug = {$: 'Aug'};
+var $elm$time$Time$Dec = {$: 'Dec'};
+var $elm$time$Time$Feb = {$: 'Feb'};
+var $elm$time$Time$Jan = {$: 'Jan'};
+var $elm$time$Time$Jul = {$: 'Jul'};
+var $elm$time$Time$Jun = {$: 'Jun'};
+var $elm$time$Time$Mar = {$: 'Mar'};
+var $elm$time$Time$May = {$: 'May'};
+var $elm$time$Time$Nov = {$: 'Nov'};
+var $elm$time$Time$Oct = {$: 'Oct'};
+var $elm$time$Time$Sep = {$: 'Sep'};
+var $elm$time$Time$toMonth = F2(
+	function (zone, time) {
+		var _v0 = $elm$time$Time$toCivil(
+			A2($elm$time$Time$toAdjustedMinutes, zone, time)).month;
+		switch (_v0) {
+			case 1:
+				return $elm$time$Time$Jan;
+			case 2:
+				return $elm$time$Time$Feb;
+			case 3:
+				return $elm$time$Time$Mar;
+			case 4:
+				return $elm$time$Time$Apr;
+			case 5:
+				return $elm$time$Time$May;
+			case 6:
+				return $elm$time$Time$Jun;
+			case 7:
+				return $elm$time$Time$Jul;
+			case 8:
+				return $elm$time$Time$Aug;
+			case 9:
+				return $elm$time$Time$Sep;
+			case 10:
+				return $elm$time$Time$Oct;
+			case 11:
+				return $elm$time$Time$Nov;
+			default:
+				return $elm$time$Time$Dec;
+		}
+	});
+var $elm$time$Time$toSecond = F2(
+	function (_v0, time) {
+		return A2(
+			$elm$core$Basics$modBy,
+			60,
+			A2(
+				$elm$time$Time$flooredDiv,
+				$elm$time$Time$posixToMillis(time),
+				1000));
+	});
+var $elm$core$String$toUpper = _String_toUpper;
+var $elm$time$Time$Fri = {$: 'Fri'};
+var $elm$time$Time$Sat = {$: 'Sat'};
+var $elm$time$Time$Sun = {$: 'Sun'};
+var $elm$time$Time$Thu = {$: 'Thu'};
+var $elm$time$Time$Tue = {$: 'Tue'};
+var $elm$time$Time$Wed = {$: 'Wed'};
+var $elm$time$Time$toWeekday = F2(
+	function (zone, time) {
+		var _v0 = A2(
+			$elm$core$Basics$modBy,
+			7,
+			A2(
+				$elm$time$Time$flooredDiv,
+				A2($elm$time$Time$toAdjustedMinutes, zone, time),
+				60 * 24));
+		switch (_v0) {
+			case 0:
+				return $elm$time$Time$Thu;
+			case 1:
+				return $elm$time$Time$Fri;
+			case 2:
+				return $elm$time$Time$Sat;
+			case 3:
+				return $elm$time$Time$Sun;
+			case 4:
+				return $elm$time$Time$Mon;
+			case 5:
+				return $elm$time$Time$Tue;
+			default:
+				return $elm$time$Time$Wed;
+		}
+	});
+var $elm$time$Time$toYear = F2(
+	function (zone, time) {
+		return $elm$time$Time$toCivil(
+			A2($elm$time$Time$toAdjustedMinutes, zone, time)).year;
+	});
+var $CoderDennis$elm_time_format$Time$Format$TwelveHourClock$AM = {$: 'AM'};
+var $CoderDennis$elm_time_format$Time$Format$TwelveHourClock$PM = {$: 'PM'};
+var $CoderDennis$elm_time_format$Time$Format$TwelveHourClock$twelveHourPeriod = F2(
+	function (z, d) {
+		return (A2($elm$time$Time$toHour, z, d) < 12) ? $CoderDennis$elm_time_format$Time$Format$TwelveHourClock$AM : $CoderDennis$elm_time_format$Time$Format$TwelveHourClock$PM;
+	});
+var $CoderDennis$elm_time_format$Time$Format$formatToken = F4(
+	function (config, zone, d, m) {
+		var symbol = A2(
+			$elm$core$Maybe$withDefault,
+			' ',
+			$CoderDennis$elm_time_format$Time$Format$collapse(
+				$elm$core$List$head(m.submatches)));
+		switch (symbol) {
+			case 'Y':
+				return A3(
+					$CoderDennis$elm_time_format$Time$Format$padWithN,
+					4,
+					_Utils_chr('0'),
+					A2($elm$time$Time$toYear, zone, d));
+			case 'y':
+				return A2(
+					$elm$core$String$right,
+					2,
+					A3(
+						$CoderDennis$elm_time_format$Time$Format$padWithN,
+						2,
+						_Utils_chr('0'),
+						A2($elm$time$Time$toYear, zone, d)));
+			case 'm':
+				return A2(
+					$CoderDennis$elm_time_format$Time$Format$padWith,
+					_Utils_chr('0'),
+					$CoderDennis$elm_time_format$Time$Format$Core$monthToInt(
+						A2($elm$time$Time$toMonth, zone, d)));
+			case '_m':
+				return A2(
+					$CoderDennis$elm_time_format$Time$Format$padWith,
+					_Utils_chr(' '),
+					$CoderDennis$elm_time_format$Time$Format$Core$monthToInt(
+						A2($elm$time$Time$toMonth, zone, d)));
+			case '-m':
+				return $elm$core$String$fromInt(
+					$CoderDennis$elm_time_format$Time$Format$Core$monthToInt(
+						A2($elm$time$Time$toMonth, zone, d)));
+			case 'B':
+				return config.i18n.monthName(
+					A2($elm$time$Time$toMonth, zone, d));
+			case '^B':
+				return $elm$core$String$toUpper(
+					config.i18n.monthName(
+						A2($elm$time$Time$toMonth, zone, d)));
+			case 'b':
+				return config.i18n.monthShort(
+					A2($elm$time$Time$toMonth, zone, d));
+			case '^b':
+				return $elm$core$String$toUpper(
+					config.i18n.monthShort(
+						A2($elm$time$Time$toMonth, zone, d)));
+			case 'd':
+				return A2(
+					$CoderDennis$elm_time_format$Time$Format$padWith,
+					_Utils_chr('0'),
+					A2($elm$time$Time$toDay, zone, d));
+			case '-d':
+				return $elm$core$String$fromInt(
+					A2($elm$time$Time$toDay, zone, d));
+			case '-@d':
+				return A2(
+					config.i18n.dayOfMonthWithSuffix,
+					false,
+					A2($elm$time$Time$toDay, zone, d));
+			case 'e':
+				return A2(
+					$CoderDennis$elm_time_format$Time$Format$padWith,
+					_Utils_chr(' '),
+					A2($elm$time$Time$toDay, zone, d));
+			case '@e':
+				return A2(
+					config.i18n.dayOfMonthWithSuffix,
+					true,
+					A2($elm$time$Time$toDay, zone, d));
+			case 'A':
+				return config.i18n.dayName(
+					A2($elm$time$Time$toWeekday, zone, d));
+			case '^A':
+				return $elm$core$String$toUpper(
+					config.i18n.dayName(
+						A2($elm$time$Time$toWeekday, zone, d)));
+			case 'a':
+				return config.i18n.dayShort(
+					A2($elm$time$Time$toWeekday, zone, d));
+			case '^a':
+				return $elm$core$String$toUpper(
+					config.i18n.dayShort(
+						A2($elm$time$Time$toWeekday, zone, d)));
+			case 'H':
+				return A2(
+					$CoderDennis$elm_time_format$Time$Format$padWith,
+					_Utils_chr('0'),
+					A2($elm$time$Time$toHour, zone, d));
+			case '-H':
+				return $elm$core$String$fromInt(
+					A2($elm$time$Time$toHour, zone, d));
+			case 'k':
+				return A2(
+					$CoderDennis$elm_time_format$Time$Format$padWith,
+					_Utils_chr(' '),
+					A2($elm$time$Time$toHour, zone, d));
+			case 'I':
+				return A2(
+					$CoderDennis$elm_time_format$Time$Format$padWith,
+					_Utils_chr('0'),
+					$CoderDennis$elm_time_format$Time$Format$hourMod12(
+						A2($elm$time$Time$toHour, zone, d)));
+			case '-I':
+				return $elm$core$String$fromInt(
+					$CoderDennis$elm_time_format$Time$Format$hourMod12(
+						A2($elm$time$Time$toHour, zone, d)));
+			case 'l':
+				return A2(
+					$CoderDennis$elm_time_format$Time$Format$padWith,
+					_Utils_chr(' '),
+					$CoderDennis$elm_time_format$Time$Format$hourMod12(
+						A2($elm$time$Time$toHour, zone, d)));
+			case 'p':
+				return $elm$core$String$toUpper(
+					config.i18n.twelveHourPeriod(
+						A2($CoderDennis$elm_time_format$Time$Format$TwelveHourClock$twelveHourPeriod, zone, d)));
+			case 'P':
+				return config.i18n.twelveHourPeriod(
+					A2($CoderDennis$elm_time_format$Time$Format$TwelveHourClock$twelveHourPeriod, zone, d));
+			case 'M':
+				return A2(
+					$CoderDennis$elm_time_format$Time$Format$padWith,
+					_Utils_chr('0'),
+					A2($elm$time$Time$toMinute, zone, d));
+			case 'S':
+				return A2(
+					$CoderDennis$elm_time_format$Time$Format$padWith,
+					_Utils_chr('0'),
+					A2($elm$time$Time$toSecond, zone, d));
+			case 'L':
+				return A3(
+					$CoderDennis$elm_time_format$Time$Format$padWithN,
+					3,
+					_Utils_chr('0'),
+					A2($elm$time$Time$toMillis, zone, d));
+			case '%':
+				return symbol;
+			default:
+				return '';
+		}
+	});
+var $elm$regex$Regex$replace = _Regex_replaceAtMost(_Regex_infinity);
+var $CoderDennis$elm_time_format$Time$Format$format = F4(
+	function (config, formatStr, zone, time) {
+		return A3(
+			$elm$regex$Regex$replace,
+			$CoderDennis$elm_time_format$Time$Format$formatRegex,
+			A3($CoderDennis$elm_time_format$Time$Format$formatToken, config, zone, time),
+			formatStr);
+	});
+var $elm$time$Time$Zone = F2(
+	function (a, b) {
+		return {$: 'Zone', a: a, b: b};
+	});
+var $elm$time$Time$utc = A2($elm$time$Time$Zone, 0, _List_Nil);
+var $author$project$Main$posixToString = function (time) {
+	return A4($CoderDennis$elm_time_format$Time$Format$format, $CoderDennis$elm_time_format$Time$Format$Config$Config_de_de$config, '%Y-%m-%d %H:%M', $elm$time$Time$utc, time);
+};
+var $elm$virtual_dom$VirtualDom$text = _VirtualDom_text;
+var $elm$html$Html$text = $elm$virtual_dom$VirtualDom$text;
+var $author$project$Main$viewCurrent = function (current) {
+	if (current.$ === 'Stopped') {
+		return A2(
+			$elm$html$Html$div,
+			_List_fromArray(
+				[
+					$elm$html$Html$Attributes$class('btn btn-primary')
+				]),
+			_List_fromArray(
+				[
+					$elm$html$Html$text('Start')
+				]));
+	} else {
+		var _v1 = current.a;
+		var start = _v1.a;
+		var maybeComment = _v1.b;
+		var comment = A2($elm$core$Maybe$withDefault, '', maybeComment);
+		return A2(
+			$elm$html$Html$div,
+			_List_Nil,
+			_List_fromArray(
+				[
+					A2(
+					$elm$html$Html$div,
+					_List_fromArray(
+						[
+							$elm$html$Html$Attributes$class('btn btn-primary')
+						]),
+					_List_fromArray(
+						[
+							$elm$html$Html$text('Stop')
+						])),
+					A2(
+					$elm$html$Html$div,
+					_List_Nil,
+					_List_fromArray(
+						[
+							$elm$html$Html$text(
+							'running since ' + ($author$project$Main$posixToString(start) + (': ' + comment)))
+						]))
+				]));
+	}
+};
+var $elm$html$Html$table = _VirtualDom_node('table');
+var $elm$html$Html$tbody = _VirtualDom_node('tbody');
+var $elm$html$Html$Attributes$scope = $elm$html$Html$Attributes$stringProperty('scope');
+var $elm$html$Html$th = _VirtualDom_node('th');
+var $elm$html$Html$thead = _VirtualDom_node('thead');
+var $elm$html$Html$tr = _VirtualDom_node('tr');
+var $author$project$Main$viewPeriodeHeader = A2(
+	$elm$html$Html$thead,
+	_List_Nil,
+	_List_fromArray(
+		[
+			A2(
+			$elm$html$Html$tr,
+			_List_Nil,
+			_List_fromArray(
+				[
+					A2(
+					$elm$html$Html$th,
+					_List_fromArray(
+						[
+							$elm$html$Html$Attributes$scope('col'),
+							$elm$html$Html$Attributes$class('time')
+						]),
+					_List_fromArray(
+						[
+							$elm$html$Html$text('Start')
+						])),
+					A2(
+					$elm$html$Html$th,
+					_List_fromArray(
+						[
+							$elm$html$Html$Attributes$scope('col'),
+							$elm$html$Html$Attributes$class('time')
+						]),
+					_List_fromArray(
+						[
+							$elm$html$Html$text('Stop')
+						])),
+					A2(
+					$elm$html$Html$th,
+					_List_fromArray(
+						[
+							$elm$html$Html$Attributes$scope('col')
+						]),
+					_List_fromArray(
+						[
+							$elm$html$Html$text('Comment')
+						]))
+				]))
+		]));
+var $elm$html$Html$td = _VirtualDom_node('td');
 var $author$project$Main$viewPeriodeLine = function (periode) {
 	return A2(
-		$elm$html$Html$li,
+		$elm$html$Html$tr,
 		_List_Nil,
 		_List_fromArray(
 			[
 				A2(
-				$elm$html$Html$span,
+				$elm$html$Html$td,
 				_List_Nil,
 				_List_fromArray(
 					[
 						$elm$html$Html$text(
-						$elm$core$String$fromInt(periode.start))
+						$author$project$Main$posixToString(periode.start))
 					])),
 				A2(
-				$elm$html$Html$span,
+				$elm$html$Html$td,
 				_List_Nil,
 				_List_fromArray(
 					[
 						$elm$html$Html$text(
-						$elm$core$String$fromInt(periode.stop))
+						$author$project$Main$posixToString(periode.stop))
 					])),
 				A2(
-				$elm$html$Html$span,
+				$elm$html$Html$td,
 				_List_Nil,
 				_List_fromArray(
 					[
@@ -6321,13 +7189,30 @@ var $author$project$Main$viewPeriodes = F2(
 					]));
 		} else {
 			return A2(
-				$elm$html$Html$ul,
-				_List_Nil,
-				A2($elm$core$List$map, $author$project$Main$viewPeriodeLine, periodes));
+				$elm$html$Html$table,
+				_List_fromArray(
+					[
+						$elm$html$Html$Attributes$class('table')
+					]),
+				_List_fromArray(
+					[
+						$author$project$Main$viewPeriodeHeader,
+						A2(
+						$elm$html$Html$tbody,
+						_List_Nil,
+						A2($elm$core$List$map, $author$project$Main$viewPeriodeLine, periodes))
+					]));
 		}
 	});
 var $author$project$Main$view = function (model) {
-	return A2($author$project$Main$viewPeriodes, model.periodes, model.fetchErrMsg);
+	return A2(
+		$elm$html$Html$div,
+		_List_Nil,
+		_List_fromArray(
+			[
+				$author$project$Main$viewCurrent(model.current),
+				A2($author$project$Main$viewPeriodes, model.periodes, model.fetchErrMsg)
+			]));
 };
 var $author$project$Main$main = $elm$browser$Browser$element(
 	{

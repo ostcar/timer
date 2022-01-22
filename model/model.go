@@ -193,20 +193,7 @@ func (m *Model) nextID() int {
 			nextID = id + 1
 		}
 	}
-	m.mu.RUnlock()
 	return nextID
-}
-
-// List returns all periodes.
-func (m *Model) List() []Periode {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	periodes := make([]Periode, 0, len(m.periodes))
-	for _, p := range m.periodes {
-		periodes = append(periodes, p)
-	}
-	return periodes
 }
 
 // Delete removes an existing periode.
@@ -235,4 +222,30 @@ func (m *Model) Edit(id int, start, stop maybe.Time, comment maybe.String) error
 		return fmt.Errorf("writing event: %w", err)
 	}
 	return nil
+}
+
+// List returns all periodes.
+func (m *Model) List() []Periode {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	periodes := make([]Periode, 0, len(m.periodes))
+	for _, p := range m.periodes {
+		periodes = append(periodes, p)
+	}
+	return periodes
+}
+
+// Running tells if the timer is currently running.
+//
+// If its running, it returns the start time and the comment.
+func (m *Model) Running() (start time.Time, comment maybe.String, ok bool) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	if m.current.start.IsZero() {
+		return time.Time{}, maybe.String{}, false
+	}
+
+	return m.current.start, m.current.comment, true
 }
