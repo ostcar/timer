@@ -164,6 +164,7 @@ func (m *Model) writeEvent(e Event) (err error) {
 
 // Start starts the timer.
 func (m *Model) Start(comment maybe.String) error {
+	log.Printf("start event")
 	if err := m.writeEvent(eventStart{Comment: comment}); err != nil {
 		return fmt.Errorf("writing event: %w", err)
 	}
@@ -172,6 +173,7 @@ func (m *Model) Start(comment maybe.String) error {
 
 // Stop stops the timer.
 func (m *Model) Stop(comment maybe.String) (int, error) {
+	log.Printf("stop event")
 	nextID := m.nextID()
 
 	if err := m.writeEvent(eventStop{Comment: comment, ID: nextID}); err != nil {
