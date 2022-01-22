@@ -31,14 +31,28 @@ tasks:
       - maybe/*
       - grpc/*
       - model/*
+      - web/*
       - main.go
     generates:
       - timer
+
+  client:
+    dir: client
+    cmds:
+      - elm make src/Main.elm --output elm.js
+    sources:
+      - elm.json
+      - src/*.elm
+      - src/**/*.elm
+      - index.html
+    generates:
+      - elm.js
 
   build:
     deps:
       - timeme
       - server
+      - client
 
   start:
     desc: |
@@ -50,6 +64,7 @@ tasks:
 
     deps: 
       - server
+      - client
 
     cmds:
     - ./timer

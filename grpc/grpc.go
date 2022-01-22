@@ -14,8 +14,7 @@ import (
 )
 
 // Run starts the grpc server on the given port.
-func Run(ctx context.Context, model *model.Model, port string) error {
-	addr := ":" + port
+func Run(ctx context.Context, model *model.Model, addr string) error {
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
 		return fmt.Errorf("listen on address %q: %w", addr, err)
@@ -26,15 +25,19 @@ func Run(ctx context.Context, model *model.Model, port string) error {
 
 	proto.RegisterTimerServer(registrar, timerServer)
 
+	wait := make(chan struct{})
 	go func() {
 		<-ctx.Done()
 		registrar.GracefulStop()
+		wait <- struct{}{}
 	}()
 
 	log.Printf("Running grpc server on %s\n", addr)
 	if err := registrar.Serve(lis); err != nil {
 		return fmt.Errorf("running grpc server: %w", err)
 	}
+
+	<-wait
 
 	return nil
 }

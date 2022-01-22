@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"embed"
 	"fmt"
 	"log"
 	"os"
@@ -9,7 +10,23 @@ import (
 
 	"github.com/ostcar/timer/grpc"
 	"github.com/ostcar/timer/model"
+	"github.com/ostcar/timer/web"
+	"golang.org/x/sync/errgroup"
 )
+
+const (
+	grpcAddr = ":4040"
+	httpAddr = ":8080"
+)
+
+//go:embed client/index.html
+var defaultIndex []byte
+
+//go:embed client/elm.js
+var defaultElm []byte
+
+//go:embed static/*
+var defaultStatic embed.FS
 
 func main() {
 	if err := run(); err != nil {
@@ -27,12 +44,30 @@ func run() error {
 		return fmt.Errorf("loading model: %w", err)
 	}
 
-	// TODO: use error group
-	if err := grpc.Run(ctx, model, "4040"); err != nil {
-		return fmt.Errorf("running grpc server: %w", err)
-	}
+	var group *errgroup.Group
+	group, ctx = errgroup.WithContext(ctx)
 
-	return nil
+	group.Go(func() error {
+		if err := grpc.Run(ctx, model, grpcAddr); err != nil {
+			return fmt.Errorf("running grpc server: %w", err)
+		}
+		return nil
+	})
+
+	group.Go(func() error {
+		defaultFiles := web.DefaultFiles{
+			Index:  defaultIndex,
+			Elm:    defaultElm,
+			Static: defaultStatic,
+		}
+
+		if err := web.Run(ctx, model, httpAddr, defaultFiles); err != nil {
+			return fmt.Errorf("running http server: %w", err)
+		}
+		return nil
+	})
+
+	return group.Wait()
 }
 
 // interruptContext works like signal.NotifyContext
