@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"time"
 
 	"github.com/ostcar/timer/grpc/proto"
 	"github.com/ostcar/timer/maybe"
@@ -73,4 +74,26 @@ func (s grpcServer) List(ctx context.Context, req *proto.ListRequest) (*proto.Li
 		}
 	}
 	return &proto.ListResponse{Periodes: protoPeriodes}, nil
+}
+
+func (s grpcServer) Edit(ctx context.Context, req *proto.EditRequest) (*proto.EditResponse, error) {
+	start := maybe.Time{}
+	if req.HasStart {
+		start = maybe.NewTime(time.Unix(req.Start, 0))
+	}
+
+	stop := maybe.Time{}
+	if req.HasStop {
+		stop = maybe.NewTime(time.Unix(req.Stop, 0))
+	}
+
+	comment := maybe.String{}
+	if req.HasComment {
+		comment = maybe.NewString(req.Comment)
+	}
+
+	if err := s.model.Edit(int(req.Id), start, stop, comment); err != nil {
+		return nil, fmt.Errorf("starting timer: %w", err)
+	}
+	return new(proto.EditResponse), nil
 }

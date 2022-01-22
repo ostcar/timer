@@ -7,6 +7,7 @@ service Timer {
     rpc Start(StartRequest) returns (StartResponse);
     rpc Stop(StopRequest) returns (StopResponse);
     rpc List(ListRequest) returns (ListResponse);
+    rpc Edit(EditRequest) returns (EditResponse);
 }
 
 message StartRequest {
@@ -36,3 +37,15 @@ message Periode {
     int64 stop = 3;
     string comment = 4;
 }
+
+message EditRequest {
+    int32 id = 1;
+    int64 start = 2;
+    int64 stop = 3;
+    string comment = 4;
+    bool hasStart = 5;
+    bool hasStop = 6;
+    bool hasComment = 7;
+}
+
+message EditResponse {}

@@ -15,6 +15,9 @@ func getEvent(eventType string) Event {
 	case eventStop{}.Name():
 		return &eventStop{}
 
+	case eventEdit{}.Name():
+		return &eventEdit{}
+
 	default:
 		return nil
 	}
@@ -101,6 +104,55 @@ func (e eventStop) execute(model *Model, eventTime time.Time) error {
 	model.periodes[e.ID] = p
 	model.current.start = time.Time{}
 	model.current.comment = ""
+	return nil
+}
+
+type eventEdit struct {
+	ID      int          `json:"id"`
+	Start   maybe.Time   `json:"start"`
+	Stop    maybe.Time   `json:"stop"`
+	Comment maybe.String `json:"comment"`
+}
+
+func (e eventEdit) String() string {
+	return "edit event ..."
+}
+
+func (e eventEdit) Name() string {
+	return "edit"
+}
+
+func (e eventEdit) validate(model *Model) error {
+	if e.ID == 0 {
+		return validationError{"ID is required"}
+	}
+
+	if _, ok := model.periodes[e.ID]; !ok {
+		return validationError{"ID is unknown"}
+	}
+
+	// TODO: Validate, that start is before stop and does not overlap with other periodes.
+
+	return nil
+}
+
+func (e eventEdit) execute(model *Model, eventTime time.Time) error {
+	p := model.periodes[e.ID]
+
+	if start, ok := e.Start.Value(); ok {
+		p.Start = start
+	}
+
+	if stop, ok := e.Stop.Value(); ok {
+		p.Stop = stop
+	}
+
+	if comment, ok := e.Comment.Value(); ok {
+		p.Comment = comment
+	}
+
+	model.periodes[e.ID] = p
+
 	return nil
 }
 

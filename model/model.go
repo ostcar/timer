@@ -195,3 +195,11 @@ func (m *Model) List() []Periode {
 	}
 	return periodes
 }
+
+// Edit changes an existing periode.
+func (m *Model) Edit(id int, start, stop maybe.Time, comment maybe.String) error {
+	if err := m.writeEvent(eventEdit{ID: id, Start: start, Stop: stop, Comment: comment}); err != nil {
+		return fmt.Errorf("writing event: %w", err)
+	}
+	return nil
+}

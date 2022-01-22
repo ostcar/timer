@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"sort"
+	"strconv"
 	"time"
 
 	"github.com/ostcar/timer/grpc/proto"
@@ -43,6 +44,7 @@ func rootCmd() *cobra.Command {
 		startCmd(),
 		stopCmd(),
 		listCmd(),
+		editCmd(),
 	)
 
 	return &cmd
@@ -142,7 +144,75 @@ func listCmd() *cobra.Command {
 			}
 			start := time.Unix(p.Start, 0)
 			stop := time.Unix(p.Stop, 0)
-			fmt.Printf("%s - %s%s\n", start.Format(*timeFormat), stop.Format(*timeFormat), comment)
+			fmt.Printf("%d: %s - %s%s\n", p.Id, start.Format(*timeFormat), stop.Format(*timeFormat), comment)
+		}
+		return nil
+	}
+
+	return &cmd
+}
+
+func editCmd() *cobra.Command {
+	cmd := cobra.Command{
+		Use:   "edit id",
+		Short: "edit an periode",
+		Long:  "edit an existing periode",
+	}
+
+	start := cmd.Flags().String("start", "", "change the start time")
+	stop := cmd.Flags().String("stop", "", "change the stop time")
+	comment := cmd.Flags().String("comment", "", "change the comment")
+	timeFormat := cmd.Flags().String("time_format", "2006-01-02 15:04:05", "format string to parse the timestamps. See golang time.")
+
+	cmd.RunE = func(cmd *cobra.Command, args []string) error {
+		client, close, err := connect()
+		if err != nil {
+			return fmt.Errorf("creating client: %w", err)
+		}
+		defer close()
+
+		if len(args) == 0 {
+			return fmt.Errorf("No id given")
+		}
+
+		id, err := strconv.Atoi(args[0])
+		if err != nil {
+			return fmt.Errorf("Invalid id: %w", err)
+		}
+
+		// TODO: Handle case where --comment was set to an empty string
+		hasComment := len(*comment) > 0
+		hasStart := len(*start) > 0
+		hasStop := len(*stop) > 0
+
+		var unixStart int64
+		if hasStart {
+			t, err := time.Parse(*timeFormat, *start)
+			if err != nil {
+				return fmt.Errorf("parsing start time: %w", err)
+			}
+			unixStart = t.Unix()
+		}
+
+		var unixStop int64
+		if hasStop {
+			t, err := time.Parse(*timeFormat, *stop)
+			if err != nil {
+				return fmt.Errorf("parsing stop time: %w", err)
+			}
+			unixStop = t.Unix()
+		}
+
+		if _, err := client.Edit(context.Background(), &proto.EditRequest{
+			Id:         int32(id),
+			HasStart:   hasStart,
+			Start:      unixStart,
+			HasStop:    hasStop,
+			Stop:       unixStop,
+			HasComment: hasComment,
+			Comment:    *comment,
+		}); err != nil {
+			return fmt.Errorf("sending stop request: %w", err)
 		}
 		return nil
 	}
