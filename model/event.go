@@ -18,6 +18,12 @@ func getEvent(eventType string) Event {
 	case eventEdit{}.Name():
 		return &eventEdit{}
 
+	case eventInsert{}.Name():
+		return &eventInsert{}
+
+	case eventDelete{}.Name():
+		return &eventDelete{}
+
 	default:
 		return nil
 	}
@@ -31,7 +37,7 @@ type Event interface {
 }
 
 type eventStart struct {
-	Comment string `json:"comment"`
+	Comment maybe.String `json:"comment"`
 }
 
 func (e eventStart) String() string {
@@ -89,9 +95,9 @@ func (e eventStop) validate(model *Model) error {
 
 func (e eventStop) execute(model *Model, eventTime time.Time) error {
 	comment := model.current.comment
-	c, ok := e.Comment.Value()
-	if ok {
-		comment = c
+
+	if _, ok := e.Comment.Value(); ok {
+		comment = e.Comment
 	}
 
 	p := Periode{
@@ -103,7 +109,78 @@ func (e eventStop) execute(model *Model, eventTime time.Time) error {
 
 	model.periodes[e.ID] = p
 	model.current.start = time.Time{}
-	model.current.comment = ""
+	model.current.comment = maybe.String{}
+	return nil
+}
+
+type eventInsert struct {
+	ID      int          `json:"id"`
+	Start   time.Time    `json:"start"`
+	Stop    time.Time    `json:"stop"`
+	Comment maybe.String `json:"comment"`
+}
+
+func (e eventInsert) String() string {
+	return "insert event ..."
+}
+
+func (e eventInsert) Name() string {
+	return "insert"
+}
+
+func (e eventInsert) validate(model *Model) error {
+	if e.ID == 0 {
+		return validationError{"ID is required"}
+	}
+
+	if _, ok := model.periodes[e.ID]; ok {
+		return validationError{"ID is taken "}
+	}
+
+	// TODO: Validate, that start is before stop and does not overlap with other periodes.
+
+	return nil
+}
+
+func (e eventInsert) execute(model *Model, eventTime time.Time) error {
+	p := Periode{
+		ID:      e.ID,
+		Start:   e.Start,
+		Stop:    e.Stop,
+		Comment: e.Comment,
+	}
+
+	model.periodes[e.ID] = p
+
+	return nil
+}
+
+type eventDelete struct {
+	ID int `json:"id"`
+}
+
+func (e eventDelete) String() string {
+	return fmt.Sprintf("delete event for %d", e.ID)
+}
+
+func (e eventDelete) Name() string {
+	return "delete"
+}
+
+func (e eventDelete) validate(model *Model) error {
+	if e.ID == 0 {
+		return validationError{"ID is required"}
+	}
+
+	if _, ok := model.periodes[e.ID]; !ok {
+		return validationError{"ID is unknown"}
+	}
+
+	return nil
+}
+
+func (e eventDelete) execute(model *Model, eventTime time.Time) error {
+	delete(model.periodes, e.ID)
 	return nil
 }
 
@@ -147,8 +224,8 @@ func (e eventEdit) execute(model *Model, eventTime time.Time) error {
 		p.Stop = stop
 	}
 
-	if comment, ok := e.Comment.Value(); ok {
-		p.Comment = comment
+	if _, ok := e.Comment.Value(); ok {
+		p.Comment = e.Comment
 	}
 
 	model.periodes[e.ID] = p

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"sync"
 	"time"
@@ -23,7 +24,7 @@ type Model struct {
 
 	current struct {
 		start   time.Time
-		comment string
+		comment maybe.String
 	}
 
 	periodes map[int]Periode
@@ -34,7 +35,7 @@ type Periode struct {
 	ID      int
 	Start   time.Time
 	Stop    time.Time
-	Comment string
+	Comment maybe.String
 }
 
 // NewModel load the db from file.
@@ -162,7 +163,7 @@ func (m *Model) writeEvent(e Event) (err error) {
 }
 
 // Start starts the timer.
-func (m *Model) Start(comment string) error {
+func (m *Model) Start(comment maybe.String) error {
 	if err := m.writeEvent(eventStart{Comment: comment}); err != nil {
 		return fmt.Errorf("writing event: %w", err)
 	}
@@ -170,25 +171,35 @@ func (m *Model) Start(comment string) error {
 }
 
 // Stop stops the timer.
-func (m *Model) Stop(comment maybe.String) error {
-	nextID := 1
+func (m *Model) Stop(comment maybe.String) (int, error) {
+	nextID := m.nextID()
+
+	if err := m.writeEvent(eventStop{Comment: comment, ID: nextID}); err != nil {
+		return 0, fmt.Errorf("writing event: %w", err)
+	}
+	return nextID, nil
+}
+
+func (m *Model) nextID() int {
+	// TODO: This is not concurent save. There has probybly be a field model.maxID
 	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	nextID := 1
 	for id := range m.periodes {
 		if nextID <= id {
 			nextID = id + 1
 		}
 	}
 	m.mu.RUnlock()
-
-	if err := m.writeEvent(eventStop{Comment: comment, ID: nextID}); err != nil {
-		return fmt.Errorf("writing event: %w", err)
-	}
-	return nil
+	return nextID
 }
 
 // List returns all periodes.
 func (m *Model) List() []Periode {
 	m.mu.RLock()
+	defer m.mu.RUnlock()
+
 	periodes := make([]Periode, 0, len(m.periodes))
 	for _, p := range m.periodes {
 		periodes = append(periodes, p)
@@ -196,8 +207,28 @@ func (m *Model) List() []Periode {
 	return periodes
 }
 
+// Delete removes an existing periode.
+func (m *Model) Delete(id int) error {
+	log.Printf("delete event for %d", id)
+	if err := m.writeEvent(eventDelete{ID: id}); err != nil {
+		return fmt.Errorf("writing event: %w", err)
+	}
+	return nil
+}
+
+// Insert creates a new periode.
+func (m *Model) Insert(start, stop time.Time, comment maybe.String) (int, error) {
+	log.Printf("insert event")
+	nextID := m.nextID()
+	if err := m.writeEvent(eventInsert{ID: nextID, Start: start, Stop: stop, Comment: comment}); err != nil {
+		return 0, fmt.Errorf("writing event: %w", err)
+	}
+	return nextID, nil
+}
+
 // Edit changes an existing periode.
 func (m *Model) Edit(id int, start, stop maybe.Time, comment maybe.String) error {
+	log.Printf("Log event for id %d", id)
 	if err := m.writeEvent(eventEdit{ID: id, Start: start, Stop: stop, Comment: comment}); err != nil {
 		return fmt.Errorf("writing event: %w", err)
 	}

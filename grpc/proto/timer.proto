@@ -8,6 +8,8 @@ service Timer {
     rpc Stop(StopRequest) returns (StopResponse);
     rpc List(ListRequest) returns (ListResponse);
     rpc Edit(EditRequest) returns (EditResponse);
+    rpc Insert(InsertRequest) returns (InsertResponse);
+    rpc Delete(DeleteRequest) returns (DeleteResponse);
 }
 
 message StartRequest {
@@ -36,6 +38,7 @@ message Periode {
     int64 start = 2;
     int64 stop = 3;
     string comment = 4;
+    bool hasComment = 5;
 }
 
 message EditRequest {
@@ -49,3 +52,20 @@ message EditRequest {
 }
 
 message EditResponse {}
+
+message InsertRequest {
+    int64 start = 1;
+    int64 stop = 2;
+    string comment = 3;
+    bool hasComment = 4;
+}
+
+message InsertResponse {
+    int32 id = 1;
+}
+
+message DeleteRequest {
+    int32 id = 1;
+}
+
+message DeleteResponse {}

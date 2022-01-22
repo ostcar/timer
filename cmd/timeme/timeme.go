@@ -45,6 +45,8 @@ func rootCmd() *cobra.Command {
 		stopCmd(),
 		listCmd(),
 		editCmd(),
+		insertCmd(),
+		deleteCmd(),
 	)
 
 	return &cmd
@@ -213,6 +215,91 @@ func editCmd() *cobra.Command {
 			Comment:    *comment,
 		}); err != nil {
 			return fmt.Errorf("sending stop request: %w", err)
+		}
+		return nil
+	}
+
+	return &cmd
+}
+
+func insertCmd() *cobra.Command {
+	cmd := cobra.Command{
+		Use:   "insert start stop [comment]",
+		Short: "insert an periode",
+		Long:  "insert a new peridode",
+	}
+
+	timeFormat := cmd.Flags().String("time_format", "2006-01-02 15:04:05", "format string to parse the timestamps. See golang time.")
+
+	cmd.RunE = func(cmd *cobra.Command, args []string) error {
+		client, close, err := connect()
+		if err != nil {
+			return fmt.Errorf("creating client: %w", err)
+		}
+		defer close()
+
+		if len(args) < 3 {
+			return fmt.Errorf("Not enough arguments")
+		}
+
+		start, err := time.Parse(*timeFormat, args[0])
+		if err != nil {
+			return fmt.Errorf("parsing start time: %w", err)
+		}
+
+		stop, err := time.Parse(*timeFormat, args[1])
+		if err != nil {
+			return fmt.Errorf("parsing stop time: %w", err)
+		}
+
+		comment := ""
+		hasComment := false
+		if len(args) >= 3 {
+			hasComment = true
+			comment = args[2]
+		}
+
+		if _, err := client.Insert(context.Background(), &proto.InsertRequest{
+			Start:      start.Unix(),
+			Stop:       stop.Unix(),
+			HasComment: hasComment,
+			Comment:    comment,
+		}); err != nil {
+			return fmt.Errorf("sending insert request: %w", err)
+		}
+		return nil
+	}
+
+	return &cmd
+}
+
+func deleteCmd() *cobra.Command {
+	cmd := cobra.Command{
+		Use:   "delete id",
+		Short: "delete an periode",
+		Long:  "edit an existing periode by its id",
+	}
+
+	cmd.RunE = func(cmd *cobra.Command, args []string) error {
+		client, close, err := connect()
+		if err != nil {
+			return fmt.Errorf("creating client: %w", err)
+		}
+		defer close()
+
+		if len(args) == 0 {
+			return fmt.Errorf("No id given")
+		}
+
+		id, err := strconv.Atoi(args[0])
+		if err != nil {
+			return fmt.Errorf("Invalid id: %w", err)
+		}
+
+		if _, err := client.Delete(context.Background(), &proto.DeleteRequest{
+			Id: int32(id),
+		}); err != nil {
+			return fmt.Errorf("sending delete request: %w", err)
 		}
 		return nil
 	}

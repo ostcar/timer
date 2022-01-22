@@ -22,6 +22,8 @@ type TimerClient interface {
 	Stop(ctx context.Context, in *StopRequest, opts ...grpc.CallOption) (*StopResponse, error)
 	List(ctx context.Context, in *ListRequest, opts ...grpc.CallOption) (*ListResponse, error)
 	Edit(ctx context.Context, in *EditRequest, opts ...grpc.CallOption) (*EditResponse, error)
+	Insert(ctx context.Context, in *InsertRequest, opts ...grpc.CallOption) (*InsertResponse, error)
+	Delete(ctx context.Context, in *DeleteRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
 }
 
 type timerClient struct {
@@ -68,6 +70,24 @@ func (c *timerClient) Edit(ctx context.Context, in *EditRequest, opts ...grpc.Ca
 	return out, nil
 }
 
+func (c *timerClient) Insert(ctx context.Context, in *InsertRequest, opts ...grpc.CallOption) (*InsertResponse, error) {
+	out := new(InsertResponse)
+	err := c.cc.Invoke(ctx, "/Timer/Insert", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *timerClient) Delete(ctx context.Context, in *DeleteRequest, opts ...grpc.CallOption) (*DeleteResponse, error) {
+	out := new(DeleteResponse)
+	err := c.cc.Invoke(ctx, "/Timer/Delete", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // TimerServer is the server API for Timer service.
 // All implementations should embed UnimplementedTimerServer
 // for forward compatibility
@@ -76,6 +96,8 @@ type TimerServer interface {
 	Stop(context.Context, *StopRequest) (*StopResponse, error)
 	List(context.Context, *ListRequest) (*ListResponse, error)
 	Edit(context.Context, *EditRequest) (*EditResponse, error)
+	Insert(context.Context, *InsertRequest) (*InsertResponse, error)
+	Delete(context.Context, *DeleteRequest) (*DeleteResponse, error)
 }
 
 // UnimplementedTimerServer should be embedded to have forward compatible implementations.
@@ -93,6 +115,12 @@ func (UnimplementedTimerServer) List(context.Context, *ListRequest) (*ListRespon
 }
 func (UnimplementedTimerServer) Edit(context.Context, *EditRequest) (*EditResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Edit not implemented")
+}
+func (UnimplementedTimerServer) Insert(context.Context, *InsertRequest) (*InsertResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Insert not implemented")
+}
+func (UnimplementedTimerServer) Delete(context.Context, *DeleteRequest) (*DeleteResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Delete not implemented")
 }
 
 // UnsafeTimerServer may be embedded to opt out of forward compatibility for this service.
@@ -178,6 +206,42 @@ func _Timer_Edit_Handler(srv interface{}, ctx context.Context, dec func(interfac
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Timer_Insert_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(InsertRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TimerServer).Insert(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Timer/Insert",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TimerServer).Insert(ctx, req.(*InsertRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Timer_Delete_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TimerServer).Delete(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Timer/Delete",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TimerServer).Delete(ctx, req.(*DeleteRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Timer_ServiceDesc is the grpc.ServiceDesc for Timer service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -200,6 +264,14 @@ var Timer_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Edit",
 			Handler:    _Timer_Edit_Handler,
+		},
+		{
+			MethodName: "Insert",
+			Handler:    _Timer_Insert_Handler,
+		},
+		{
+			MethodName: "Delete",
+			Handler:    _Timer_Delete_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
