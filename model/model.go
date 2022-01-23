@@ -135,12 +135,12 @@ func (m *Model) writeEvent(e Event) (err error) {
 
 	now := time.Now()
 	event := struct {
-		Type    string `json:"type"`
 		Time    string `json:"time"`
+		Type    string `json:"type"`
 		Payload Event  `json:"payload"`
 	}{
-		e.Name(),
 		now.Format(timeFormat),
+		e.Name(),
 		e,
 	}
 
