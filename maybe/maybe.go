@@ -60,6 +60,52 @@ func (m *String) UnmarshalJSON(bs []byte) error {
 	return nil
 }
 
+// Int64 is a int64 or null.
+type Int64 struct {
+	value int64
+	set   bool
+}
+
+// NewInt64 create a new maybe.Int64 with a value.
+//
+// To create a null-maybe-int64, just use the zero-value.
+func NewInt64(value int64) Int64 {
+	return Int64{value: value, set: true}
+}
+
+// Value returns the value and with the second return argument, if the value is
+// set.
+func (m Int64) Value() (int64, bool) {
+	if m.set {
+		return m.value, true
+	}
+	return 0, false
+}
+
+// MarshalJSON encodes the value from json.
+func (m Int64) MarshalJSON() ([]byte, error) {
+	v, ok := m.Value()
+	if !ok {
+		return []byte("null"), nil
+	}
+	return json.Marshal(v)
+}
+
+// UnmarshalJSON decodes the value from json.
+func (m *Int64) UnmarshalJSON(bs []byte) error {
+	if string(bs) == "null" {
+		m.value = 0
+		m.set = false
+		return nil
+	}
+
+	if err := json.Unmarshal(bs, &m.value); err != nil {
+		return fmt.Errorf("unmarshaling value: %w", err)
+	}
+	m.set = true
+	return nil
+}
+
 const timeFormat = "2006-01-02 15:04:05"
 
 // Time is a string or null.

@@ -3,7 +3,9 @@ module Main exposing (main)
 import Browser
 import Html exposing (..)
 import Html.Attributes exposing (..)
+import Html.Events exposing (..)
 import Http
+import Json.Encode as Encode
 import Periode
 import Time exposing (utc)
 import Time.Format
@@ -24,11 +26,17 @@ type alias Model =
     { periodes : List Periode.Periode
     , current : Periode.Current
     , fetchErrMsg : Maybe String
+    , comment : String
     }
 
 
 type Msg
     = ReceiveState (Result Http.Error Periode.State)
+    | SaveComment String
+    | SendStart
+    | SendStop
+    | SendDelete Periode.ID
+    | ReceiveEvent (Result Http.Error ())
 
 
 init : flags -> ( Model, Cmd Msg )
@@ -36,6 +44,7 @@ init _ =
     ( { periodes = []
       , current = Periode.Stopped
       , fetchErrMsg = Nothing
+      , comment = ""
       }
     , Periode.fetch ReceiveState
     )
@@ -47,7 +56,16 @@ update msg model =
         ReceiveState response ->
             case response of
                 Ok a ->
-                    ( { model | periodes = a.periodes, current = a.current, fetchErrMsg = Nothing }
+                    let
+                        comment =
+                            case a.current of
+                                Periode.Stopped ->
+                                    ""
+
+                                Periode.Started _ text ->
+                                    Maybe.withDefault "" text
+                    in
+                    ( { model | periodes = a.periodes, current = a.current, comment = comment, fetchErrMsg = Nothing }
                     , Cmd.none
                     )
 
@@ -56,30 +74,118 @@ update msg model =
                     , Cmd.none
                     )
 
+        SaveComment comment ->
+            ( { model | comment = comment }
+            , Cmd.none
+            )
+
+        SendStart ->
+            ( model
+            , sendStartStop "start" ReceiveEvent model.comment
+            )
+
+        SendStop ->
+            ( model
+            , sendStartStop "stop" ReceiveEvent model.comment
+            )
+
+        SendDelete id ->
+            ( model
+            , sendDelete ReceiveEvent id
+            )
+
+        ReceiveEvent response ->
+            case response of
+                Ok _ ->
+                    ( model
+                    , Periode.fetch ReceiveState
+                    )
+
+                Err e ->
+                    ( { model | periodes = [], current = Periode.Stopped, fetchErrMsg = Just (buildErrorMessage e) }
+                    , Cmd.none
+                    )
+
+
+sendStartStop : String -> (Result Http.Error () -> Msg) -> String -> Cmd Msg
+sendStartStop startStop result comment =
+    Http.post
+        { url = "/api/" ++ startStop
+        , body = Http.jsonBody (commentEncoder comment)
+        , expect = Http.expectWhatever result
+        }
+
+
+sendDelete : (Result Http.Error () -> Msg) -> Periode.ID -> Cmd Msg
+sendDelete result id =
+    Http.request
+        { method = "DELETE"
+        , headers = []
+        , url = "/api/periode/" ++ Periode.idToString id
+        , body = Http.emptyBody
+        , expect = Http.expectWhatever result
+        , timeout = Nothing
+        , tracker = Nothing
+        }
+
+
+commentEncoder : String -> Encode.Value
+commentEncoder comment =
+    Encode.object
+        [ ( "comment", Encode.string comment ) ]
+
 
 view : Model -> Html Msg
 view model =
     div []
-        [ viewCurrent model.current
+        [ viewCurrent model.current model.comment
         , viewPeriodes model.periodes model.fetchErrMsg
         ]
 
 
-viewCurrent : Periode.Current -> Html Msg
-viewCurrent current =
+viewCurrent : Periode.Current -> String -> Html Msg
+viewCurrent current comment =
     case current of
         Periode.Stopped ->
-            div [ class "btn btn-primary" ] [ text "Start" ]
+            viewStartStopButton Start comment
 
-        Periode.Started ( start, maybeComment ) ->
+        Periode.Started start maybeComment ->
             let
-                comment =
+                currentComment =
                     Maybe.withDefault "" maybeComment
             in
             div []
-                [ div [ class "btn btn-primary" ] [ text "Stop" ]
-                , div [] [ text ("running since " ++ posixToString start ++ ": " ++ comment) ]
+                [ viewStartStopButton Stop comment
+                , div [] [ text ("running since " ++ posixToString start ++ ": " ++ currentComment) ]
                 ]
+
+
+type StartStop
+    = Start
+    | Stop
+
+
+viewStartStopButton : StartStop -> String -> Html Msg
+viewStartStopButton startStop comment =
+    let
+        ( event, buttonText ) =
+            case startStop of
+                Start ->
+                    ( SendStart, "Start" )
+
+                Stop ->
+                    ( SendStop, "Stop" )
+    in
+    div []
+        [ button [ class "btn btn-primary", onClick event ] [ text buttonText ]
+        , input
+            [ id "comment"
+            , type_ "text"
+            , value comment
+            , onInput SaveComment
+            ]
+            []
+        ]
 
 
 viewPeriodes : List Periode.Periode -> Maybe String -> Html Msg
@@ -91,7 +197,7 @@ viewPeriodes periodes error =
         Nothing ->
             table [ Html.Attributes.class "table" ]
                 [ viewPeriodeHeader
-                , tbody [] (List.map viewPeriodeLine periodes)
+                , tbody [] (List.map viewPeriodeLine (Periode.sort periodes))
                 ]
 
 
@@ -102,6 +208,7 @@ viewPeriodeHeader =
             [ th [ scope "col", class "time" ] [ text "Start" ]
             , th [ scope "col", class "time" ] [ text "Stop" ]
             , th [ scope "col" ] [ text "Comment" ]
+            , th [ scope "col", class "actions" ] [ text "#" ]
             ]
         ]
 
@@ -112,6 +219,7 @@ viewPeriodeLine periode =
         [ td [] [ text (posixToString periode.start) ]
         , td [] [ text (posixToString periode.stop) ]
         , td [] [ text (Maybe.withDefault "" periode.comment) ]
+        , td [] [ button [ type_ "button", class "btn btn-danger", onClick (SendDelete periode.id) ] [ text "X" ] ]
         ]
 
 

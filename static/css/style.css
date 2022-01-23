@@ -1,3 +1,7 @@
 th.time {
     width: 1px;
 }
+
+th.action {
+    text-align: end;
+}

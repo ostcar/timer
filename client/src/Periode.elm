@@ -1,4 +1,4 @@
-module Periode exposing (Current(..), ID(..), Periode, ServerState, State, fetch, idDecoder, periodeDecoder, periodeListDecoder, serverStateToState, stateDecoder, timeDecoder)
+module Periode exposing (Current(..), ID(..), Periode, ServerState, State, fetch, idDecoder, idToString, periodeDecoder, periodeListDecoder, serverStateToState, sort, stateDecoder, timeDecoder)
 
 import Http
 import Json.Decode as Decode exposing (Decoder, bool, int, map, string)
@@ -8,7 +8,7 @@ import Time
 
 type Current
     = Stopped
-    | Started ( Time.Posix, Maybe String )
+    | Started Time.Posix (Maybe String)
 
 
 type alias Periode =
@@ -63,7 +63,7 @@ serverStateToState data =
     let
         current =
             if data.running then
-                Started ( data.start, data.comment )
+                Started data.start data.comment
 
             else
                 Stopped
@@ -75,6 +75,11 @@ serverStateToState data =
 
 type ID
     = ID Int
+
+
+idToString : ID -> String
+idToString (ID id) =
+    String.fromInt id
 
 
 idDecoder : Decoder ID
@@ -95,3 +100,8 @@ fetch result =
             stateDecoder
                 |> Http.expectJson result
         }
+
+
+sort : List Periode -> List Periode
+sort periodes =
+    List.sortBy (\p -> Time.posixToMillis p.start) periodes

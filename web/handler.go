@@ -7,7 +7,9 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/ostcar/timer/maybe"
@@ -32,8 +34,10 @@ func registerHandlers(router *mux.Router, model *model.Model, defaultFiles Defau
 	handleElmJS(router, defaultFiles.Elm)
 	handleIndex(router, defaultFiles.Index)
 	handleStatic(router, fileSystem)
+	handleStart(router, model)
+	handleStop(router, model)
 
-	handleList(router, model)
+	handlePeriode(router, model)
 }
 
 type responselogger struct {
@@ -64,8 +68,7 @@ func handleIndex(router *mux.Router, defaultContent []byte) {
 		bs, err := os.ReadFile("client/index.html")
 		if err != nil {
 			if !errors.Is(err, os.ErrNotExist) {
-				log.Println(err)
-				http.Error(w, "Internal", 500)
+				handleError(w, err)
 				return
 			}
 			bs = defaultContent
@@ -88,8 +91,7 @@ func handleElmJS(router *mux.Router, defaultContent []byte) {
 		bs, err := os.ReadFile("client/elm.js")
 		if err != nil {
 			if !errors.Is(err, os.ErrNotExist) {
-				log.Println(err)
-				http.Error(w, "Internal", 500)
+				handleError(w, err)
 				return
 			}
 			bs = defaultContent
@@ -107,7 +109,10 @@ func handleStatic(router *mux.Router, fileSystem fs.FS) {
 	router.PathPrefix(pathPrefixStatic).Handler(http.StripPrefix(pathPrefixStatic, http.FileServer(http.FS(fileSystem))))
 }
 
-func handleList(router *mux.Router, model *model.Model) {
+func handlePeriode(router *mux.Router, model *model.Model) {
+	pathList := pathPrefixAPI + "/periode"
+	pathSingle := pathList + "/{id}"
+
 	type periode struct {
 		ID      int          `json:"id"`
 		Start   int64        `json:"start"`
@@ -115,7 +120,8 @@ func handleList(router *mux.Router, model *model.Model) {
 		Comment maybe.String `json:"comment"`
 	}
 
-	handler := func(w http.ResponseWriter, r *http.Request) {
+	// List Handler
+	router.Path(pathList).Methods("GET").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		modelPeriodes := model.List()
 		outPeriodes := make([]periode, len(modelPeriodes))
 		for i, p := range modelPeriodes {
@@ -142,10 +148,157 @@ func handleList(router *mux.Router, model *model.Model) {
 		}
 
 		if err := json.NewEncoder(w).Encode(data); err != nil {
-			log.Println(err)
-			http.Error(w, "Internal", 500)
+			handleError(w, err)
+			return
+		}
+	})
+
+	// Create Handler
+	router.Path(pathList).Methods("POST").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var content struct {
+			Start   int64        `json:"start"`
+			Stop    int64        `json:"stop"`
+			Content maybe.String `json:"content"`
+		}
+
+		if err := json.NewDecoder(r.Body).Decode(&content); err != nil {
+			handleError(w, err)
+			return
+		}
+
+		id, err := model.Insert(time.Unix(content.Start, 0), time.Unix(content.Stop, 0), content.Content)
+		if err != nil {
+			handleError(w, err)
+			return
+		}
+
+		response := struct {
+			ID int `json:"id"`
+		}{
+			ID: id,
+		}
+		if err := json.NewEncoder(w).Encode(response); err != nil {
+			handleError(w, err)
+			return
+		}
+	})
+
+	// Edit Handler
+	router.Path(pathSingle).Methods("PUT").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id, _ := strconv.Atoi(mux.Vars(r)["id"])
+
+		var content struct {
+			Start   maybe.Int64  `json:"start"`
+			Stop    maybe.Int64  `json:"stop"`
+			Content maybe.String `json:"content"`
+		}
+
+		if err := json.NewDecoder(r.Body).Decode(&content); err != nil {
+			handleError(w, err)
+			return
+		}
+
+		start := maybe.Time{}
+		if v, ok := content.Start.Value(); ok {
+			start = maybe.NewTime(time.Unix(v, 0))
+		}
+
+		stop := maybe.Time{}
+		if v, ok := content.Stop.Value(); ok {
+			stop = maybe.NewTime(time.Unix(v, 0))
+		}
+
+		if err := model.Edit(id, start, stop, content.Content); err != nil {
+			handleError(w, err)
+			return
+		}
+	})
+
+	// Delete Handler
+	router.Path(pathSingle).Methods("DELETE").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id, _ := strconv.Atoi(mux.Vars(r)["id"])
+
+		if err := model.Delete(id); err != nil {
+			handleError(w, err)
+			return
+		}
+	})
+}
+
+func handleStart(router *mux.Router, model *model.Model) {
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		var content struct {
+			Comment maybe.String `json:"comment"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&content); err != nil {
+			handleError(w, err)
+			return
+		}
+
+		if err := model.Start(content.Comment); err != nil {
+			handleError(w, err)
+			return
 		}
 	}
 
-	router.Path(pathPrefixAPI + "/periode").Methods("GET").HandlerFunc(handler)
+	router.Path(pathPrefixAPI + "/start").Methods("POST").HandlerFunc(handler)
+}
+
+func handleStop(router *mux.Router, model *model.Model) {
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		var content struct {
+			Comment maybe.String `json:"comment"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&content); err != nil {
+			handleError(w, err)
+			return
+		}
+
+		id, err := model.Stop(content.Comment)
+		if err != nil {
+			handleError(w, err)
+			return
+		}
+
+		response := struct {
+			ID int `json:"id"`
+		}{
+			ID: id,
+		}
+		if err := json.NewEncoder(w).Encode(response); err != nil {
+			handleError(w, err)
+			return
+		}
+	}
+
+	router.Path(pathPrefixAPI + "/stop").Methods("POST").HandlerFunc(handler)
+}
+
+func handleError(w http.ResponseWriter, err error) {
+	msg := "Interner Fehler"
+	status := 500
+	var skipLog bool
+
+	var forClient interface {
+		forClient() string
+	}
+	if errors.As(err, &forClient) {
+		msg = forClient.forClient()
+		status = 400
+		//skipLog = true
+	}
+
+	var httpStatus interface {
+		httpStatus() int
+	}
+	if errors.As(err, &httpStatus) {
+		status = httpStatus.httpStatus()
+	}
+
+	if !skipLog {
+		log.Printf("Error: %v", err)
+	}
+
+	http.Error(w, msg, status)
+	return
 }

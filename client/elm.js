@@ -6359,12 +6359,12 @@ var $author$project$Periode$periodeDecoder = A4(
 				$author$project$Periode$idDecoder,
 				$elm$json$Json$Decode$succeed($author$project$Periode$Periode)))));
 var $author$project$Periode$periodeListDecoder = $elm$json$Json$Decode$list($author$project$Periode$periodeDecoder);
-var $author$project$Periode$Started = function (a) {
-	return {$: 'Started', a: a};
-};
+var $author$project$Periode$Started = F2(
+	function (a, b) {
+		return {$: 'Started', a: a, b: b};
+	});
 var $author$project$Periode$serverStateToState = function (data) {
-	var current = data.running ? $author$project$Periode$Started(
-		_Utils_Tuple2(data.start, data.comment)) : $author$project$Periode$Stopped;
+	var current = data.running ? A2($author$project$Periode$Started, data.start, data.comment) : $author$project$Periode$Stopped;
 	return {current: current, periodes: data.periodes};
 };
 var $author$project$Periode$stateDecoder = A2(
@@ -6397,11 +6397,14 @@ var $author$project$Periode$fetch = function (result) {
 };
 var $author$project$Main$init = function (_v0) {
 	return _Utils_Tuple2(
-		{current: $author$project$Periode$Stopped, fetchErrMsg: $elm$core$Maybe$Nothing, periodes: _List_Nil},
+		{comment: '', current: $author$project$Periode$Stopped, fetchErrMsg: $elm$core$Maybe$Nothing, periodes: _List_Nil},
 		$author$project$Periode$fetch($author$project$Main$ReceiveState));
 };
 var $elm$core$Platform$Sub$batch = _Platform_batch;
 var $elm$core$Platform$Sub$none = $elm$core$Platform$Sub$batch(_List_Nil);
+var $author$project$Main$ReceiveEvent = function (a) {
+	return {$: 'ReceiveEvent', a: a};
+};
 var $author$project$Main$buildErrorMessage = function (httpError) {
 	switch (httpError.$) {
 		case 'BadUrl':
@@ -6421,40 +6424,170 @@ var $author$project$Main$buildErrorMessage = function (httpError) {
 };
 var $elm$core$Platform$Cmd$batch = _Platform_batch;
 var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
+var $elm$http$Http$expectBytesResponse = F2(
+	function (toMsg, toResult) {
+		return A3(
+			_Http_expect,
+			'arraybuffer',
+			_Http_toDataView,
+			A2($elm$core$Basics$composeR, toResult, toMsg));
+	});
+var $elm$http$Http$expectWhatever = function (toMsg) {
+	return A2(
+		$elm$http$Http$expectBytesResponse,
+		toMsg,
+		$elm$http$Http$resolve(
+			function (_v0) {
+				return $elm$core$Result$Ok(_Utils_Tuple0);
+			}));
+};
+var $author$project$Periode$idToString = function (_v0) {
+	var id = _v0.a;
+	return $elm$core$String$fromInt(id);
+};
+var $author$project$Main$sendDelete = F2(
+	function (result, id) {
+		return $elm$http$Http$request(
+			{
+				body: $elm$http$Http$emptyBody,
+				expect: $elm$http$Http$expectWhatever(result),
+				headers: _List_Nil,
+				method: 'DELETE',
+				timeout: $elm$core$Maybe$Nothing,
+				tracker: $elm$core$Maybe$Nothing,
+				url: '/api/periode/' + $author$project$Periode$idToString(id)
+			});
+	});
+var $elm$json$Json$Encode$object = function (pairs) {
+	return _Json_wrap(
+		A3(
+			$elm$core$List$foldl,
+			F2(
+				function (_v0, obj) {
+					var k = _v0.a;
+					var v = _v0.b;
+					return A3(_Json_addField, k, v, obj);
+				}),
+			_Json_emptyObject(_Utils_Tuple0),
+			pairs));
+};
+var $elm$json$Json$Encode$string = _Json_wrap;
+var $author$project$Main$commentEncoder = function (comment) {
+	return $elm$json$Json$Encode$object(
+		_List_fromArray(
+			[
+				_Utils_Tuple2(
+				'comment',
+				$elm$json$Json$Encode$string(comment))
+			]));
+};
+var $elm$http$Http$jsonBody = function (value) {
+	return A2(
+		_Http_pair,
+		'application/json',
+		A2($elm$json$Json$Encode$encode, 0, value));
+};
+var $elm$http$Http$post = function (r) {
+	return $elm$http$Http$request(
+		{body: r.body, expect: r.expect, headers: _List_Nil, method: 'POST', timeout: $elm$core$Maybe$Nothing, tracker: $elm$core$Maybe$Nothing, url: r.url});
+};
+var $author$project$Main$sendStartStop = F3(
+	function (startStop, result, comment) {
+		return $elm$http$Http$post(
+			{
+				body: $elm$http$Http$jsonBody(
+					$author$project$Main$commentEncoder(comment)),
+				expect: $elm$http$Http$expectWhatever(result),
+				url: '/api/' + startStop
+			});
+	});
+var $elm$core$Maybe$withDefault = F2(
+	function (_default, maybe) {
+		if (maybe.$ === 'Just') {
+			var value = maybe.a;
+			return value;
+		} else {
+			return _default;
+		}
+	});
 var $author$project$Main$update = F2(
 	function (msg, model) {
-		var response = msg.a;
-		if (response.$ === 'Ok') {
-			var a = response.a;
-			return _Utils_Tuple2(
-				_Utils_update(
+		switch (msg.$) {
+			case 'ReceiveState':
+				var response = msg.a;
+				if (response.$ === 'Ok') {
+					var a = response.a;
+					var comment = function () {
+						var _v2 = a.current;
+						if (_v2.$ === 'Stopped') {
+							return '';
+						} else {
+							var text = _v2.b;
+							return A2($elm$core$Maybe$withDefault, '', text);
+						}
+					}();
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{comment: comment, current: a.current, fetchErrMsg: $elm$core$Maybe$Nothing, periodes: a.periodes}),
+						$elm$core$Platform$Cmd$none);
+				} else {
+					var e = response.a;
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{
+								current: $author$project$Periode$Stopped,
+								fetchErrMsg: $elm$core$Maybe$Just(
+									$author$project$Main$buildErrorMessage(e)),
+								periodes: _List_Nil
+							}),
+						$elm$core$Platform$Cmd$none);
+				}
+			case 'SaveComment':
+				var comment = msg.a;
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{comment: comment}),
+					$elm$core$Platform$Cmd$none);
+			case 'SendStart':
+				return _Utils_Tuple2(
 					model,
-					{current: a.current, fetchErrMsg: $elm$core$Maybe$Nothing, periodes: a.periodes}),
-				$elm$core$Platform$Cmd$none);
-		} else {
-			var e = response.a;
-			return _Utils_Tuple2(
-				_Utils_update(
+					A3($author$project$Main$sendStartStop, 'start', $author$project$Main$ReceiveEvent, model.comment));
+			case 'SendStop':
+				return _Utils_Tuple2(
 					model,
-					{
-						current: $author$project$Periode$Stopped,
-						fetchErrMsg: $elm$core$Maybe$Just(
-							$author$project$Main$buildErrorMessage(e)),
-						periodes: _List_Nil
-					}),
-				$elm$core$Platform$Cmd$none);
+					A3($author$project$Main$sendStartStop, 'stop', $author$project$Main$ReceiveEvent, model.comment));
+			case 'SendDelete':
+				var id = msg.a;
+				return _Utils_Tuple2(
+					model,
+					A2($author$project$Main$sendDelete, $author$project$Main$ReceiveEvent, id));
+			default:
+				var response = msg.a;
+				if (response.$ === 'Ok') {
+					return _Utils_Tuple2(
+						model,
+						$author$project$Periode$fetch($author$project$Main$ReceiveState));
+				} else {
+					var e = response.a;
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{
+								current: $author$project$Periode$Stopped,
+								fetchErrMsg: $elm$core$Maybe$Just(
+									$author$project$Main$buildErrorMessage(e)),
+								periodes: _List_Nil
+							}),
+						$elm$core$Platform$Cmd$none);
+				}
 		}
 	});
 var $elm$html$Html$div = _VirtualDom_node('div');
-var $elm$json$Json$Encode$string = _Json_wrap;
-var $elm$html$Html$Attributes$stringProperty = F2(
-	function (key, string) {
-		return A2(
-			_VirtualDom_property,
-			key,
-			$elm$json$Json$Encode$string(string));
-	});
-var $elm$html$Html$Attributes$class = $elm$html$Html$Attributes$stringProperty('className');
+var $author$project$Main$Start = {$: 'Start'};
+var $author$project$Main$Stop = {$: 'Stop'};
 var $elm$time$Time$Mon = {$: 'Mon'};
 var $CoderDennis$elm_time_format$Time$Format$I18n$I_de_de$dayName = function (day) {
 	switch (day.$) {
@@ -6575,15 +6708,6 @@ var $elm$regex$Regex$fromString = function (string) {
 		string);
 };
 var $elm$regex$Regex$never = _Regex_never;
-var $elm$core$Maybe$withDefault = F2(
-	function (_default, maybe) {
-		if (maybe.$ === 'Just') {
-			var value = maybe.a;
-			return value;
-		} else {
-			return _default;
-		}
-	});
 var $CoderDennis$elm_time_format$Time$Format$formatRegex = A2(
 	$elm$core$Maybe$withDefault,
 	$elm$regex$Regex$never,
@@ -7050,48 +7174,140 @@ var $author$project$Main$posixToString = function (time) {
 };
 var $elm$virtual_dom$VirtualDom$text = _VirtualDom_text;
 var $elm$html$Html$text = $elm$virtual_dom$VirtualDom$text;
-var $author$project$Main$viewCurrent = function (current) {
-	if (current.$ === 'Stopped') {
+var $author$project$Main$SaveComment = function (a) {
+	return {$: 'SaveComment', a: a};
+};
+var $author$project$Main$SendStart = {$: 'SendStart'};
+var $author$project$Main$SendStop = {$: 'SendStop'};
+var $elm$html$Html$button = _VirtualDom_node('button');
+var $elm$html$Html$Attributes$stringProperty = F2(
+	function (key, string) {
 		return A2(
-			$elm$html$Html$div,
-			_List_fromArray(
-				[
-					$elm$html$Html$Attributes$class('btn btn-primary')
-				]),
-			_List_fromArray(
-				[
-					$elm$html$Html$text('Start')
-				]));
-	} else {
-		var _v1 = current.a;
-		var start = _v1.a;
-		var maybeComment = _v1.b;
-		var comment = A2($elm$core$Maybe$withDefault, '', maybeComment);
+			_VirtualDom_property,
+			key,
+			$elm$json$Json$Encode$string(string));
+	});
+var $elm$html$Html$Attributes$class = $elm$html$Html$Attributes$stringProperty('className');
+var $elm$html$Html$Attributes$id = $elm$html$Html$Attributes$stringProperty('id');
+var $elm$html$Html$input = _VirtualDom_node('input');
+var $elm$virtual_dom$VirtualDom$Normal = function (a) {
+	return {$: 'Normal', a: a};
+};
+var $elm$virtual_dom$VirtualDom$on = _VirtualDom_on;
+var $elm$html$Html$Events$on = F2(
+	function (event, decoder) {
+		return A2(
+			$elm$virtual_dom$VirtualDom$on,
+			event,
+			$elm$virtual_dom$VirtualDom$Normal(decoder));
+	});
+var $elm$html$Html$Events$onClick = function (msg) {
+	return A2(
+		$elm$html$Html$Events$on,
+		'click',
+		$elm$json$Json$Decode$succeed(msg));
+};
+var $elm$html$Html$Events$alwaysStop = function (x) {
+	return _Utils_Tuple2(x, true);
+};
+var $elm$virtual_dom$VirtualDom$MayStopPropagation = function (a) {
+	return {$: 'MayStopPropagation', a: a};
+};
+var $elm$html$Html$Events$stopPropagationOn = F2(
+	function (event, decoder) {
+		return A2(
+			$elm$virtual_dom$VirtualDom$on,
+			event,
+			$elm$virtual_dom$VirtualDom$MayStopPropagation(decoder));
+	});
+var $elm$html$Html$Events$targetValue = A2(
+	$elm$json$Json$Decode$at,
+	_List_fromArray(
+		['target', 'value']),
+	$elm$json$Json$Decode$string);
+var $elm$html$Html$Events$onInput = function (tagger) {
+	return A2(
+		$elm$html$Html$Events$stopPropagationOn,
+		'input',
+		A2(
+			$elm$json$Json$Decode$map,
+			$elm$html$Html$Events$alwaysStop,
+			A2($elm$json$Json$Decode$map, tagger, $elm$html$Html$Events$targetValue)));
+};
+var $elm$html$Html$Attributes$type_ = $elm$html$Html$Attributes$stringProperty('type');
+var $elm$html$Html$Attributes$value = $elm$html$Html$Attributes$stringProperty('value');
+var $author$project$Main$viewStartStopButton = F2(
+	function (startStop, comment) {
+		var _v0 = function () {
+			if (startStop.$ === 'Start') {
+				return _Utils_Tuple2($author$project$Main$SendStart, 'Start');
+			} else {
+				return _Utils_Tuple2($author$project$Main$SendStop, 'Stop');
+			}
+		}();
+		var event = _v0.a;
+		var buttonText = _v0.b;
 		return A2(
 			$elm$html$Html$div,
 			_List_Nil,
 			_List_fromArray(
 				[
 					A2(
-					$elm$html$Html$div,
+					$elm$html$Html$button,
 					_List_fromArray(
 						[
-							$elm$html$Html$Attributes$class('btn btn-primary')
+							$elm$html$Html$Attributes$class('btn btn-primary'),
+							$elm$html$Html$Events$onClick(event)
 						]),
 					_List_fromArray(
 						[
-							$elm$html$Html$text('Stop')
+							$elm$html$Html$text(buttonText)
 						])),
 					A2(
-					$elm$html$Html$div,
-					_List_Nil,
+					$elm$html$Html$input,
 					_List_fromArray(
 						[
-							$elm$html$Html$text(
-							'running since ' + ($author$project$Main$posixToString(start) + (': ' + comment)))
-						]))
+							$elm$html$Html$Attributes$id('comment'),
+							$elm$html$Html$Attributes$type_('text'),
+							$elm$html$Html$Attributes$value(comment),
+							$elm$html$Html$Events$onInput($author$project$Main$SaveComment)
+						]),
+					_List_Nil)
 				]));
-	}
+	});
+var $author$project$Main$viewCurrent = F2(
+	function (current, comment) {
+		if (current.$ === 'Stopped') {
+			return A2($author$project$Main$viewStartStopButton, $author$project$Main$Start, comment);
+		} else {
+			var start = current.a;
+			var maybeComment = current.b;
+			var currentComment = A2($elm$core$Maybe$withDefault, '', maybeComment);
+			return A2(
+				$elm$html$Html$div,
+				_List_Nil,
+				_List_fromArray(
+					[
+						A2($author$project$Main$viewStartStopButton, $author$project$Main$Stop, comment),
+						A2(
+						$elm$html$Html$div,
+						_List_Nil,
+						_List_fromArray(
+							[
+								$elm$html$Html$text(
+								'running since ' + ($author$project$Main$posixToString(start) + (': ' + currentComment)))
+							]))
+					]));
+		}
+	});
+var $elm$core$List$sortBy = _List_sortBy;
+var $author$project$Periode$sort = function (periodes) {
+	return A2(
+		$elm$core$List$sortBy,
+		function (p) {
+			return $elm$time$Time$posixToMillis(p.start);
+		},
+		periodes);
 };
 var $elm$html$Html$table = _VirtualDom_node('table');
 var $elm$html$Html$tbody = _VirtualDom_node('tbody');
@@ -7140,9 +7356,23 @@ var $author$project$Main$viewPeriodeHeader = A2(
 					_List_fromArray(
 						[
 							$elm$html$Html$text('Comment')
+						])),
+					A2(
+					$elm$html$Html$th,
+					_List_fromArray(
+						[
+							$elm$html$Html$Attributes$scope('col'),
+							$elm$html$Html$Attributes$class('actions')
+						]),
+					_List_fromArray(
+						[
+							$elm$html$Html$text('#')
 						]))
 				]))
 		]));
+var $author$project$Main$SendDelete = function (a) {
+	return {$: 'SendDelete', a: a};
+};
 var $elm$html$Html$td = _VirtualDom_node('td');
 var $author$project$Main$viewPeriodeLine = function (periode) {
 	return A2(
@@ -7173,6 +7403,25 @@ var $author$project$Main$viewPeriodeLine = function (periode) {
 					[
 						$elm$html$Html$text(
 						A2($elm$core$Maybe$withDefault, '', periode.comment))
+					])),
+				A2(
+				$elm$html$Html$td,
+				_List_Nil,
+				_List_fromArray(
+					[
+						A2(
+						$elm$html$Html$button,
+						_List_fromArray(
+							[
+								$elm$html$Html$Attributes$type_('button'),
+								$elm$html$Html$Attributes$class('btn btn-danger'),
+								$elm$html$Html$Events$onClick(
+								$author$project$Main$SendDelete(periode.id))
+							]),
+						_List_fromArray(
+							[
+								$elm$html$Html$text('X')
+							]))
 					]))
 			]));
 };
@@ -7200,7 +7449,10 @@ var $author$project$Main$viewPeriodes = F2(
 						A2(
 						$elm$html$Html$tbody,
 						_List_Nil,
-						A2($elm$core$List$map, $author$project$Main$viewPeriodeLine, periodes))
+						A2(
+							$elm$core$List$map,
+							$author$project$Main$viewPeriodeLine,
+							$author$project$Periode$sort(periodes)))
 					]));
 		}
 	});
@@ -7210,7 +7462,7 @@ var $author$project$Main$view = function (model) {
 		_List_Nil,
 		_List_fromArray(
 			[
-				$author$project$Main$viewCurrent(model.current),
+				A2($author$project$Main$viewCurrent, model.current, model.comment),
 				A2($author$project$Main$viewPeriodes, model.periodes, model.fetchErrMsg)
 			]));
 };
