@@ -158,7 +158,7 @@ func handlePeriode(router *mux.Router, model *model.Model) {
 		var content struct {
 			Start   int64        `json:"start"`
 			Stop    int64        `json:"stop"`
-			Content maybe.String `json:"content"`
+			Content maybe.String `json:"comment"`
 		}
 
 		if err := json.NewDecoder(r.Body).Decode(&content); err != nil {

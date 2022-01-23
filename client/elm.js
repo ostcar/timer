@@ -4532,6 +4532,52 @@ function _Http_track(router, xhr, tracker)
 	});
 }
 
+
+function _Time_now(millisToPosix)
+{
+	return _Scheduler_binding(function(callback)
+	{
+		callback(_Scheduler_succeed(millisToPosix(Date.now())));
+	});
+}
+
+var _Time_setInterval = F2(function(interval, task)
+{
+	return _Scheduler_binding(function(callback)
+	{
+		var id = setInterval(function() { _Scheduler_rawSpawn(task); }, interval);
+		return function() { clearInterval(id); };
+	});
+});
+
+function _Time_here()
+{
+	return _Scheduler_binding(function(callback)
+	{
+		callback(_Scheduler_succeed(
+			A2($elm$time$Time$customZone, -(new Date().getTimezoneOffset()), _List_Nil)
+		));
+	});
+}
+
+
+function _Time_getZoneName()
+{
+	return _Scheduler_binding(function(callback)
+	{
+		try
+		{
+			var name = $elm$time$Time$Name(Intl.DateTimeFormat().resolvedOptions().timeZone);
+		}
+		catch (e)
+		{
+			var name = $elm$time$Time$Offset(new Date().getTimezoneOffset());
+		}
+		callback(_Scheduler_succeed(name));
+	});
+}
+
+
 // CREATE
 
 var _Regex_never = /.^/;
@@ -6397,11 +6443,1525 @@ var $author$project$Periode$fetch = function (result) {
 };
 var $author$project$Main$init = function (_v0) {
 	return _Utils_Tuple2(
-		{comment: '', current: $author$project$Periode$Stopped, fetchErrMsg: $elm$core$Maybe$Nothing, insert: $elm$core$Maybe$Nothing, periodes: _List_Nil},
+		{
+			comment: '',
+			current: $author$project$Periode$Stopped,
+			currentTime: $elm$time$Time$millisToPosix(0),
+			fetchErrMsg: $elm$core$Maybe$Nothing,
+			insert: $elm$core$Maybe$Nothing,
+			periodes: _List_Nil
+		},
 		$author$project$Periode$fetch($author$project$Main$ReceiveState));
 };
+var $author$project$Main$Tick = function (a) {
+	return {$: 'Tick', a: a};
+};
+var $author$project$Main$UpdatePicker = function (a) {
+	return {$: 'UpdatePicker', a: a};
+};
 var $elm$core$Platform$Sub$batch = _Platform_batch;
+var $mercurymedia$elm_datetime_picker$DurationDatePicker$AlwaysVisible = function (a) {
+	return {$: 'AlwaysVisible', a: a};
+};
+var $elm$time$Time$Mon = {$: 'Mon'};
+var $mercurymedia$elm_datetime_picker$DatePicker$Utilities$dayToNameString = function (day) {
+	switch (day.$) {
+		case 'Mon':
+			return 'Mo';
+		case 'Tue':
+			return 'Tu';
+		case 'Wed':
+			return 'We';
+		case 'Thu':
+			return 'Th';
+		case 'Fri':
+			return 'Fr';
+		case 'Sat':
+			return 'Sa';
+		default:
+			return 'Su';
+	}
+};
+var $mercurymedia$elm_datetime_picker$DurationDatePicker$defaultTimePickerSettings = {
+	allowedTimesOfDay: F2(
+		function (_v0, _v1) {
+			return {endHour: 23, endMinute: 59, startHour: 0, startMinute: 0};
+		}),
+	timeStringFn: F2(
+		function (_v2, _v3) {
+			return '';
+		})
+};
+var $mercurymedia$elm_datetime_picker$DatePicker$Utilities$monthToNameString = function (month) {
+	switch (month.$) {
+		case 'Jan':
+			return 'Jan';
+		case 'Feb':
+			return 'Feb';
+		case 'Mar':
+			return 'Mar';
+		case 'Apr':
+			return 'Apr';
+		case 'May':
+			return 'May';
+		case 'Jun':
+			return 'Jun';
+		case 'Jul':
+			return 'Jul';
+		case 'Aug':
+			return 'Aug';
+		case 'Sep':
+			return 'Sep';
+		case 'Oct':
+			return 'Oct';
+		case 'Nov':
+			return 'Nov';
+		default:
+			return 'Dec';
+	}
+};
+var $mercurymedia$elm_datetime_picker$DurationDatePicker$defaultSettings = F2(
+	function (zone, internalMsg) {
+		return {
+			dateStringFn: F2(
+				function (_v0, _v1) {
+					return '';
+				}),
+			firstWeekDay: $elm$time$Time$Mon,
+			focusedDate: $elm$core$Maybe$Nothing,
+			formattedDay: $mercurymedia$elm_datetime_picker$DatePicker$Utilities$dayToNameString,
+			formattedMonth: $mercurymedia$elm_datetime_picker$DatePicker$Utilities$monthToNameString,
+			internalMsg: internalMsg,
+			isDayDisabled: F2(
+				function (_v2, _v3) {
+					return false;
+				}),
+			timePickerVisibility: $mercurymedia$elm_datetime_picker$DurationDatePicker$AlwaysVisible($mercurymedia$elm_datetime_picker$DurationDatePicker$defaultTimePickerSettings),
+			zone: zone
+		};
+	});
+var $mercurymedia$elm_datetime_picker$DurationDatePicker$Closed = {$: 'Closed'};
+var $mercurymedia$elm_datetime_picker$DurationDatePicker$DatePicker = function (a) {
+	return {$: 'DatePicker', a: a};
+};
+var $mercurymedia$elm_datetime_picker$DurationDatePicker$init = $mercurymedia$elm_datetime_picker$DurationDatePicker$DatePicker(
+	{endSelectionTuple: $elm$core$Maybe$Nothing, hovered: $elm$core$Maybe$Nothing, startSelectionTuple: $elm$core$Maybe$Nothing, status: $mercurymedia$elm_datetime_picker$DurationDatePicker$Closed, viewOffset: 0});
+var $author$project$Main$emptyInsert = {comment: '', picker: $mercurymedia$elm_datetime_picker$DurationDatePicker$init, startStop: $elm$core$Maybe$Nothing};
+var $elm$time$Time$Every = F2(
+	function (a, b) {
+		return {$: 'Every', a: a, b: b};
+	});
+var $elm$time$Time$State = F2(
+	function (taggers, processes) {
+		return {processes: processes, taggers: taggers};
+	});
+var $elm$time$Time$init = $elm$core$Task$succeed(
+	A2($elm$time$Time$State, $elm$core$Dict$empty, $elm$core$Dict$empty));
+var $elm$time$Time$addMySub = F2(
+	function (_v0, state) {
+		var interval = _v0.a;
+		var tagger = _v0.b;
+		var _v1 = A2($elm$core$Dict$get, interval, state);
+		if (_v1.$ === 'Nothing') {
+			return A3(
+				$elm$core$Dict$insert,
+				interval,
+				_List_fromArray(
+					[tagger]),
+				state);
+		} else {
+			var taggers = _v1.a;
+			return A3(
+				$elm$core$Dict$insert,
+				interval,
+				A2($elm$core$List$cons, tagger, taggers),
+				state);
+		}
+	});
+var $elm$core$Dict$foldl = F3(
+	function (func, acc, dict) {
+		foldl:
+		while (true) {
+			if (dict.$ === 'RBEmpty_elm_builtin') {
+				return acc;
+			} else {
+				var key = dict.b;
+				var value = dict.c;
+				var left = dict.d;
+				var right = dict.e;
+				var $temp$func = func,
+					$temp$acc = A3(
+					func,
+					key,
+					value,
+					A3($elm$core$Dict$foldl, func, acc, left)),
+					$temp$dict = right;
+				func = $temp$func;
+				acc = $temp$acc;
+				dict = $temp$dict;
+				continue foldl;
+			}
+		}
+	});
+var $elm$core$Dict$merge = F6(
+	function (leftStep, bothStep, rightStep, leftDict, rightDict, initialResult) {
+		var stepState = F3(
+			function (rKey, rValue, _v0) {
+				stepState:
+				while (true) {
+					var list = _v0.a;
+					var result = _v0.b;
+					if (!list.b) {
+						return _Utils_Tuple2(
+							list,
+							A3(rightStep, rKey, rValue, result));
+					} else {
+						var _v2 = list.a;
+						var lKey = _v2.a;
+						var lValue = _v2.b;
+						var rest = list.b;
+						if (_Utils_cmp(lKey, rKey) < 0) {
+							var $temp$rKey = rKey,
+								$temp$rValue = rValue,
+								$temp$_v0 = _Utils_Tuple2(
+								rest,
+								A3(leftStep, lKey, lValue, result));
+							rKey = $temp$rKey;
+							rValue = $temp$rValue;
+							_v0 = $temp$_v0;
+							continue stepState;
+						} else {
+							if (_Utils_cmp(lKey, rKey) > 0) {
+								return _Utils_Tuple2(
+									list,
+									A3(rightStep, rKey, rValue, result));
+							} else {
+								return _Utils_Tuple2(
+									rest,
+									A4(bothStep, lKey, lValue, rValue, result));
+							}
+						}
+					}
+				}
+			});
+		var _v3 = A3(
+			$elm$core$Dict$foldl,
+			stepState,
+			_Utils_Tuple2(
+				$elm$core$Dict$toList(leftDict),
+				initialResult),
+			rightDict);
+		var leftovers = _v3.a;
+		var intermediateResult = _v3.b;
+		return A3(
+			$elm$core$List$foldl,
+			F2(
+				function (_v4, result) {
+					var k = _v4.a;
+					var v = _v4.b;
+					return A3(leftStep, k, v, result);
+				}),
+			intermediateResult,
+			leftovers);
+	});
+var $elm$time$Time$Name = function (a) {
+	return {$: 'Name', a: a};
+};
+var $elm$time$Time$Offset = function (a) {
+	return {$: 'Offset', a: a};
+};
+var $elm$time$Time$Zone = F2(
+	function (a, b) {
+		return {$: 'Zone', a: a, b: b};
+	});
+var $elm$time$Time$customZone = $elm$time$Time$Zone;
+var $elm$time$Time$setInterval = _Time_setInterval;
+var $elm$time$Time$spawnHelp = F3(
+	function (router, intervals, processes) {
+		if (!intervals.b) {
+			return $elm$core$Task$succeed(processes);
+		} else {
+			var interval = intervals.a;
+			var rest = intervals.b;
+			var spawnTimer = $elm$core$Process$spawn(
+				A2(
+					$elm$time$Time$setInterval,
+					interval,
+					A2($elm$core$Platform$sendToSelf, router, interval)));
+			var spawnRest = function (id) {
+				return A3(
+					$elm$time$Time$spawnHelp,
+					router,
+					rest,
+					A3($elm$core$Dict$insert, interval, id, processes));
+			};
+			return A2($elm$core$Task$andThen, spawnRest, spawnTimer);
+		}
+	});
+var $elm$time$Time$onEffects = F3(
+	function (router, subs, _v0) {
+		var processes = _v0.processes;
+		var rightStep = F3(
+			function (_v6, id, _v7) {
+				var spawns = _v7.a;
+				var existing = _v7.b;
+				var kills = _v7.c;
+				return _Utils_Tuple3(
+					spawns,
+					existing,
+					A2(
+						$elm$core$Task$andThen,
+						function (_v5) {
+							return kills;
+						},
+						$elm$core$Process$kill(id)));
+			});
+		var newTaggers = A3($elm$core$List$foldl, $elm$time$Time$addMySub, $elm$core$Dict$empty, subs);
+		var leftStep = F3(
+			function (interval, taggers, _v4) {
+				var spawns = _v4.a;
+				var existing = _v4.b;
+				var kills = _v4.c;
+				return _Utils_Tuple3(
+					A2($elm$core$List$cons, interval, spawns),
+					existing,
+					kills);
+			});
+		var bothStep = F4(
+			function (interval, taggers, id, _v3) {
+				var spawns = _v3.a;
+				var existing = _v3.b;
+				var kills = _v3.c;
+				return _Utils_Tuple3(
+					spawns,
+					A3($elm$core$Dict$insert, interval, id, existing),
+					kills);
+			});
+		var _v1 = A6(
+			$elm$core$Dict$merge,
+			leftStep,
+			bothStep,
+			rightStep,
+			newTaggers,
+			processes,
+			_Utils_Tuple3(
+				_List_Nil,
+				$elm$core$Dict$empty,
+				$elm$core$Task$succeed(_Utils_Tuple0)));
+		var spawnList = _v1.a;
+		var existingDict = _v1.b;
+		var killTask = _v1.c;
+		return A2(
+			$elm$core$Task$andThen,
+			function (newProcesses) {
+				return $elm$core$Task$succeed(
+					A2($elm$time$Time$State, newTaggers, newProcesses));
+			},
+			A2(
+				$elm$core$Task$andThen,
+				function (_v2) {
+					return A3($elm$time$Time$spawnHelp, router, spawnList, existingDict);
+				},
+				killTask));
+	});
+var $elm$time$Time$now = _Time_now($elm$time$Time$millisToPosix);
+var $elm$time$Time$onSelfMsg = F3(
+	function (router, interval, state) {
+		var _v0 = A2($elm$core$Dict$get, interval, state.taggers);
+		if (_v0.$ === 'Nothing') {
+			return $elm$core$Task$succeed(state);
+		} else {
+			var taggers = _v0.a;
+			var tellTaggers = function (time) {
+				return $elm$core$Task$sequence(
+					A2(
+						$elm$core$List$map,
+						function (tagger) {
+							return A2(
+								$elm$core$Platform$sendToApp,
+								router,
+								tagger(time));
+						},
+						taggers));
+			};
+			return A2(
+				$elm$core$Task$andThen,
+				function (_v1) {
+					return $elm$core$Task$succeed(state);
+				},
+				A2($elm$core$Task$andThen, tellTaggers, $elm$time$Time$now));
+		}
+	});
+var $elm$core$Basics$composeL = F3(
+	function (g, f, x) {
+		return g(
+			f(x));
+	});
+var $elm$time$Time$subMap = F2(
+	function (f, _v0) {
+		var interval = _v0.a;
+		var tagger = _v0.b;
+		return A2(
+			$elm$time$Time$Every,
+			interval,
+			A2($elm$core$Basics$composeL, f, tagger));
+	});
+_Platform_effectManagers['Time'] = _Platform_createManager($elm$time$Time$init, $elm$time$Time$onEffects, $elm$time$Time$onSelfMsg, 0, $elm$time$Time$subMap);
+var $elm$time$Time$subscription = _Platform_leaf('Time');
+var $elm$time$Time$every = F2(
+	function (interval, tagger) {
+		return $elm$time$Time$subscription(
+			A2($elm$time$Time$Every, interval, tagger));
+	});
+var $mercurymedia$elm_datetime_picker$DurationDatePicker$Close = {$: 'Close'};
+var $elm$json$Json$Decode$fail = _Json_fail;
+var $elm$json$Json$Decode$lazy = function (thunk) {
+	return A2(
+		$elm$json$Json$Decode$andThen,
+		thunk,
+		$elm$json$Json$Decode$succeed(_Utils_Tuple0));
+};
+var $mercurymedia$elm_datetime_picker$DatePicker$Utilities$eventIsOutsideComponent = function (componentId) {
+	return $elm$json$Json$Decode$oneOf(
+		_List_fromArray(
+			[
+				A2(
+				$elm$json$Json$Decode$andThen,
+				function (id) {
+					return _Utils_eq(componentId, id) ? $elm$json$Json$Decode$succeed(false) : $elm$json$Json$Decode$fail('check parent node');
+				},
+				A2($elm$json$Json$Decode$field, 'id', $elm$json$Json$Decode$string)),
+				$elm$json$Json$Decode$lazy(
+				function (_v0) {
+					return A2(
+						$elm$json$Json$Decode$field,
+						'parentNode',
+						$mercurymedia$elm_datetime_picker$DatePicker$Utilities$eventIsOutsideComponent(componentId));
+				}),
+				$elm$json$Json$Decode$succeed(true)
+			]));
+};
+var $mercurymedia$elm_datetime_picker$DurationDatePicker$Open = F2(
+	function (a, b) {
+		return {$: 'Open', a: a, b: b};
+	});
+var $elm$core$Basics$not = _Basics_not;
+var $elm$core$Maybe$map2 = F3(
+	function (func, ma, mb) {
+		if (ma.$ === 'Nothing') {
+			return $elm$core$Maybe$Nothing;
+		} else {
+			var a = ma.a;
+			if (mb.$ === 'Nothing') {
+				return $elm$core$Maybe$Nothing;
+			} else {
+				var b = mb.a;
+				return $elm$core$Maybe$Just(
+					A2(func, a, b));
+			}
+		}
+	});
+var $mercurymedia$elm_datetime_picker$DurationDatePicker$processSelection = F2(
+	function (model, _v0) {
+		var startSelectionTuple = _v0.a;
+		var endSelectionTuple = _v0.b;
+		var newDuration = A3(
+			$elm$core$Maybe$map2,
+			F2(
+				function (_v1, _v2) {
+					var startSelection = _v1.b;
+					var endSelection = _v2.b;
+					return _Utils_Tuple2(startSelection, endSelection);
+				}),
+			startSelectionTuple,
+			endSelectionTuple);
+		return _Utils_Tuple2(
+			$mercurymedia$elm_datetime_picker$DurationDatePicker$DatePicker(
+				_Utils_update(
+					model,
+					{endSelectionTuple: endSelectionTuple, startSelectionTuple: startSelectionTuple})),
+			newDuration);
+	});
+var $elm$time$Time$posixToMillis = function (_v0) {
+	var millis = _v0.a;
+	return millis;
+};
+var $elm$time$Time$flooredDiv = F2(
+	function (numerator, denominator) {
+		return $elm$core$Basics$floor(numerator / denominator);
+	});
+var $elm$core$Basics$modBy = _Basics_modBy;
+var $elm$time$Time$toAdjustedMinutesHelp = F3(
+	function (defaultOffset, posixMinutes, eras) {
+		toAdjustedMinutesHelp:
+		while (true) {
+			if (!eras.b) {
+				return posixMinutes + defaultOffset;
+			} else {
+				var era = eras.a;
+				var olderEras = eras.b;
+				if (_Utils_cmp(era.start, posixMinutes) < 0) {
+					return posixMinutes + era.offset;
+				} else {
+					var $temp$defaultOffset = defaultOffset,
+						$temp$posixMinutes = posixMinutes,
+						$temp$eras = olderEras;
+					defaultOffset = $temp$defaultOffset;
+					posixMinutes = $temp$posixMinutes;
+					eras = $temp$eras;
+					continue toAdjustedMinutesHelp;
+				}
+			}
+		}
+	});
+var $elm$time$Time$toAdjustedMinutes = F2(
+	function (_v0, time) {
+		var defaultOffset = _v0.a;
+		var eras = _v0.b;
+		return A3(
+			$elm$time$Time$toAdjustedMinutesHelp,
+			defaultOffset,
+			A2(
+				$elm$time$Time$flooredDiv,
+				$elm$time$Time$posixToMillis(time),
+				60000),
+			eras);
+	});
+var $elm$time$Time$toHour = F2(
+	function (zone, time) {
+		return A2(
+			$elm$core$Basics$modBy,
+			24,
+			A2(
+				$elm$time$Time$flooredDiv,
+				A2($elm$time$Time$toAdjustedMinutes, zone, time),
+				60));
+	});
+var $elm$time$Time$toMinute = F2(
+	function (zone, time) {
+		return A2(
+			$elm$core$Basics$modBy,
+			60,
+			A2($elm$time$Time$toAdjustedMinutes, zone, time));
+	});
+var $mercurymedia$elm_datetime_picker$DatePicker$Utilities$timeOfDayFromPosix = F2(
+	function (zone, posix) {
+		return _Utils_Tuple2(
+			A2($elm$time$Time$toHour, zone, posix),
+			A2($elm$time$Time$toMinute, zone, posix));
+	});
+var $mercurymedia$elm_datetime_picker$DatePicker$Utilities$posixWithinPickerDayBoundaries = F3(
+	function (zone, pickerDay, selection) {
+		var _v0 = A2($mercurymedia$elm_datetime_picker$DatePicker$Utilities$timeOfDayFromPosix, zone, pickerDay.start);
+		var startHour = _v0.a;
+		var startMinute = _v0.b;
+		var _v1 = A2($mercurymedia$elm_datetime_picker$DatePicker$Utilities$timeOfDayFromPosix, zone, selection);
+		var selectionHour = _v1.a;
+		var selectionMinute = _v1.b;
+		var _v2 = A2($mercurymedia$elm_datetime_picker$DatePicker$Utilities$timeOfDayFromPosix, zone, pickerDay.end);
+		var endHour = _v2.a;
+		var endMinute = _v2.b;
+		return (_Utils_eq(startHour, selectionHour) && (_Utils_cmp(startMinute, selectionMinute) < 1)) || (((_Utils_cmp(startHour, selectionHour) < 0) && (_Utils_cmp(selectionHour, endHour) < 0)) || (_Utils_eq(selectionHour, endHour) && (_Utils_cmp(selectionMinute, endMinute) < 1)));
+	});
+var $elm$core$Basics$clamp = F3(
+	function (low, high, number) {
+		return (_Utils_cmp(number, low) < 0) ? low : ((_Utils_cmp(number, high) > 0) ? high : number);
+	});
+var $justinmimbs$date$Date$RD = function (a) {
+	return {$: 'RD', a: a};
+};
+var $elm$core$Basics$neq = _Utils_notEqual;
+var $justinmimbs$date$Date$isLeapYear = function (y) {
+	return ((!A2($elm$core$Basics$modBy, 4, y)) && (!(!A2($elm$core$Basics$modBy, 100, y)))) || (!A2($elm$core$Basics$modBy, 400, y));
+};
+var $justinmimbs$date$Date$daysBeforeMonth = F2(
+	function (y, m) {
+		var leapDays = $justinmimbs$date$Date$isLeapYear(y) ? 1 : 0;
+		switch (m.$) {
+			case 'Jan':
+				return 0;
+			case 'Feb':
+				return 31;
+			case 'Mar':
+				return 59 + leapDays;
+			case 'Apr':
+				return 90 + leapDays;
+			case 'May':
+				return 120 + leapDays;
+			case 'Jun':
+				return 151 + leapDays;
+			case 'Jul':
+				return 181 + leapDays;
+			case 'Aug':
+				return 212 + leapDays;
+			case 'Sep':
+				return 243 + leapDays;
+			case 'Oct':
+				return 273 + leapDays;
+			case 'Nov':
+				return 304 + leapDays;
+			default:
+				return 334 + leapDays;
+		}
+	});
+var $justinmimbs$date$Date$floorDiv = F2(
+	function (a, b) {
+		return $elm$core$Basics$floor(a / b);
+	});
+var $justinmimbs$date$Date$daysBeforeYear = function (y1) {
+	var y = y1 - 1;
+	var leapYears = (A2($justinmimbs$date$Date$floorDiv, y, 4) - A2($justinmimbs$date$Date$floorDiv, y, 100)) + A2($justinmimbs$date$Date$floorDiv, y, 400);
+	return (365 * y) + leapYears;
+};
+var $justinmimbs$date$Date$daysInMonth = F2(
+	function (y, m) {
+		switch (m.$) {
+			case 'Jan':
+				return 31;
+			case 'Feb':
+				return $justinmimbs$date$Date$isLeapYear(y) ? 29 : 28;
+			case 'Mar':
+				return 31;
+			case 'Apr':
+				return 30;
+			case 'May':
+				return 31;
+			case 'Jun':
+				return 30;
+			case 'Jul':
+				return 31;
+			case 'Aug':
+				return 31;
+			case 'Sep':
+				return 30;
+			case 'Oct':
+				return 31;
+			case 'Nov':
+				return 30;
+			default:
+				return 31;
+		}
+	});
+var $justinmimbs$date$Date$fromCalendarDate = F3(
+	function (y, m, d) {
+		return $justinmimbs$date$Date$RD(
+			($justinmimbs$date$Date$daysBeforeYear(y) + A2($justinmimbs$date$Date$daysBeforeMonth, y, m)) + A3(
+				$elm$core$Basics$clamp,
+				1,
+				A2($justinmimbs$date$Date$daysInMonth, y, m),
+				d));
+	});
+var $justinmimbs$date$Date$toRataDie = function (_v0) {
+	var rd = _v0.a;
+	return rd;
+};
+var $justinmimbs$time_extra$Time$Extra$dateToMillis = function (date) {
+	var daysSinceEpoch = $justinmimbs$date$Date$toRataDie(date) - 719163;
+	return daysSinceEpoch * 86400000;
+};
+var $elm$core$Basics$ge = _Utils_ge;
+var $elm$core$Basics$negate = function (n) {
+	return -n;
+};
+var $elm$time$Time$toCivil = function (minutes) {
+	var rawDay = A2($elm$time$Time$flooredDiv, minutes, 60 * 24) + 719468;
+	var era = (((rawDay >= 0) ? rawDay : (rawDay - 146096)) / 146097) | 0;
+	var dayOfEra = rawDay - (era * 146097);
+	var yearOfEra = ((((dayOfEra - ((dayOfEra / 1460) | 0)) + ((dayOfEra / 36524) | 0)) - ((dayOfEra / 146096) | 0)) / 365) | 0;
+	var dayOfYear = dayOfEra - (((365 * yearOfEra) + ((yearOfEra / 4) | 0)) - ((yearOfEra / 100) | 0));
+	var mp = (((5 * dayOfYear) + 2) / 153) | 0;
+	var month = mp + ((mp < 10) ? 3 : (-9));
+	var year = yearOfEra + (era * 400);
+	return {
+		day: (dayOfYear - ((((153 * mp) + 2) / 5) | 0)) + 1,
+		month: month,
+		year: year + ((month <= 2) ? 1 : 0)
+	};
+};
+var $elm$time$Time$toDay = F2(
+	function (zone, time) {
+		return $elm$time$Time$toCivil(
+			A2($elm$time$Time$toAdjustedMinutes, zone, time)).day;
+	});
+var $elm$time$Time$Apr = {$: 'Apr'};
+var $elm$time$Time$Aug = {$: 'Aug'};
+var $elm$time$Time$Dec = {$: 'Dec'};
+var $elm$time$Time$Feb = {$: 'Feb'};
+var $elm$time$Time$Jan = {$: 'Jan'};
+var $elm$time$Time$Jul = {$: 'Jul'};
+var $elm$time$Time$Jun = {$: 'Jun'};
+var $elm$time$Time$Mar = {$: 'Mar'};
+var $elm$time$Time$May = {$: 'May'};
+var $elm$time$Time$Nov = {$: 'Nov'};
+var $elm$time$Time$Oct = {$: 'Oct'};
+var $elm$time$Time$Sep = {$: 'Sep'};
+var $elm$time$Time$toMonth = F2(
+	function (zone, time) {
+		var _v0 = $elm$time$Time$toCivil(
+			A2($elm$time$Time$toAdjustedMinutes, zone, time)).month;
+		switch (_v0) {
+			case 1:
+				return $elm$time$Time$Jan;
+			case 2:
+				return $elm$time$Time$Feb;
+			case 3:
+				return $elm$time$Time$Mar;
+			case 4:
+				return $elm$time$Time$Apr;
+			case 5:
+				return $elm$time$Time$May;
+			case 6:
+				return $elm$time$Time$Jun;
+			case 7:
+				return $elm$time$Time$Jul;
+			case 8:
+				return $elm$time$Time$Aug;
+			case 9:
+				return $elm$time$Time$Sep;
+			case 10:
+				return $elm$time$Time$Oct;
+			case 11:
+				return $elm$time$Time$Nov;
+			default:
+				return $elm$time$Time$Dec;
+		}
+	});
+var $elm$time$Time$toYear = F2(
+	function (zone, time) {
+		return $elm$time$Time$toCivil(
+			A2($elm$time$Time$toAdjustedMinutes, zone, time)).year;
+	});
+var $justinmimbs$date$Date$fromPosix = F2(
+	function (zone, posix) {
+		return A3(
+			$justinmimbs$date$Date$fromCalendarDate,
+			A2($elm$time$Time$toYear, zone, posix),
+			A2($elm$time$Time$toMonth, zone, posix),
+			A2($elm$time$Time$toDay, zone, posix));
+	});
+var $justinmimbs$time_extra$Time$Extra$timeFromClock = F4(
+	function (hour, minute, second, millisecond) {
+		return (((hour * 3600000) + (minute * 60000)) + (second * 1000)) + millisecond;
+	});
+var $elm$time$Time$toMillis = F2(
+	function (_v0, time) {
+		return A2(
+			$elm$core$Basics$modBy,
+			1000,
+			$elm$time$Time$posixToMillis(time));
+	});
+var $elm$time$Time$toSecond = F2(
+	function (_v0, time) {
+		return A2(
+			$elm$core$Basics$modBy,
+			60,
+			A2(
+				$elm$time$Time$flooredDiv,
+				$elm$time$Time$posixToMillis(time),
+				1000));
+	});
+var $justinmimbs$time_extra$Time$Extra$timeFromPosix = F2(
+	function (zone, posix) {
+		return A4(
+			$justinmimbs$time_extra$Time$Extra$timeFromClock,
+			A2($elm$time$Time$toHour, zone, posix),
+			A2($elm$time$Time$toMinute, zone, posix),
+			A2($elm$time$Time$toSecond, zone, posix),
+			A2($elm$time$Time$toMillis, zone, posix));
+	});
+var $justinmimbs$time_extra$Time$Extra$toOffset = F2(
+	function (zone, posix) {
+		var millis = $elm$time$Time$posixToMillis(posix);
+		var localMillis = $justinmimbs$time_extra$Time$Extra$dateToMillis(
+			A2($justinmimbs$date$Date$fromPosix, zone, posix)) + A2($justinmimbs$time_extra$Time$Extra$timeFromPosix, zone, posix);
+		return ((localMillis - millis) / 60000) | 0;
+	});
+var $justinmimbs$time_extra$Time$Extra$posixFromDateTime = F3(
+	function (zone, date, time) {
+		var millis = $justinmimbs$time_extra$Time$Extra$dateToMillis(date) + time;
+		var offset0 = A2(
+			$justinmimbs$time_extra$Time$Extra$toOffset,
+			zone,
+			$elm$time$Time$millisToPosix(millis));
+		var posix1 = $elm$time$Time$millisToPosix(millis - (offset0 * 60000));
+		var offset1 = A2($justinmimbs$time_extra$Time$Extra$toOffset, zone, posix1);
+		if (_Utils_eq(offset0, offset1)) {
+			return posix1;
+		} else {
+			var posix2 = $elm$time$Time$millisToPosix(millis - (offset1 * 60000));
+			var offset2 = A2($justinmimbs$time_extra$Time$Extra$toOffset, zone, posix2);
+			return _Utils_eq(offset1, offset2) ? posix2 : posix1;
+		}
+	});
+var $justinmimbs$time_extra$Time$Extra$partsToPosix = F2(
+	function (zone, _v0) {
+		var year = _v0.year;
+		var month = _v0.month;
+		var day = _v0.day;
+		var hour = _v0.hour;
+		var minute = _v0.minute;
+		var second = _v0.second;
+		var millisecond = _v0.millisecond;
+		return A3(
+			$justinmimbs$time_extra$Time$Extra$posixFromDateTime,
+			zone,
+			A3($justinmimbs$date$Date$fromCalendarDate, year, month, day),
+			A4(
+				$justinmimbs$time_extra$Time$Extra$timeFromClock,
+				A3($elm$core$Basics$clamp, 0, 23, hour),
+				A3($elm$core$Basics$clamp, 0, 59, minute),
+				A3($elm$core$Basics$clamp, 0, 59, second),
+				A3($elm$core$Basics$clamp, 0, 999, millisecond)));
+	});
+var $justinmimbs$time_extra$Time$Extra$posixToParts = F2(
+	function (zone, posix) {
+		return {
+			day: A2($elm$time$Time$toDay, zone, posix),
+			hour: A2($elm$time$Time$toHour, zone, posix),
+			millisecond: A2($elm$time$Time$toMillis, zone, posix),
+			minute: A2($elm$time$Time$toMinute, zone, posix),
+			month: A2($elm$time$Time$toMonth, zone, posix),
+			second: A2($elm$time$Time$toSecond, zone, posix),
+			year: A2($elm$time$Time$toYear, zone, posix)
+		};
+	});
+var $mercurymedia$elm_datetime_picker$DatePicker$Utilities$setTimeOfDay = F5(
+	function (zone, hour, minute, second, timeToUpdate) {
+		var parts = A2($justinmimbs$time_extra$Time$Extra$posixToParts, zone, timeToUpdate);
+		var newParts = _Utils_update(
+			parts,
+			{hour: hour, minute: minute, second: second});
+		return A2($justinmimbs$time_extra$Time$Extra$partsToPosix, zone, newParts);
+	});
+var $mercurymedia$elm_datetime_picker$DatePicker$DurationUtilities$selectDay = F4(
+	function (zone, previousStartSelectionTuple, previousEndSelectionTuple, selectedPickerDay) {
+		if (selectedPickerDay.disabled) {
+			return _Utils_Tuple2(previousStartSelectionTuple, previousEndSelectionTuple);
+		} else {
+			var _v0 = _Utils_Tuple2(previousStartSelectionTuple, previousEndSelectionTuple);
+			if (_v0.a.$ === 'Just') {
+				if (_v0.b.$ === 'Just') {
+					var _v1 = _v0.a.a;
+					var startPickerDay = _v1.a;
+					var previousSelectionStart = _v1.b;
+					var _v2 = _v0.b.a;
+					var endPickerDay = _v2.a;
+					var previousSelectionEnd = _v2.b;
+					return (_Utils_eq(startPickerDay, selectedPickerDay) && _Utils_eq(selectedPickerDay, endPickerDay)) ? _Utils_Tuple2(
+						$elm$core$Maybe$Just(
+							_Utils_Tuple2(startPickerDay, previousSelectionStart)),
+						$elm$core$Maybe$Nothing) : (_Utils_eq(startPickerDay, selectedPickerDay) ? _Utils_Tuple2(
+						$elm$core$Maybe$Nothing,
+						$elm$core$Maybe$Just(
+							_Utils_Tuple2(endPickerDay, previousSelectionEnd))) : (_Utils_eq(endPickerDay, selectedPickerDay) ? _Utils_Tuple2(
+						$elm$core$Maybe$Just(
+							_Utils_Tuple2(startPickerDay, previousSelectionStart)),
+						$elm$core$Maybe$Nothing) : _Utils_Tuple2(
+						$elm$core$Maybe$Just(
+							_Utils_Tuple2(selectedPickerDay, selectedPickerDay.start)),
+						$elm$core$Maybe$Nothing)));
+				} else {
+					var _v3 = _v0.a.a;
+					var startPickerDay = _v3.a;
+					var selectionStart = _v3.b;
+					var _v4 = _v0.b;
+					return (_Utils_eq(startPickerDay, selectedPickerDay) || (_Utils_cmp(
+						$elm$time$Time$posixToMillis(startPickerDay.start),
+						$elm$time$Time$posixToMillis(selectedPickerDay.start)) < 0)) ? _Utils_Tuple2(
+						$elm$core$Maybe$Just(
+							_Utils_Tuple2(startPickerDay, selectionStart)),
+						$elm$core$Maybe$Just(
+							_Utils_Tuple2(selectedPickerDay, selectedPickerDay.end))) : (A3($mercurymedia$elm_datetime_picker$DatePicker$Utilities$posixWithinPickerDayBoundaries, zone, selectedPickerDay, selectionStart) ? _Utils_Tuple2(
+						$elm$core$Maybe$Just(
+							_Utils_Tuple2(
+								selectedPickerDay,
+								A5(
+									$mercurymedia$elm_datetime_picker$DatePicker$Utilities$setTimeOfDay,
+									zone,
+									A2($elm$time$Time$toHour, zone, selectionStart),
+									A2($elm$time$Time$toMinute, zone, selectionStart),
+									0,
+									selectedPickerDay.start))),
+						$elm$core$Maybe$Just(
+							_Utils_Tuple2(startPickerDay, startPickerDay.end))) : _Utils_Tuple2(
+						$elm$core$Maybe$Just(
+							_Utils_Tuple2(selectedPickerDay, selectedPickerDay.start)),
+						$elm$core$Maybe$Just(
+							_Utils_Tuple2(startPickerDay, startPickerDay.end))));
+				}
+			} else {
+				if (_v0.b.$ === 'Just') {
+					var _v5 = _v0.a;
+					var _v6 = _v0.b.a;
+					var endPickerDay = _v6.a;
+					var selectionEnd = _v6.b;
+					return (_Utils_eq(endPickerDay, selectedPickerDay) || (_Utils_cmp(
+						$elm$time$Time$posixToMillis(endPickerDay.start),
+						$elm$time$Time$posixToMillis(selectedPickerDay.end)) > 0)) ? _Utils_Tuple2(
+						$elm$core$Maybe$Just(
+							_Utils_Tuple2(selectedPickerDay, selectedPickerDay.start)),
+						$elm$core$Maybe$Just(
+							_Utils_Tuple2(endPickerDay, selectionEnd))) : (A3($mercurymedia$elm_datetime_picker$DatePicker$Utilities$posixWithinPickerDayBoundaries, zone, selectedPickerDay, selectionEnd) ? _Utils_Tuple2(
+						$elm$core$Maybe$Just(
+							_Utils_Tuple2(endPickerDay, endPickerDay.start)),
+						$elm$core$Maybe$Just(
+							_Utils_Tuple2(
+								selectedPickerDay,
+								A5(
+									$mercurymedia$elm_datetime_picker$DatePicker$Utilities$setTimeOfDay,
+									zone,
+									A2($elm$time$Time$toHour, zone, selectionEnd),
+									A2($elm$time$Time$toMinute, zone, selectionEnd),
+									59,
+									selectedPickerDay.end)))) : _Utils_Tuple2(
+						$elm$core$Maybe$Just(
+							_Utils_Tuple2(endPickerDay, endPickerDay.start)),
+						$elm$core$Maybe$Just(
+							_Utils_Tuple2(selectedPickerDay, selectedPickerDay.end))));
+				} else {
+					var _v7 = _v0.a;
+					var _v8 = _v0.b;
+					return _Utils_Tuple2(
+						$elm$core$Maybe$Just(
+							_Utils_Tuple2(selectedPickerDay, selectedPickerDay.start)),
+						$elm$core$Maybe$Nothing);
+				}
+			}
+		}
+	});
+var $mercurymedia$elm_datetime_picker$DatePicker$Utilities$minuteBoundsForSelectedHour = F2(
+	function (zone, _v0) {
+		var pickerDay = _v0.a;
+		var selection = _v0.b;
+		var _v1 = A2($mercurymedia$elm_datetime_picker$DatePicker$Utilities$timeOfDayFromPosix, zone, pickerDay.start);
+		var startBoundaryHour = _v1.a;
+		var startBoundaryMinute = _v1.b;
+		var _v2 = A2($mercurymedia$elm_datetime_picker$DatePicker$Utilities$timeOfDayFromPosix, zone, selection);
+		var selectedHour = _v2.a;
+		var selectedMinute = _v2.b;
+		var earliestSelectableMinute = _Utils_eq(startBoundaryHour, selectedHour) ? startBoundaryMinute : 0;
+		var _v3 = A2($mercurymedia$elm_datetime_picker$DatePicker$Utilities$timeOfDayFromPosix, zone, pickerDay.end);
+		var endBoundaryHour = _v3.a;
+		var endBoundaryMinute = _v3.b;
+		var latestSelectableMinute = _Utils_eq(endBoundaryHour, selectedHour) ? endBoundaryMinute : 59;
+		return _Utils_Tuple2(earliestSelectableMinute, latestSelectableMinute);
+	});
+var $mercurymedia$elm_datetime_picker$DatePicker$Utilities$setHourNotDay = F3(
+	function (zone, hour, timeToUpdate) {
+		var parts = A2($justinmimbs$time_extra$Time$Extra$posixToParts, zone, timeToUpdate);
+		var newParts = _Utils_update(
+			parts,
+			{hour: hour});
+		return A2($justinmimbs$time_extra$Time$Extra$partsToPosix, zone, newParts);
+	});
+var $mercurymedia$elm_datetime_picker$DatePicker$Utilities$setMinuteNotDay = F3(
+	function (zone, minute, timeToUpdate) {
+		var parts = A2($justinmimbs$time_extra$Time$Extra$posixToParts, zone, timeToUpdate);
+		var newParts = _Utils_update(
+			parts,
+			{minute: minute});
+		return A2($justinmimbs$time_extra$Time$Extra$partsToPosix, zone, newParts);
+	});
+var $mercurymedia$elm_datetime_picker$DatePicker$DurationUtilities$validDurationSelectionOrDefault = F2(
+	function (_v0, _v1) {
+		var previousStart = _v0.a;
+		var previousEnd = _v0.b;
+		var newStart = _v1.a;
+		var newEnd = _v1.b;
+		var _v2 = _Utils_Tuple2(newStart, newEnd);
+		if ((_v2.a.$ === 'Just') && (_v2.b.$ === 'Just')) {
+			var _v3 = _v2.a.a;
+			var startSelection = _v3.b;
+			var _v4 = _v2.b.a;
+			var endSelection = _v4.b;
+			return (_Utils_cmp(
+				$elm$time$Time$posixToMillis(startSelection),
+				$elm$time$Time$posixToMillis(endSelection)) < 0) ? _Utils_Tuple2(newStart, newEnd) : _Utils_Tuple2(previousStart, previousEnd);
+		} else {
+			return _Utils_Tuple2(newStart, newEnd);
+		}
+	});
+var $mercurymedia$elm_datetime_picker$DatePicker$Utilities$doDaysMatch = F3(
+	function (zone, dateTimeOne, dateTimeTwo) {
+		var twoParts = A2($justinmimbs$time_extra$Time$Extra$posixToParts, zone, dateTimeTwo);
+		var oneParts = A2($justinmimbs$time_extra$Time$Extra$posixToParts, zone, dateTimeOne);
+		return _Utils_eq(oneParts.day, twoParts.day) && (_Utils_eq(oneParts.month, twoParts.month) && _Utils_eq(oneParts.year, twoParts.year));
+	});
+var $mercurymedia$elm_datetime_picker$DatePicker$Utilities$validSelectionOrDefault = F3(
+	function (zone, _default, _v0) {
+		var selectionPickerDay = _v0.a;
+		var selection = _v0.b;
+		var selectionDayEqualsPickerDay = A3($mercurymedia$elm_datetime_picker$DatePicker$Utilities$doDaysMatch, zone, selection, selectionPickerDay.start);
+		return (A3($mercurymedia$elm_datetime_picker$DatePicker$Utilities$posixWithinPickerDayBoundaries, zone, selectionPickerDay, selection) && ((!selectionPickerDay.disabled) && selectionDayEqualsPickerDay)) ? $elm$core$Maybe$Just(
+			_Utils_Tuple2(selectionPickerDay, selection)) : _default;
+	});
+var $mercurymedia$elm_datetime_picker$DatePicker$DurationUtilities$selectEndHour = F5(
+	function (zone, basePickerDay, startSelectionTuple, endSelectionTuple, newEndHour) {
+		var _v0 = function () {
+			var _v1 = _Utils_Tuple2(startSelectionTuple, endSelectionTuple);
+			if (_v1.b.$ === 'Just') {
+				var _v2 = _v1.b.a;
+				var endPickerDay = _v2.a;
+				var endSelection = _v2.b;
+				var updatedHourSelection = A3($mercurymedia$elm_datetime_picker$DatePicker$Utilities$setHourNotDay, zone, newEndHour, endSelection);
+				var _v3 = A2(
+					$mercurymedia$elm_datetime_picker$DatePicker$Utilities$minuteBoundsForSelectedHour,
+					zone,
+					_Utils_Tuple2(endPickerDay, updatedHourSelection));
+				var latestSelectableMinute = _v3.b;
+				return (_Utils_cmp(
+					A2($elm$time$Time$toMinute, zone, endSelection),
+					latestSelectableMinute) > 0) ? _Utils_Tuple2(
+					endPickerDay,
+					A3($mercurymedia$elm_datetime_picker$DatePicker$Utilities$setMinuteNotDay, zone, latestSelectableMinute, updatedHourSelection)) : _Utils_Tuple2(endPickerDay, updatedHourSelection);
+			} else {
+				if (_v1.a.$ === 'Just') {
+					var _v4 = _v1.a.a;
+					var startPickerDay = _v4.a;
+					var startSelection = _v4.b;
+					var _v5 = _v1.b;
+					var updatedHourSelection = A3($mercurymedia$elm_datetime_picker$DatePicker$Utilities$setHourNotDay, zone, newEndHour, startPickerDay.end);
+					var _v6 = A2(
+						$mercurymedia$elm_datetime_picker$DatePicker$Utilities$minuteBoundsForSelectedHour,
+						zone,
+						_Utils_Tuple2(startPickerDay, updatedHourSelection));
+					var latestSelectableMinute = _v6.b;
+					return _Utils_Tuple2(
+						startPickerDay,
+						A3($mercurymedia$elm_datetime_picker$DatePicker$Utilities$setMinuteNotDay, zone, latestSelectableMinute, updatedHourSelection));
+				} else {
+					var _v7 = _v1.a;
+					var _v8 = _v1.b;
+					var updatedHourSelection = A3($mercurymedia$elm_datetime_picker$DatePicker$Utilities$setHourNotDay, zone, newEndHour, basePickerDay.end);
+					var _v9 = A2(
+						$mercurymedia$elm_datetime_picker$DatePicker$Utilities$minuteBoundsForSelectedHour,
+						zone,
+						_Utils_Tuple2(basePickerDay, updatedHourSelection));
+					var latestSelectableMinute = _v9.b;
+					return _Utils_Tuple2(
+						basePickerDay,
+						A3($mercurymedia$elm_datetime_picker$DatePicker$Utilities$setMinuteNotDay, zone, latestSelectableMinute, updatedHourSelection));
+				}
+			}
+		}();
+		var selectedPickerDay = _v0.a;
+		var selection = _v0.b;
+		return function (subjectSelection) {
+			return A2(
+				$mercurymedia$elm_datetime_picker$DatePicker$DurationUtilities$validDurationSelectionOrDefault,
+				_Utils_Tuple2(startSelectionTuple, endSelectionTuple),
+				_Utils_Tuple2(startSelectionTuple, subjectSelection));
+		}(
+			A3(
+				$mercurymedia$elm_datetime_picker$DatePicker$Utilities$validSelectionOrDefault,
+				zone,
+				endSelectionTuple,
+				_Utils_Tuple2(selectedPickerDay, selection)));
+	});
+var $mercurymedia$elm_datetime_picker$DatePicker$DurationUtilities$selectEndMinute = F5(
+	function (zone, basePickerDay, startSelectionTuple, endSelectionTuple, newEndMinute) {
+		var _v0 = function () {
+			var _v1 = _Utils_Tuple2(startSelectionTuple, endSelectionTuple);
+			if (_v1.b.$ === 'Just') {
+				var _v2 = _v1.b.a;
+				var endPickerDay = _v2.a;
+				var endSelection = _v2.b;
+				return _Utils_Tuple2(
+					endPickerDay,
+					A3($mercurymedia$elm_datetime_picker$DatePicker$Utilities$setMinuteNotDay, zone, newEndMinute, endSelection));
+			} else {
+				if (_v1.a.$ === 'Just') {
+					var _v3 = _v1.a.a;
+					var startPickerDay = _v3.a;
+					var startSelection = _v3.b;
+					var _v4 = _v1.b;
+					return _Utils_Tuple2(
+						startPickerDay,
+						A3($mercurymedia$elm_datetime_picker$DatePicker$Utilities$setMinuteNotDay, zone, newEndMinute, startPickerDay.end));
+				} else {
+					var _v5 = _v1.a;
+					var _v6 = _v1.b;
+					return _Utils_Tuple2(
+						basePickerDay,
+						A3($mercurymedia$elm_datetime_picker$DatePicker$Utilities$setMinuteNotDay, zone, newEndMinute, basePickerDay.end));
+				}
+			}
+		}();
+		var selectedPickerDay = _v0.a;
+		var selection = _v0.b;
+		return function (subjectSelection) {
+			return A2(
+				$mercurymedia$elm_datetime_picker$DatePicker$DurationUtilities$validDurationSelectionOrDefault,
+				_Utils_Tuple2(startSelectionTuple, endSelectionTuple),
+				_Utils_Tuple2(startSelectionTuple, subjectSelection));
+		}(
+			A3(
+				$mercurymedia$elm_datetime_picker$DatePicker$Utilities$validSelectionOrDefault,
+				zone,
+				endSelectionTuple,
+				_Utils_Tuple2(selectedPickerDay, selection)));
+	});
+var $mercurymedia$elm_datetime_picker$DatePicker$DurationUtilities$selectStartHour = F5(
+	function (zone, basePickerDay, startSelectionTuple, endSelectionTuple, newStartHour) {
+		var _v0 = function () {
+			var _v1 = _Utils_Tuple2(startSelectionTuple, endSelectionTuple);
+			if (_v1.a.$ === 'Just') {
+				var _v2 = _v1.a.a;
+				var startPickerDay = _v2.a;
+				var startSelection = _v2.b;
+				var updatedHourSelection = A3($mercurymedia$elm_datetime_picker$DatePicker$Utilities$setHourNotDay, zone, newStartHour, startSelection);
+				var _v3 = A2(
+					$mercurymedia$elm_datetime_picker$DatePicker$Utilities$minuteBoundsForSelectedHour,
+					zone,
+					_Utils_Tuple2(startPickerDay, updatedHourSelection));
+				var earliestSelectableMinute = _v3.a;
+				return (_Utils_cmp(
+					A2($elm$time$Time$toMinute, zone, startSelection),
+					earliestSelectableMinute) < 0) ? _Utils_Tuple2(
+					startPickerDay,
+					A3($mercurymedia$elm_datetime_picker$DatePicker$Utilities$setMinuteNotDay, zone, earliestSelectableMinute, updatedHourSelection)) : _Utils_Tuple2(startPickerDay, updatedHourSelection);
+			} else {
+				if (_v1.b.$ === 'Just') {
+					var _v4 = _v1.a;
+					var _v5 = _v1.b.a;
+					var endPickerDay = _v5.a;
+					var endSelection = _v5.b;
+					var updatedHourSelection = A3($mercurymedia$elm_datetime_picker$DatePicker$Utilities$setHourNotDay, zone, newStartHour, endSelection);
+					var _v6 = A2(
+						$mercurymedia$elm_datetime_picker$DatePicker$Utilities$minuteBoundsForSelectedHour,
+						zone,
+						_Utils_Tuple2(endPickerDay, updatedHourSelection));
+					var earliestSelectableMinute = _v6.a;
+					return _Utils_Tuple2(
+						endPickerDay,
+						A3($mercurymedia$elm_datetime_picker$DatePicker$Utilities$setMinuteNotDay, zone, earliestSelectableMinute, updatedHourSelection));
+				} else {
+					var _v7 = _v1.a;
+					var _v8 = _v1.b;
+					var updatedHourSelection = A3($mercurymedia$elm_datetime_picker$DatePicker$Utilities$setHourNotDay, zone, newStartHour, basePickerDay.start);
+					var _v9 = A2(
+						$mercurymedia$elm_datetime_picker$DatePicker$Utilities$minuteBoundsForSelectedHour,
+						zone,
+						_Utils_Tuple2(basePickerDay, updatedHourSelection));
+					var earliestSelectableMinute = _v9.a;
+					return _Utils_Tuple2(
+						basePickerDay,
+						A3($mercurymedia$elm_datetime_picker$DatePicker$Utilities$setMinuteNotDay, zone, earliestSelectableMinute, updatedHourSelection));
+				}
+			}
+		}();
+		var selectedPickerDay = _v0.a;
+		var selection = _v0.b;
+		return function (subjectSelection) {
+			return A2(
+				$mercurymedia$elm_datetime_picker$DatePicker$DurationUtilities$validDurationSelectionOrDefault,
+				_Utils_Tuple2(startSelectionTuple, endSelectionTuple),
+				_Utils_Tuple2(subjectSelection, endSelectionTuple));
+		}(
+			A3(
+				$mercurymedia$elm_datetime_picker$DatePicker$Utilities$validSelectionOrDefault,
+				zone,
+				startSelectionTuple,
+				_Utils_Tuple2(selectedPickerDay, selection)));
+	});
+var $mercurymedia$elm_datetime_picker$DatePicker$DurationUtilities$selectStartMinute = F5(
+	function (zone, basePickerDay, startSelectionTuple, endSelectionTuple, newStartMinute) {
+		var _v0 = function () {
+			var _v1 = _Utils_Tuple2(startSelectionTuple, endSelectionTuple);
+			if (_v1.a.$ === 'Just') {
+				var _v2 = _v1.a.a;
+				var startPickerDay = _v2.a;
+				var startSelection = _v2.b;
+				return _Utils_Tuple2(
+					startPickerDay,
+					A3($mercurymedia$elm_datetime_picker$DatePicker$Utilities$setMinuteNotDay, zone, newStartMinute, startSelection));
+			} else {
+				if (_v1.b.$ === 'Just') {
+					var _v3 = _v1.a;
+					var _v4 = _v1.b.a;
+					var endPickerDay = _v4.a;
+					var endSelection = _v4.b;
+					return _Utils_Tuple2(
+						endPickerDay,
+						A3($mercurymedia$elm_datetime_picker$DatePicker$Utilities$setMinuteNotDay, zone, newStartMinute, endPickerDay.start));
+				} else {
+					var _v5 = _v1.a;
+					var _v6 = _v1.b;
+					return _Utils_Tuple2(
+						basePickerDay,
+						A3($mercurymedia$elm_datetime_picker$DatePicker$Utilities$setMinuteNotDay, zone, newStartMinute, basePickerDay.start));
+				}
+			}
+		}();
+		var selectedPickerDay = _v0.a;
+		var selection = _v0.b;
+		return function (subjectSelection) {
+			return A2(
+				$mercurymedia$elm_datetime_picker$DatePicker$DurationUtilities$validDurationSelectionOrDefault,
+				_Utils_Tuple2(startSelectionTuple, endSelectionTuple),
+				_Utils_Tuple2(subjectSelection, endSelectionTuple));
+		}(
+			A3(
+				$mercurymedia$elm_datetime_picker$DatePicker$Utilities$validSelectionOrDefault,
+				zone,
+				startSelectionTuple,
+				_Utils_Tuple2(selectedPickerDay, selection)));
+	});
+var $mercurymedia$elm_datetime_picker$DurationDatePicker$update = F3(
+	function (settings, msg, _v0) {
+		var model = _v0.a;
+		var _v1 = model.status;
+		if (_v1.$ === 'Open') {
+			var timePickerVisible = _v1.a;
+			var baseDay = _v1.b;
+			switch (msg.$) {
+				case 'NextMonth':
+					return _Utils_Tuple2(
+						$mercurymedia$elm_datetime_picker$DurationDatePicker$DatePicker(
+							_Utils_update(
+								model,
+								{viewOffset: model.viewOffset + 1})),
+						$elm$core$Maybe$Nothing);
+				case 'PrevMonth':
+					return _Utils_Tuple2(
+						$mercurymedia$elm_datetime_picker$DurationDatePicker$DatePicker(
+							_Utils_update(
+								model,
+								{viewOffset: model.viewOffset - 1})),
+						$elm$core$Maybe$Nothing);
+				case 'NextYear':
+					return _Utils_Tuple2(
+						$mercurymedia$elm_datetime_picker$DurationDatePicker$DatePicker(
+							_Utils_update(
+								model,
+								{viewOffset: model.viewOffset + 12})),
+						$elm$core$Maybe$Nothing);
+				case 'PrevYear':
+					return _Utils_Tuple2(
+						$mercurymedia$elm_datetime_picker$DurationDatePicker$DatePicker(
+							_Utils_update(
+								model,
+								{viewOffset: model.viewOffset - 12})),
+						$elm$core$Maybe$Nothing);
+				case 'SetHoveredDay':
+					var pickerDay = msg.a;
+					return _Utils_Tuple2(
+						$mercurymedia$elm_datetime_picker$DurationDatePicker$DatePicker(
+							_Utils_update(
+								model,
+								{
+									hovered: $elm$core$Maybe$Just(pickerDay)
+								})),
+						$elm$core$Maybe$Nothing);
+				case 'ClearHoveredDay':
+					return _Utils_Tuple2(
+						$mercurymedia$elm_datetime_picker$DurationDatePicker$DatePicker(
+							_Utils_update(
+								model,
+								{hovered: $elm$core$Maybe$Nothing})),
+						$elm$core$Maybe$Nothing);
+				case 'SetRange':
+					var pickerDay = msg.a;
+					return A2(
+						$mercurymedia$elm_datetime_picker$DurationDatePicker$processSelection,
+						model,
+						A4($mercurymedia$elm_datetime_picker$DatePicker$DurationUtilities$selectDay, settings.zone, model.startSelectionTuple, model.endSelectionTuple, pickerDay));
+				case 'ToggleTimePickerVisibility':
+					var _v3 = settings.timePickerVisibility;
+					if (_v3.$ === 'Toggleable') {
+						return _Utils_Tuple2(
+							$mercurymedia$elm_datetime_picker$DurationDatePicker$DatePicker(
+								_Utils_update(
+									model,
+									{
+										status: A2($mercurymedia$elm_datetime_picker$DurationDatePicker$Open, !timePickerVisible, baseDay)
+									})),
+							$elm$core$Maybe$Nothing);
+					} else {
+						return _Utils_Tuple2(
+							$mercurymedia$elm_datetime_picker$DurationDatePicker$DatePicker(model),
+							$elm$core$Maybe$Nothing);
+					}
+				case 'SetHour':
+					var startOrEnd = msg.a;
+					var hour = msg.b;
+					if (startOrEnd.$ === 'Start') {
+						return A2(
+							$mercurymedia$elm_datetime_picker$DurationDatePicker$processSelection,
+							model,
+							A5($mercurymedia$elm_datetime_picker$DatePicker$DurationUtilities$selectStartHour, settings.zone, baseDay, model.startSelectionTuple, model.endSelectionTuple, hour));
+					} else {
+						return A2(
+							$mercurymedia$elm_datetime_picker$DurationDatePicker$processSelection,
+							model,
+							A5($mercurymedia$elm_datetime_picker$DatePicker$DurationUtilities$selectEndHour, settings.zone, baseDay, model.startSelectionTuple, model.endSelectionTuple, hour));
+					}
+				case 'SetMinute':
+					var startOrEnd = msg.a;
+					var minute = msg.b;
+					if (startOrEnd.$ === 'Start') {
+						return A2(
+							$mercurymedia$elm_datetime_picker$DurationDatePicker$processSelection,
+							model,
+							A5($mercurymedia$elm_datetime_picker$DatePicker$DurationUtilities$selectStartMinute, settings.zone, baseDay, model.startSelectionTuple, model.endSelectionTuple, minute));
+					} else {
+						return A2(
+							$mercurymedia$elm_datetime_picker$DurationDatePicker$processSelection,
+							model,
+							A5($mercurymedia$elm_datetime_picker$DatePicker$DurationUtilities$selectEndMinute, settings.zone, baseDay, model.startSelectionTuple, model.endSelectionTuple, minute));
+					}
+				default:
+					return _Utils_Tuple2(
+						$mercurymedia$elm_datetime_picker$DurationDatePicker$DatePicker(
+							_Utils_update(
+								model,
+								{status: $mercurymedia$elm_datetime_picker$DurationDatePicker$Closed})),
+						$elm$core$Maybe$Nothing);
+			}
+		} else {
+			return _Utils_Tuple2(
+				$mercurymedia$elm_datetime_picker$DurationDatePicker$DatePicker(model),
+				$elm$core$Maybe$Nothing);
+		}
+	});
+var $mercurymedia$elm_datetime_picker$DurationDatePicker$clickedOutsidePicker = F4(
+	function (settings, componentId, internalMsg, datePicker) {
+		return A2(
+			$elm$json$Json$Decode$andThen,
+			function (isOutside) {
+				return isOutside ? $elm$json$Json$Decode$succeed(
+					internalMsg(
+						A3($mercurymedia$elm_datetime_picker$DurationDatePicker$update, settings, $mercurymedia$elm_datetime_picker$DurationDatePicker$Close, datePicker))) : $elm$json$Json$Decode$fail('inside component');
+			},
+			A2(
+				$elm$json$Json$Decode$field,
+				'target',
+				$mercurymedia$elm_datetime_picker$DatePicker$Utilities$eventIsOutsideComponent(componentId)));
+	});
+var $mercurymedia$elm_datetime_picker$DurationDatePicker$datePickerId = 'date-picker-component';
 var $elm$core$Platform$Sub$none = $elm$core$Platform$Sub$batch(_List_Nil);
+var $elm$browser$Browser$Events$Document = {$: 'Document'};
+var $elm$browser$Browser$Events$MySub = F3(
+	function (a, b, c) {
+		return {$: 'MySub', a: a, b: b, c: c};
+	});
+var $elm$browser$Browser$Events$State = F2(
+	function (subs, pids) {
+		return {pids: pids, subs: subs};
+	});
+var $elm$browser$Browser$Events$init = $elm$core$Task$succeed(
+	A2($elm$browser$Browser$Events$State, _List_Nil, $elm$core$Dict$empty));
+var $elm$browser$Browser$Events$nodeToKey = function (node) {
+	if (node.$ === 'Document') {
+		return 'd_';
+	} else {
+		return 'w_';
+	}
+};
+var $elm$browser$Browser$Events$addKey = function (sub) {
+	var node = sub.a;
+	var name = sub.b;
+	return _Utils_Tuple2(
+		_Utils_ap(
+			$elm$browser$Browser$Events$nodeToKey(node),
+			name),
+		sub);
+};
+var $elm$core$Dict$fromList = function (assocs) {
+	return A3(
+		$elm$core$List$foldl,
+		F2(
+			function (_v0, dict) {
+				var key = _v0.a;
+				var value = _v0.b;
+				return A3($elm$core$Dict$insert, key, value, dict);
+			}),
+		$elm$core$Dict$empty,
+		assocs);
+};
+var $elm$browser$Browser$Events$Event = F2(
+	function (key, event) {
+		return {event: event, key: key};
+	});
+var $elm$browser$Browser$Events$spawn = F3(
+	function (router, key, _v0) {
+		var node = _v0.a;
+		var name = _v0.b;
+		var actualNode = function () {
+			if (node.$ === 'Document') {
+				return _Browser_doc;
+			} else {
+				return _Browser_window;
+			}
+		}();
+		return A2(
+			$elm$core$Task$map,
+			function (value) {
+				return _Utils_Tuple2(key, value);
+			},
+			A3(
+				_Browser_on,
+				actualNode,
+				name,
+				function (event) {
+					return A2(
+						$elm$core$Platform$sendToSelf,
+						router,
+						A2($elm$browser$Browser$Events$Event, key, event));
+				}));
+	});
+var $elm$core$Dict$union = F2(
+	function (t1, t2) {
+		return A3($elm$core$Dict$foldl, $elm$core$Dict$insert, t2, t1);
+	});
+var $elm$browser$Browser$Events$onEffects = F3(
+	function (router, subs, state) {
+		var stepRight = F3(
+			function (key, sub, _v6) {
+				var deads = _v6.a;
+				var lives = _v6.b;
+				var news = _v6.c;
+				return _Utils_Tuple3(
+					deads,
+					lives,
+					A2(
+						$elm$core$List$cons,
+						A3($elm$browser$Browser$Events$spawn, router, key, sub),
+						news));
+			});
+		var stepLeft = F3(
+			function (_v4, pid, _v5) {
+				var deads = _v5.a;
+				var lives = _v5.b;
+				var news = _v5.c;
+				return _Utils_Tuple3(
+					A2($elm$core$List$cons, pid, deads),
+					lives,
+					news);
+			});
+		var stepBoth = F4(
+			function (key, pid, _v2, _v3) {
+				var deads = _v3.a;
+				var lives = _v3.b;
+				var news = _v3.c;
+				return _Utils_Tuple3(
+					deads,
+					A3($elm$core$Dict$insert, key, pid, lives),
+					news);
+			});
+		var newSubs = A2($elm$core$List$map, $elm$browser$Browser$Events$addKey, subs);
+		var _v0 = A6(
+			$elm$core$Dict$merge,
+			stepLeft,
+			stepBoth,
+			stepRight,
+			state.pids,
+			$elm$core$Dict$fromList(newSubs),
+			_Utils_Tuple3(_List_Nil, $elm$core$Dict$empty, _List_Nil));
+		var deadPids = _v0.a;
+		var livePids = _v0.b;
+		var makeNewPids = _v0.c;
+		return A2(
+			$elm$core$Task$andThen,
+			function (pids) {
+				return $elm$core$Task$succeed(
+					A2(
+						$elm$browser$Browser$Events$State,
+						newSubs,
+						A2(
+							$elm$core$Dict$union,
+							livePids,
+							$elm$core$Dict$fromList(pids))));
+			},
+			A2(
+				$elm$core$Task$andThen,
+				function (_v1) {
+					return $elm$core$Task$sequence(makeNewPids);
+				},
+				$elm$core$Task$sequence(
+					A2($elm$core$List$map, $elm$core$Process$kill, deadPids))));
+	});
+var $elm$browser$Browser$Events$onSelfMsg = F3(
+	function (router, _v0, state) {
+		var key = _v0.key;
+		var event = _v0.event;
+		var toMessage = function (_v2) {
+			var subKey = _v2.a;
+			var _v3 = _v2.b;
+			var node = _v3.a;
+			var name = _v3.b;
+			var decoder = _v3.c;
+			return _Utils_eq(subKey, key) ? A2(_Browser_decodeEvent, decoder, event) : $elm$core$Maybe$Nothing;
+		};
+		var messages = A2($elm$core$List$filterMap, toMessage, state.subs);
+		return A2(
+			$elm$core$Task$andThen,
+			function (_v1) {
+				return $elm$core$Task$succeed(state);
+			},
+			$elm$core$Task$sequence(
+				A2(
+					$elm$core$List$map,
+					$elm$core$Platform$sendToApp(router),
+					messages)));
+	});
+var $elm$browser$Browser$Events$subMap = F2(
+	function (func, _v0) {
+		var node = _v0.a;
+		var name = _v0.b;
+		var decoder = _v0.c;
+		return A3(
+			$elm$browser$Browser$Events$MySub,
+			node,
+			name,
+			A2($elm$json$Json$Decode$map, func, decoder));
+	});
+_Platform_effectManagers['Browser.Events'] = _Platform_createManager($elm$browser$Browser$Events$init, $elm$browser$Browser$Events$onEffects, $elm$browser$Browser$Events$onSelfMsg, 0, $elm$browser$Browser$Events$subMap);
+var $elm$browser$Browser$Events$subscription = _Platform_leaf('Browser.Events');
+var $elm$browser$Browser$Events$on = F3(
+	function (node, name, decoder) {
+		return $elm$browser$Browser$Events$subscription(
+			A3($elm$browser$Browser$Events$MySub, node, name, decoder));
+	});
+var $elm$browser$Browser$Events$onMouseDown = A2($elm$browser$Browser$Events$on, $elm$browser$Browser$Events$Document, 'mousedown');
+var $mercurymedia$elm_datetime_picker$DurationDatePicker$subscriptions = F3(
+	function (settings, internalMsg, _v0) {
+		var model = _v0.a;
+		var _v1 = model.status;
+		if (_v1.$ === 'Open') {
+			return $elm$browser$Browser$Events$onMouseDown(
+				A4(
+					$mercurymedia$elm_datetime_picker$DurationDatePicker$clickedOutsidePicker,
+					settings,
+					$mercurymedia$elm_datetime_picker$DurationDatePicker$datePickerId,
+					internalMsg,
+					$mercurymedia$elm_datetime_picker$DurationDatePicker$DatePicker(model)));
+		} else {
+			return $elm$core$Platform$Sub$none;
+		}
+	});
+var $elm$time$Time$utc = A2($elm$time$Time$Zone, 0, _List_Nil);
+var $author$project$Main$subscriptions = function (model) {
+	var insert = function () {
+		var _v0 = model.insert;
+		if (_v0.$ === 'Nothing') {
+			return $author$project$Main$emptyInsert;
+		} else {
+			var i = _v0.a;
+			return i;
+		}
+	}();
+	return $elm$core$Platform$Sub$batch(
+		_List_fromArray(
+			[
+				A3(
+				$mercurymedia$elm_datetime_picker$DurationDatePicker$subscriptions,
+				A2($mercurymedia$elm_datetime_picker$DurationDatePicker$defaultSettings, $elm$time$Time$utc, $author$project$Main$UpdatePicker),
+				$author$project$Main$UpdatePicker,
+				insert.picker),
+				A2($elm$time$Time$every, 1000, $author$project$Main$Tick)
+			]));
+};
 var $author$project$Main$ReceiveEvent = function (a) {
 	return {$: 'ReceiveEvent', a: a};
 };
@@ -6422,8 +7982,503 @@ var $author$project$Main$buildErrorMessage = function (httpError) {
 			return message;
 	}
 };
+var $elm$core$Maybe$map = F2(
+	function (f, maybe) {
+		if (maybe.$ === 'Just') {
+			var value = maybe.a;
+			return $elm$core$Maybe$Just(
+				f(value));
+		} else {
+			return $elm$core$Maybe$Nothing;
+		}
+	});
 var $elm$core$Platform$Cmd$batch = _Platform_batch;
 var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
+var $justinmimbs$time_extra$Time$Extra$Month = {$: 'Month'};
+var $justinmimbs$time_extra$Time$Extra$Day = {$: 'Day'};
+var $justinmimbs$time_extra$Time$Extra$Millisecond = {$: 'Millisecond'};
+var $justinmimbs$time_extra$Time$Extra$Week = {$: 'Week'};
+var $justinmimbs$date$Date$Day = {$: 'Day'};
+var $justinmimbs$date$Date$Friday = {$: 'Friday'};
+var $justinmimbs$date$Date$Monday = {$: 'Monday'};
+var $justinmimbs$date$Date$Month = {$: 'Month'};
+var $justinmimbs$date$Date$Quarter = {$: 'Quarter'};
+var $justinmimbs$date$Date$Saturday = {$: 'Saturday'};
+var $justinmimbs$date$Date$Sunday = {$: 'Sunday'};
+var $justinmimbs$date$Date$Thursday = {$: 'Thursday'};
+var $justinmimbs$date$Date$Tuesday = {$: 'Tuesday'};
+var $justinmimbs$date$Date$Wednesday = {$: 'Wednesday'};
+var $justinmimbs$date$Date$Week = {$: 'Week'};
+var $justinmimbs$date$Date$Year = {$: 'Year'};
+var $elm$time$Time$Fri = {$: 'Fri'};
+var $elm$time$Time$Sat = {$: 'Sat'};
+var $elm$time$Time$Sun = {$: 'Sun'};
+var $elm$time$Time$Thu = {$: 'Thu'};
+var $elm$time$Time$Tue = {$: 'Tue'};
+var $elm$time$Time$Wed = {$: 'Wed'};
+var $justinmimbs$date$Date$weekdayNumber = function (_v0) {
+	var rd = _v0.a;
+	var _v1 = A2($elm$core$Basics$modBy, 7, rd);
+	if (!_v1) {
+		return 7;
+	} else {
+		var n = _v1;
+		return n;
+	}
+};
+var $justinmimbs$date$Date$weekdayToNumber = function (wd) {
+	switch (wd.$) {
+		case 'Mon':
+			return 1;
+		case 'Tue':
+			return 2;
+		case 'Wed':
+			return 3;
+		case 'Thu':
+			return 4;
+		case 'Fri':
+			return 5;
+		case 'Sat':
+			return 6;
+		default:
+			return 7;
+	}
+};
+var $justinmimbs$date$Date$daysSincePreviousWeekday = F2(
+	function (wd, date) {
+		return A2(
+			$elm$core$Basics$modBy,
+			7,
+			($justinmimbs$date$Date$weekdayNumber(date) + 7) - $justinmimbs$date$Date$weekdayToNumber(wd));
+	});
+var $justinmimbs$date$Date$firstOfMonth = F2(
+	function (y, m) {
+		return $justinmimbs$date$Date$RD(
+			($justinmimbs$date$Date$daysBeforeYear(y) + A2($justinmimbs$date$Date$daysBeforeMonth, y, m)) + 1);
+	});
+var $justinmimbs$date$Date$firstOfYear = function (y) {
+	return $justinmimbs$date$Date$RD(
+		$justinmimbs$date$Date$daysBeforeYear(y) + 1);
+};
+var $justinmimbs$date$Date$monthToNumber = function (m) {
+	switch (m.$) {
+		case 'Jan':
+			return 1;
+		case 'Feb':
+			return 2;
+		case 'Mar':
+			return 3;
+		case 'Apr':
+			return 4;
+		case 'May':
+			return 5;
+		case 'Jun':
+			return 6;
+		case 'Jul':
+			return 7;
+		case 'Aug':
+			return 8;
+		case 'Sep':
+			return 9;
+		case 'Oct':
+			return 10;
+		case 'Nov':
+			return 11;
+		default:
+			return 12;
+	}
+};
+var $justinmimbs$date$Date$numberToMonth = function (mn) {
+	var _v0 = A2($elm$core$Basics$max, 1, mn);
+	switch (_v0) {
+		case 1:
+			return $elm$time$Time$Jan;
+		case 2:
+			return $elm$time$Time$Feb;
+		case 3:
+			return $elm$time$Time$Mar;
+		case 4:
+			return $elm$time$Time$Apr;
+		case 5:
+			return $elm$time$Time$May;
+		case 6:
+			return $elm$time$Time$Jun;
+		case 7:
+			return $elm$time$Time$Jul;
+		case 8:
+			return $elm$time$Time$Aug;
+		case 9:
+			return $elm$time$Time$Sep;
+		case 10:
+			return $elm$time$Time$Oct;
+		case 11:
+			return $elm$time$Time$Nov;
+		default:
+			return $elm$time$Time$Dec;
+	}
+};
+var $justinmimbs$date$Date$toCalendarDateHelp = F3(
+	function (y, m, d) {
+		toCalendarDateHelp:
+		while (true) {
+			var monthDays = A2($justinmimbs$date$Date$daysInMonth, y, m);
+			var mn = $justinmimbs$date$Date$monthToNumber(m);
+			if ((mn < 12) && (_Utils_cmp(d, monthDays) > 0)) {
+				var $temp$y = y,
+					$temp$m = $justinmimbs$date$Date$numberToMonth(mn + 1),
+					$temp$d = d - monthDays;
+				y = $temp$y;
+				m = $temp$m;
+				d = $temp$d;
+				continue toCalendarDateHelp;
+			} else {
+				return {day: d, month: m, year: y};
+			}
+		}
+	});
+var $justinmimbs$date$Date$divWithRemainder = F2(
+	function (a, b) {
+		return _Utils_Tuple2(
+			A2($justinmimbs$date$Date$floorDiv, a, b),
+			A2($elm$core$Basics$modBy, b, a));
+	});
+var $justinmimbs$date$Date$year = function (_v0) {
+	var rd = _v0.a;
+	var _v1 = A2($justinmimbs$date$Date$divWithRemainder, rd, 146097);
+	var n400 = _v1.a;
+	var r400 = _v1.b;
+	var _v2 = A2($justinmimbs$date$Date$divWithRemainder, r400, 36524);
+	var n100 = _v2.a;
+	var r100 = _v2.b;
+	var _v3 = A2($justinmimbs$date$Date$divWithRemainder, r100, 1461);
+	var n4 = _v3.a;
+	var r4 = _v3.b;
+	var _v4 = A2($justinmimbs$date$Date$divWithRemainder, r4, 365);
+	var n1 = _v4.a;
+	var r1 = _v4.b;
+	var n = (!r1) ? 0 : 1;
+	return ((((n400 * 400) + (n100 * 100)) + (n4 * 4)) + n1) + n;
+};
+var $justinmimbs$date$Date$toOrdinalDate = function (_v0) {
+	var rd = _v0.a;
+	var y = $justinmimbs$date$Date$year(
+		$justinmimbs$date$Date$RD(rd));
+	return {
+		ordinalDay: rd - $justinmimbs$date$Date$daysBeforeYear(y),
+		year: y
+	};
+};
+var $justinmimbs$date$Date$toCalendarDate = function (_v0) {
+	var rd = _v0.a;
+	var date = $justinmimbs$date$Date$toOrdinalDate(
+		$justinmimbs$date$Date$RD(rd));
+	return A3($justinmimbs$date$Date$toCalendarDateHelp, date.year, $elm$time$Time$Jan, date.ordinalDay);
+};
+var $justinmimbs$date$Date$month = A2(
+	$elm$core$Basics$composeR,
+	$justinmimbs$date$Date$toCalendarDate,
+	function ($) {
+		return $.month;
+	});
+var $justinmimbs$date$Date$monthToQuarter = function (m) {
+	return (($justinmimbs$date$Date$monthToNumber(m) + 2) / 3) | 0;
+};
+var $justinmimbs$date$Date$quarter = A2($elm$core$Basics$composeR, $justinmimbs$date$Date$month, $justinmimbs$date$Date$monthToQuarter);
+var $justinmimbs$date$Date$quarterToMonth = function (q) {
+	return $justinmimbs$date$Date$numberToMonth((q * 3) - 2);
+};
+var $justinmimbs$date$Date$floor = F2(
+	function (interval, date) {
+		var rd = date.a;
+		switch (interval.$) {
+			case 'Year':
+				return $justinmimbs$date$Date$firstOfYear(
+					$justinmimbs$date$Date$year(date));
+			case 'Quarter':
+				return A2(
+					$justinmimbs$date$Date$firstOfMonth,
+					$justinmimbs$date$Date$year(date),
+					$justinmimbs$date$Date$quarterToMonth(
+						$justinmimbs$date$Date$quarter(date)));
+			case 'Month':
+				return A2(
+					$justinmimbs$date$Date$firstOfMonth,
+					$justinmimbs$date$Date$year(date),
+					$justinmimbs$date$Date$month(date));
+			case 'Week':
+				return $justinmimbs$date$Date$RD(
+					rd - A2($justinmimbs$date$Date$daysSincePreviousWeekday, $elm$time$Time$Mon, date));
+			case 'Monday':
+				return $justinmimbs$date$Date$RD(
+					rd - A2($justinmimbs$date$Date$daysSincePreviousWeekday, $elm$time$Time$Mon, date));
+			case 'Tuesday':
+				return $justinmimbs$date$Date$RD(
+					rd - A2($justinmimbs$date$Date$daysSincePreviousWeekday, $elm$time$Time$Tue, date));
+			case 'Wednesday':
+				return $justinmimbs$date$Date$RD(
+					rd - A2($justinmimbs$date$Date$daysSincePreviousWeekday, $elm$time$Time$Wed, date));
+			case 'Thursday':
+				return $justinmimbs$date$Date$RD(
+					rd - A2($justinmimbs$date$Date$daysSincePreviousWeekday, $elm$time$Time$Thu, date));
+			case 'Friday':
+				return $justinmimbs$date$Date$RD(
+					rd - A2($justinmimbs$date$Date$daysSincePreviousWeekday, $elm$time$Time$Fri, date));
+			case 'Saturday':
+				return $justinmimbs$date$Date$RD(
+					rd - A2($justinmimbs$date$Date$daysSincePreviousWeekday, $elm$time$Time$Sat, date));
+			case 'Sunday':
+				return $justinmimbs$date$Date$RD(
+					rd - A2($justinmimbs$date$Date$daysSincePreviousWeekday, $elm$time$Time$Sun, date));
+			default:
+				return date;
+		}
+	});
+var $justinmimbs$time_extra$Time$Extra$floorDate = F3(
+	function (dateInterval, zone, posix) {
+		return A3(
+			$justinmimbs$time_extra$Time$Extra$posixFromDateTime,
+			zone,
+			A2(
+				$justinmimbs$date$Date$floor,
+				dateInterval,
+				A2($justinmimbs$date$Date$fromPosix, zone, posix)),
+			0);
+	});
+var $justinmimbs$time_extra$Time$Extra$floor = F3(
+	function (interval, zone, posix) {
+		switch (interval.$) {
+			case 'Millisecond':
+				return posix;
+			case 'Second':
+				return A3(
+					$justinmimbs$time_extra$Time$Extra$posixFromDateTime,
+					zone,
+					A2($justinmimbs$date$Date$fromPosix, zone, posix),
+					A4(
+						$justinmimbs$time_extra$Time$Extra$timeFromClock,
+						A2($elm$time$Time$toHour, zone, posix),
+						A2($elm$time$Time$toMinute, zone, posix),
+						A2($elm$time$Time$toSecond, zone, posix),
+						0));
+			case 'Minute':
+				return A3(
+					$justinmimbs$time_extra$Time$Extra$posixFromDateTime,
+					zone,
+					A2($justinmimbs$date$Date$fromPosix, zone, posix),
+					A4(
+						$justinmimbs$time_extra$Time$Extra$timeFromClock,
+						A2($elm$time$Time$toHour, zone, posix),
+						A2($elm$time$Time$toMinute, zone, posix),
+						0,
+						0));
+			case 'Hour':
+				return A3(
+					$justinmimbs$time_extra$Time$Extra$posixFromDateTime,
+					zone,
+					A2($justinmimbs$date$Date$fromPosix, zone, posix),
+					A4(
+						$justinmimbs$time_extra$Time$Extra$timeFromClock,
+						A2($elm$time$Time$toHour, zone, posix),
+						0,
+						0,
+						0));
+			case 'Day':
+				return A3($justinmimbs$time_extra$Time$Extra$floorDate, $justinmimbs$date$Date$Day, zone, posix);
+			case 'Month':
+				return A3($justinmimbs$time_extra$Time$Extra$floorDate, $justinmimbs$date$Date$Month, zone, posix);
+			case 'Year':
+				return A3($justinmimbs$time_extra$Time$Extra$floorDate, $justinmimbs$date$Date$Year, zone, posix);
+			case 'Quarter':
+				return A3($justinmimbs$time_extra$Time$Extra$floorDate, $justinmimbs$date$Date$Quarter, zone, posix);
+			case 'Week':
+				return A3($justinmimbs$time_extra$Time$Extra$floorDate, $justinmimbs$date$Date$Week, zone, posix);
+			case 'Monday':
+				return A3($justinmimbs$time_extra$Time$Extra$floorDate, $justinmimbs$date$Date$Monday, zone, posix);
+			case 'Tuesday':
+				return A3($justinmimbs$time_extra$Time$Extra$floorDate, $justinmimbs$date$Date$Tuesday, zone, posix);
+			case 'Wednesday':
+				return A3($justinmimbs$time_extra$Time$Extra$floorDate, $justinmimbs$date$Date$Wednesday, zone, posix);
+			case 'Thursday':
+				return A3($justinmimbs$time_extra$Time$Extra$floorDate, $justinmimbs$date$Date$Thursday, zone, posix);
+			case 'Friday':
+				return A3($justinmimbs$time_extra$Time$Extra$floorDate, $justinmimbs$date$Date$Friday, zone, posix);
+			case 'Saturday':
+				return A3($justinmimbs$time_extra$Time$Extra$floorDate, $justinmimbs$date$Date$Saturday, zone, posix);
+			default:
+				return A3($justinmimbs$time_extra$Time$Extra$floorDate, $justinmimbs$date$Date$Sunday, zone, posix);
+		}
+	});
+var $justinmimbs$time_extra$Time$Extra$toFractionalDay = F2(
+	function (zone, posix) {
+		return A2($justinmimbs$time_extra$Time$Extra$timeFromPosix, zone, posix) / 86400000;
+	});
+var $justinmimbs$time_extra$Time$Extra$toMonths = F2(
+	function (zone, posix) {
+		var wholeMonths = (12 * (A2($elm$time$Time$toYear, zone, posix) - 1)) + ($justinmimbs$date$Date$monthToNumber(
+			A2($elm$time$Time$toMonth, zone, posix)) - 1);
+		var fractionalMonth = (A2($elm$time$Time$toDay, zone, posix) + A2($justinmimbs$time_extra$Time$Extra$toFractionalDay, zone, posix)) / 100;
+		return wholeMonths + fractionalMonth;
+	});
+var $justinmimbs$time_extra$Time$Extra$toRataDieMoment = F2(
+	function (zone, posix) {
+		return $justinmimbs$date$Date$toRataDie(
+			A2($justinmimbs$date$Date$fromPosix, zone, posix)) + A2($justinmimbs$time_extra$Time$Extra$toFractionalDay, zone, posix);
+	});
+var $elm$core$Basics$truncate = _Basics_truncate;
+var $justinmimbs$time_extra$Time$Extra$diff = F4(
+	function (interval, zone, posix1, posix2) {
+		diff:
+		while (true) {
+			switch (interval.$) {
+				case 'Millisecond':
+					return $elm$time$Time$posixToMillis(posix2) - $elm$time$Time$posixToMillis(posix1);
+				case 'Second':
+					return (A4($justinmimbs$time_extra$Time$Extra$diff, $justinmimbs$time_extra$Time$Extra$Millisecond, zone, posix1, posix2) / 1000) | 0;
+				case 'Minute':
+					return (A4($justinmimbs$time_extra$Time$Extra$diff, $justinmimbs$time_extra$Time$Extra$Millisecond, zone, posix1, posix2) / 60000) | 0;
+				case 'Hour':
+					return (A4($justinmimbs$time_extra$Time$Extra$diff, $justinmimbs$time_extra$Time$Extra$Millisecond, zone, posix1, posix2) / 3600000) | 0;
+				case 'Day':
+					return (A2($justinmimbs$time_extra$Time$Extra$toRataDieMoment, zone, posix2) - A2($justinmimbs$time_extra$Time$Extra$toRataDieMoment, zone, posix1)) | 0;
+				case 'Month':
+					return (A2($justinmimbs$time_extra$Time$Extra$toMonths, zone, posix2) - A2($justinmimbs$time_extra$Time$Extra$toMonths, zone, posix1)) | 0;
+				case 'Year':
+					return (A4($justinmimbs$time_extra$Time$Extra$diff, $justinmimbs$time_extra$Time$Extra$Month, zone, posix1, posix2) / 12) | 0;
+				case 'Quarter':
+					return (A4($justinmimbs$time_extra$Time$Extra$diff, $justinmimbs$time_extra$Time$Extra$Month, zone, posix1, posix2) / 3) | 0;
+				case 'Week':
+					return (A4($justinmimbs$time_extra$Time$Extra$diff, $justinmimbs$time_extra$Time$Extra$Day, zone, posix1, posix2) / 7) | 0;
+				default:
+					var weekday = interval;
+					var $temp$interval = $justinmimbs$time_extra$Time$Extra$Week,
+						$temp$zone = zone,
+						$temp$posix1 = A3($justinmimbs$time_extra$Time$Extra$floor, weekday, zone, posix1),
+						$temp$posix2 = A3($justinmimbs$time_extra$Time$Extra$floor, weekday, zone, posix2);
+					interval = $temp$interval;
+					zone = $temp$zone;
+					posix1 = $temp$posix1;
+					posix2 = $temp$posix2;
+					continue diff;
+			}
+		}
+	});
+var $mercurymedia$elm_datetime_picker$DatePicker$Utilities$calculateViewOffset = F3(
+	function (zone, referenceTime, subjectTime) {
+		var flooredReference = A3($justinmimbs$time_extra$Time$Extra$floor, $justinmimbs$time_extra$Time$Extra$Month, zone, referenceTime);
+		if (subjectTime.$ === 'Nothing') {
+			return 0;
+		} else {
+			var time = subjectTime.a;
+			var flooredSubject = A3($justinmimbs$time_extra$Time$Extra$floor, $justinmimbs$time_extra$Time$Extra$Month, zone, time);
+			return (_Utils_cmp(
+				$elm$time$Time$posixToMillis(flooredReference),
+				$elm$time$Time$posixToMillis(flooredSubject)) < 1) ? A4($justinmimbs$time_extra$Time$Extra$diff, $justinmimbs$time_extra$Time$Extra$Month, zone, flooredReference, flooredSubject) : (0 - A4($justinmimbs$time_extra$Time$Extra$diff, $justinmimbs$time_extra$Time$Extra$Month, zone, flooredSubject, flooredReference));
+		}
+	});
+var $mercurymedia$elm_datetime_picker$DurationDatePicker$getTimePickerSettings = function (settings) {
+	var _v0 = settings.timePickerVisibility;
+	switch (_v0.$) {
+		case 'NeverVisible':
+			return $elm$core$Maybe$Nothing;
+		case 'Toggleable':
+			var timePickerSettings = _v0.a;
+			return $elm$core$Maybe$Just(timePickerSettings);
+		default:
+			var timePickerSettings = _v0.a;
+			return $elm$core$Maybe$Just(timePickerSettings);
+	}
+};
+var $elm$core$Maybe$withDefault = F2(
+	function (_default, maybe) {
+		if (maybe.$ === 'Just') {
+			var value = maybe.a;
+			return value;
+		} else {
+			return _default;
+		}
+	});
+var $mercurymedia$elm_datetime_picker$DatePicker$Utilities$pickerDayFromPosix = F4(
+	function (zone, isDisabledFn, allowableTimesFn, posix) {
+		var flooredPosix = A3($justinmimbs$time_extra$Time$Extra$floor, $justinmimbs$time_extra$Time$Extra$Day, zone, posix);
+		var allowableTimes = A2(
+			$elm$core$Maybe$withDefault,
+			{endHour: 23, endMinute: 59, startHour: 0, startMinute: 0},
+			A2(
+				$elm$core$Maybe$map,
+				function (fn) {
+					return A2(fn, zone, flooredPosix);
+				},
+				allowableTimesFn));
+		return {
+			disabled: A2(
+				isDisabledFn,
+				zone,
+				A3($justinmimbs$time_extra$Time$Extra$floor, $justinmimbs$time_extra$Time$Extra$Day, zone, flooredPosix)),
+			end: A5($mercurymedia$elm_datetime_picker$DatePicker$Utilities$setTimeOfDay, zone, allowableTimes.endHour, allowableTimes.endMinute, 59, flooredPosix),
+			start: A5($mercurymedia$elm_datetime_picker$DatePicker$Utilities$setTimeOfDay, zone, allowableTimes.startHour, allowableTimes.startMinute, 0, flooredPosix)
+		};
+	});
+var $mercurymedia$elm_datetime_picker$DurationDatePicker$generatePickerDay = F2(
+	function (settings, time) {
+		return A2(
+			$elm$core$Maybe$withDefault,
+			A4($mercurymedia$elm_datetime_picker$DatePicker$Utilities$pickerDayFromPosix, settings.zone, settings.isDayDisabled, $elm$core$Maybe$Nothing, time),
+			A2(
+				$elm$core$Maybe$map,
+				function (timePickerSettings) {
+					return A4(
+						$mercurymedia$elm_datetime_picker$DatePicker$Utilities$pickerDayFromPosix,
+						settings.zone,
+						settings.isDayDisabled,
+						$elm$core$Maybe$Just(timePickerSettings.allowedTimesOfDay),
+						time);
+				},
+				$mercurymedia$elm_datetime_picker$DurationDatePicker$getTimePickerSettings(settings)));
+	});
+var $mercurymedia$elm_datetime_picker$DurationDatePicker$openPicker = F5(
+	function (settings, baseTime, start, end, _v0) {
+		var model = _v0.a;
+		var viewOffset = A3($mercurymedia$elm_datetime_picker$DatePicker$Utilities$calculateViewOffset, settings.zone, baseTime, start);
+		var timePickerVisible = function () {
+			var _v1 = settings.timePickerVisibility;
+			switch (_v1.$) {
+				case 'NeverVisible':
+					return false;
+				case 'Toggleable':
+					return false;
+				default:
+					return true;
+			}
+		}();
+		var startSelectionTuple = A2(
+			$elm$core$Maybe$map,
+			function (s) {
+				return _Utils_Tuple2(
+					A2($mercurymedia$elm_datetime_picker$DurationDatePicker$generatePickerDay, settings, s),
+					s);
+			},
+			start);
+		var endSelectionTuple = A2(
+			$elm$core$Maybe$map,
+			function (e) {
+				return _Utils_Tuple2(
+					A2($mercurymedia$elm_datetime_picker$DurationDatePicker$generatePickerDay, settings, e),
+					e);
+			},
+			end);
+		return $mercurymedia$elm_datetime_picker$DurationDatePicker$DatePicker(
+			_Utils_update(
+				model,
+				{
+					endSelectionTuple: endSelectionTuple,
+					startSelectionTuple: startSelectionTuple,
+					status: A2(
+						$mercurymedia$elm_datetime_picker$DurationDatePicker$Open,
+						timePickerVisible,
+						A2($mercurymedia$elm_datetime_picker$DurationDatePicker$generatePickerDay, settings, baseTime)),
+					viewOffset: viewOffset
+				}));
+	});
 var $elm$http$Http$expectBytesResponse = F2(
 	function (toMsg, toResult) {
 		return A3(
@@ -6458,6 +8513,7 @@ var $author$project$Main$sendDelete = F2(
 				url: '/api/periode/' + $author$project$Periode$idToString(id)
 			});
 	});
+var $elm$json$Json$Encode$int = _Json_wrap;
 var $elm$json$Json$Encode$object = function (pairs) {
 	return _Json_wrap(
 		A3(
@@ -6472,15 +8528,36 @@ var $elm$json$Json$Encode$object = function (pairs) {
 			pairs));
 };
 var $elm$json$Json$Encode$string = _Json_wrap;
-var $author$project$Main$commentEncoder = function (comment) {
-	return $elm$json$Json$Encode$object(
-		_List_fromArray(
-			[
-				_Utils_Tuple2(
-				'comment',
-				$elm$json$Json$Encode$string(comment))
-			]));
-};
+var $author$project$Main$insertEncoder = F3(
+	function (start, stop, maybeComment) {
+		var comment = function () {
+			if (maybeComment.$ === 'Nothing') {
+				return _List_Nil;
+			} else {
+				var s = maybeComment.a;
+				return _List_fromArray(
+					[
+						_Utils_Tuple2(
+						'comment',
+						$elm$json$Json$Encode$string(s))
+					]);
+			}
+		}();
+		return $elm$json$Json$Encode$object(
+			_Utils_ap(
+				_List_fromArray(
+					[
+						_Utils_Tuple2(
+						'start',
+						$elm$json$Json$Encode$int(
+							($elm$time$Time$posixToMillis(start) / 1000) | 0)),
+						_Utils_Tuple2(
+						'stop',
+						$elm$json$Json$Encode$int(
+							($elm$time$Time$posixToMillis(stop) / 1000) | 0))
+					]),
+				comment));
+	});
 var $elm$http$Http$jsonBody = function (value) {
 	return A2(
 		_Http_pair,
@@ -6491,6 +8568,25 @@ var $elm$http$Http$post = function (r) {
 	return $elm$http$Http$request(
 		{body: r.body, expect: r.expect, headers: _List_Nil, method: 'POST', timeout: $elm$core$Maybe$Nothing, tracker: $elm$core$Maybe$Nothing, url: r.url});
 };
+var $author$project$Main$sendInsert = F4(
+	function (result, start, stop, comment) {
+		return $elm$http$Http$post(
+			{
+				body: $elm$http$Http$jsonBody(
+					A3($author$project$Main$insertEncoder, start, stop, comment)),
+				expect: $elm$http$Http$expectWhatever(result),
+				url: '/api/periode'
+			});
+	});
+var $author$project$Main$commentEncoder = function (comment) {
+	return $elm$json$Json$Encode$object(
+		_List_fromArray(
+			[
+				_Utils_Tuple2(
+				'comment',
+				$elm$json$Json$Encode$string(comment))
+			]));
+};
 var $author$project$Main$sendStartStop = F3(
 	function (startStop, result, comment) {
 		return $elm$http$Http$post(
@@ -6500,15 +8596,6 @@ var $author$project$Main$sendStartStop = F3(
 				expect: $elm$http$Http$expectWhatever(result),
 				url: '/api/' + startStop
 			});
-	});
-var $elm$core$Maybe$withDefault = F2(
-	function (_default, maybe) {
-		if (maybe.$ === 'Just') {
-			var value = maybe.a;
-			return value;
-		} else {
-			return _default;
-		}
 	});
 var $author$project$Main$update = F2(
 	function (msg, model) {
@@ -6544,6 +8631,13 @@ var $author$project$Main$update = F2(
 							}),
 						$elm$core$Platform$Cmd$none);
 				}
+			case 'Tick':
+				var newTime = msg.a;
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{currentTime: newTime}),
+					$elm$core$Platform$Cmd$none);
 			case 'SaveComment':
 				var comment = msg.a;
 				return _Utils_Tuple2(
@@ -6588,26 +8682,147 @@ var $author$project$Main$update = F2(
 					_Utils_update(
 						model,
 						{
-							insert: $elm$core$Maybe$Just(
-								{
-									comment: '',
-									start: $elm$time$Time$millisToPosix(0),
-									stop: $elm$time$Time$millisToPosix(0)
-								})
+							insert: $elm$core$Maybe$Just($author$project$Main$emptyInsert)
 						}),
 					$elm$core$Platform$Cmd$none);
-			default:
+			case 'CloseInsert':
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
 						{insert: $elm$core$Maybe$Nothing}),
 					$elm$core$Platform$Cmd$none);
+			case 'OpenPicker':
+				var insert = function () {
+					var _v7 = model.insert;
+					if (_v7.$ === 'Nothing') {
+						return $author$project$Main$emptyInsert;
+					} else {
+						var i = _v7.a;
+						return i;
+					}
+				}();
+				var _v4 = function () {
+					var _v5 = insert.startStop;
+					if (_v5.$ === 'Nothing') {
+						return _Utils_Tuple2($elm$core$Maybe$Nothing, $elm$core$Maybe$Nothing);
+					} else {
+						var _v6 = _v5.a;
+						var s = _v6.a;
+						var t = _v6.b;
+						return _Utils_Tuple2(
+							$elm$core$Maybe$Just(s),
+							$elm$core$Maybe$Just(t));
+					}
+				}();
+				var start = _v4.a;
+				var stop = _v4.b;
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{
+							insert: $elm$core$Maybe$Just(
+								_Utils_update(
+									insert,
+									{
+										picker: A5(
+											$mercurymedia$elm_datetime_picker$DurationDatePicker$openPicker,
+											A2($mercurymedia$elm_datetime_picker$DurationDatePicker$defaultSettings, $elm$time$Time$utc, $author$project$Main$UpdatePicker),
+											model.currentTime,
+											start,
+											stop,
+											insert.picker)
+									}))
+						}),
+					$elm$core$Platform$Cmd$none);
+			case 'UpdatePicker':
+				var _v8 = msg.a;
+				var newPicker = _v8.a;
+				var maybeRuntime = _v8.b;
+				var insert = function () {
+					var _v9 = model.insert;
+					if (_v9.$ === 'Nothing') {
+						return $author$project$Main$emptyInsert;
+					} else {
+						var i = _v9.a;
+						return i;
+					}
+				}();
+				var runtime = A2(
+					$elm$core$Maybe$withDefault,
+					insert.startStop,
+					A2(
+						$elm$core$Maybe$map,
+						function (rt) {
+							return $elm$core$Maybe$Just(rt);
+						},
+						maybeRuntime));
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{
+							insert: $elm$core$Maybe$Just(
+								_Utils_update(
+									insert,
+									{picker: newPicker, startStop: runtime}))
+						}),
+					$elm$core$Platform$Cmd$none);
+			case 'SaveInsertComment':
+				var comment = msg.a;
+				var insert = function () {
+					var _v10 = model.insert;
+					if (_v10.$ === 'Nothing') {
+						return $author$project$Main$emptyInsert;
+					} else {
+						var i = _v10.a;
+						return i;
+					}
+				}();
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{
+							insert: $elm$core$Maybe$Just(
+								_Utils_update(
+									insert,
+									{comment: comment}))
+						}),
+					$elm$core$Platform$Cmd$none);
+			default:
+				var insert = function () {
+					var _v13 = model.insert;
+					if (_v13.$ === 'Nothing') {
+						return $author$project$Main$emptyInsert;
+					} else {
+						var i = _v13.a;
+						return i;
+					}
+				}();
+				var cmd = function () {
+					var _v11 = insert.startStop;
+					if (_v11.$ === 'Nothing') {
+						return $elm$core$Platform$Cmd$none;
+					} else {
+						var _v12 = _v11.a;
+						var start = _v12.a;
+						var stop = _v12.b;
+						return A4(
+							$author$project$Main$sendInsert,
+							$author$project$Main$ReceiveEvent,
+							start,
+							stop,
+							$elm$core$Maybe$Just(insert.comment));
+					}
+				}();
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{insert: $elm$core$Maybe$Nothing}),
+					cmd);
 		}
 	});
 var $elm$html$Html$div = _VirtualDom_node('div');
 var $author$project$Main$Start = {$: 'Start'};
 var $author$project$Main$Stop = {$: 'Stop'};
-var $elm$time$Time$Mon = {$: 'Mon'};
 var $CoderDennis$elm_time_format$Time$Format$I18n$I_de_de$dayName = function (day) {
 	switch (day.$) {
 		case 'Mon':
@@ -6752,7 +8967,6 @@ var $elm$core$List$head = function (list) {
 		return $elm$core$Maybe$Nothing;
 	}
 };
-var $elm$core$Basics$modBy = _Basics_modBy;
 var $CoderDennis$elm_time_format$Time$Format$hourMod12 = function (h) {
 	return (!A2($elm$core$Basics$modBy, 12, h)) ? 12 : A2($elm$core$Basics$modBy, 12, h);
 };
@@ -6784,11 +8998,6 @@ var $CoderDennis$elm_time_format$Time$Format$Core$monthToInt = function (month) 
 			return 12;
 	}
 };
-var $elm$core$Basics$composeL = F3(
-	function (g, f, x) {
-		return g(
-			f(x));
-	});
 var $elm$core$String$cons = _String_cons;
 var $elm$core$String$fromChar = function (_char) {
 	return A2($elm$core$String$cons, _char, '');
@@ -6829,9 +9038,6 @@ var $CoderDennis$elm_time_format$Time$Format$padWithN = F2(
 			A2($elm$core$String$padLeft, n, c),
 			$elm$core$String$fromInt);
 	});
-var $elm$core$Basics$negate = function (n) {
-	return -n;
-};
 var $elm$core$String$right = F2(
 	function (n, string) {
 		return (n < 1) ? '' : A3(
@@ -6840,155 +9046,7 @@ var $elm$core$String$right = F2(
 			$elm$core$String$length(string),
 			string);
 	});
-var $elm$time$Time$flooredDiv = F2(
-	function (numerator, denominator) {
-		return $elm$core$Basics$floor(numerator / denominator);
-	});
-var $elm$time$Time$posixToMillis = function (_v0) {
-	var millis = _v0.a;
-	return millis;
-};
-var $elm$time$Time$toAdjustedMinutesHelp = F3(
-	function (defaultOffset, posixMinutes, eras) {
-		toAdjustedMinutesHelp:
-		while (true) {
-			if (!eras.b) {
-				return posixMinutes + defaultOffset;
-			} else {
-				var era = eras.a;
-				var olderEras = eras.b;
-				if (_Utils_cmp(era.start, posixMinutes) < 0) {
-					return posixMinutes + era.offset;
-				} else {
-					var $temp$defaultOffset = defaultOffset,
-						$temp$posixMinutes = posixMinutes,
-						$temp$eras = olderEras;
-					defaultOffset = $temp$defaultOffset;
-					posixMinutes = $temp$posixMinutes;
-					eras = $temp$eras;
-					continue toAdjustedMinutesHelp;
-				}
-			}
-		}
-	});
-var $elm$time$Time$toAdjustedMinutes = F2(
-	function (_v0, time) {
-		var defaultOffset = _v0.a;
-		var eras = _v0.b;
-		return A3(
-			$elm$time$Time$toAdjustedMinutesHelp,
-			defaultOffset,
-			A2(
-				$elm$time$Time$flooredDiv,
-				$elm$time$Time$posixToMillis(time),
-				60000),
-			eras);
-	});
-var $elm$core$Basics$ge = _Utils_ge;
-var $elm$time$Time$toCivil = function (minutes) {
-	var rawDay = A2($elm$time$Time$flooredDiv, minutes, 60 * 24) + 719468;
-	var era = (((rawDay >= 0) ? rawDay : (rawDay - 146096)) / 146097) | 0;
-	var dayOfEra = rawDay - (era * 146097);
-	var yearOfEra = ((((dayOfEra - ((dayOfEra / 1460) | 0)) + ((dayOfEra / 36524) | 0)) - ((dayOfEra / 146096) | 0)) / 365) | 0;
-	var dayOfYear = dayOfEra - (((365 * yearOfEra) + ((yearOfEra / 4) | 0)) - ((yearOfEra / 100) | 0));
-	var mp = (((5 * dayOfYear) + 2) / 153) | 0;
-	var month = mp + ((mp < 10) ? 3 : (-9));
-	var year = yearOfEra + (era * 400);
-	return {
-		day: (dayOfYear - ((((153 * mp) + 2) / 5) | 0)) + 1,
-		month: month,
-		year: year + ((month <= 2) ? 1 : 0)
-	};
-};
-var $elm$time$Time$toDay = F2(
-	function (zone, time) {
-		return $elm$time$Time$toCivil(
-			A2($elm$time$Time$toAdjustedMinutes, zone, time)).day;
-	});
-var $elm$time$Time$toHour = F2(
-	function (zone, time) {
-		return A2(
-			$elm$core$Basics$modBy,
-			24,
-			A2(
-				$elm$time$Time$flooredDiv,
-				A2($elm$time$Time$toAdjustedMinutes, zone, time),
-				60));
-	});
-var $elm$time$Time$toMillis = F2(
-	function (_v0, time) {
-		return A2(
-			$elm$core$Basics$modBy,
-			1000,
-			$elm$time$Time$posixToMillis(time));
-	});
-var $elm$time$Time$toMinute = F2(
-	function (zone, time) {
-		return A2(
-			$elm$core$Basics$modBy,
-			60,
-			A2($elm$time$Time$toAdjustedMinutes, zone, time));
-	});
-var $elm$time$Time$Apr = {$: 'Apr'};
-var $elm$time$Time$Aug = {$: 'Aug'};
-var $elm$time$Time$Dec = {$: 'Dec'};
-var $elm$time$Time$Feb = {$: 'Feb'};
-var $elm$time$Time$Jan = {$: 'Jan'};
-var $elm$time$Time$Jul = {$: 'Jul'};
-var $elm$time$Time$Jun = {$: 'Jun'};
-var $elm$time$Time$Mar = {$: 'Mar'};
-var $elm$time$Time$May = {$: 'May'};
-var $elm$time$Time$Nov = {$: 'Nov'};
-var $elm$time$Time$Oct = {$: 'Oct'};
-var $elm$time$Time$Sep = {$: 'Sep'};
-var $elm$time$Time$toMonth = F2(
-	function (zone, time) {
-		var _v0 = $elm$time$Time$toCivil(
-			A2($elm$time$Time$toAdjustedMinutes, zone, time)).month;
-		switch (_v0) {
-			case 1:
-				return $elm$time$Time$Jan;
-			case 2:
-				return $elm$time$Time$Feb;
-			case 3:
-				return $elm$time$Time$Mar;
-			case 4:
-				return $elm$time$Time$Apr;
-			case 5:
-				return $elm$time$Time$May;
-			case 6:
-				return $elm$time$Time$Jun;
-			case 7:
-				return $elm$time$Time$Jul;
-			case 8:
-				return $elm$time$Time$Aug;
-			case 9:
-				return $elm$time$Time$Sep;
-			case 10:
-				return $elm$time$Time$Oct;
-			case 11:
-				return $elm$time$Time$Nov;
-			default:
-				return $elm$time$Time$Dec;
-		}
-	});
-var $elm$time$Time$toSecond = F2(
-	function (_v0, time) {
-		return A2(
-			$elm$core$Basics$modBy,
-			60,
-			A2(
-				$elm$time$Time$flooredDiv,
-				$elm$time$Time$posixToMillis(time),
-				1000));
-	});
 var $elm$core$String$toUpper = _String_toUpper;
-var $elm$time$Time$Fri = {$: 'Fri'};
-var $elm$time$Time$Sat = {$: 'Sat'};
-var $elm$time$Time$Sun = {$: 'Sun'};
-var $elm$time$Time$Thu = {$: 'Thu'};
-var $elm$time$Time$Tue = {$: 'Tue'};
-var $elm$time$Time$Wed = {$: 'Wed'};
 var $elm$time$Time$toWeekday = F2(
 	function (zone, time) {
 		var _v0 = A2(
@@ -7014,11 +9072,6 @@ var $elm$time$Time$toWeekday = F2(
 			default:
 				return $elm$time$Time$Wed;
 		}
-	});
-var $elm$time$Time$toYear = F2(
-	function (zone, time) {
-		return $elm$time$Time$toCivil(
-			A2($elm$time$Time$toAdjustedMinutes, zone, time)).year;
 	});
 var $CoderDennis$elm_time_format$Time$Format$TwelveHourClock$AM = {$: 'AM'};
 var $CoderDennis$elm_time_format$Time$Format$TwelveHourClock$PM = {$: 'PM'};
@@ -7183,11 +9236,6 @@ var $CoderDennis$elm_time_format$Time$Format$format = F4(
 			A3($CoderDennis$elm_time_format$Time$Format$formatToken, config, zone, time),
 			formatStr);
 	});
-var $elm$time$Time$Zone = F2(
-	function (a, b) {
-		return {$: 'Zone', a: a, b: b};
-	});
-var $elm$time$Time$utc = A2($elm$time$Time$Zone, 0, _List_Nil);
 var $author$project$Main$posixToString = function (time) {
 	return A4($CoderDennis$elm_time_format$Time$Format$format, $CoderDennis$elm_time_format$Time$Format$Config$Config_de_de$config, '%Y-%m-%d %H:%M', $elm$time$Time$utc, time);
 };
@@ -7320,13 +9368,1948 @@ var $author$project$Main$viewCurrent = F2(
 		}
 	});
 var $author$project$Main$OpenInsert = {$: 'OpenInsert'};
-var $author$project$Main$viewInsert = function (insert) {
-	if (insert.$ === 'Nothing') {
+var $author$project$Main$OpenPicker = {$: 'OpenPicker'};
+var $author$project$Main$SaveInsertComment = function (a) {
+	return {$: 'SaveInsertComment', a: a};
+};
+var $author$project$Main$SendInsert = {$: 'SendInsert'};
+var $elm$html$Html$span = _VirtualDom_node('span');
+var $justinmimbs$date$Date$Days = {$: 'Days'};
+var $justinmimbs$date$Date$Months = {$: 'Months'};
+var $elm$core$Basics$min = F2(
+	function (x, y) {
+		return (_Utils_cmp(x, y) < 0) ? x : y;
+	});
+var $justinmimbs$date$Date$add = F3(
+	function (unit, n, _v0) {
+		var rd = _v0.a;
+		switch (unit.$) {
+			case 'Years':
+				return A3(
+					$justinmimbs$date$Date$add,
+					$justinmimbs$date$Date$Months,
+					12 * n,
+					$justinmimbs$date$Date$RD(rd));
+			case 'Months':
+				var date = $justinmimbs$date$Date$toCalendarDate(
+					$justinmimbs$date$Date$RD(rd));
+				var wholeMonths = ((12 * (date.year - 1)) + ($justinmimbs$date$Date$monthToNumber(date.month) - 1)) + n;
+				var m = $justinmimbs$date$Date$numberToMonth(
+					A2($elm$core$Basics$modBy, 12, wholeMonths) + 1);
+				var y = A2($justinmimbs$date$Date$floorDiv, wholeMonths, 12) + 1;
+				return $justinmimbs$date$Date$RD(
+					($justinmimbs$date$Date$daysBeforeYear(y) + A2($justinmimbs$date$Date$daysBeforeMonth, y, m)) + A2(
+						$elm$core$Basics$min,
+						date.day,
+						A2($justinmimbs$date$Date$daysInMonth, y, m)));
+			case 'Weeks':
+				return $justinmimbs$date$Date$RD(rd + (7 * n));
+			default:
+				return $justinmimbs$date$Date$RD(rd + n);
+		}
+	});
+var $justinmimbs$time_extra$Time$Extra$add = F4(
+	function (interval, n, zone, posix) {
+		add:
+		while (true) {
+			switch (interval.$) {
+				case 'Millisecond':
+					return $elm$time$Time$millisToPosix(
+						$elm$time$Time$posixToMillis(posix) + n);
+				case 'Second':
+					var $temp$interval = $justinmimbs$time_extra$Time$Extra$Millisecond,
+						$temp$n = n * 1000,
+						$temp$zone = zone,
+						$temp$posix = posix;
+					interval = $temp$interval;
+					n = $temp$n;
+					zone = $temp$zone;
+					posix = $temp$posix;
+					continue add;
+				case 'Minute':
+					var $temp$interval = $justinmimbs$time_extra$Time$Extra$Millisecond,
+						$temp$n = n * 60000,
+						$temp$zone = zone,
+						$temp$posix = posix;
+					interval = $temp$interval;
+					n = $temp$n;
+					zone = $temp$zone;
+					posix = $temp$posix;
+					continue add;
+				case 'Hour':
+					var $temp$interval = $justinmimbs$time_extra$Time$Extra$Millisecond,
+						$temp$n = n * 3600000,
+						$temp$zone = zone,
+						$temp$posix = posix;
+					interval = $temp$interval;
+					n = $temp$n;
+					zone = $temp$zone;
+					posix = $temp$posix;
+					continue add;
+				case 'Day':
+					return A3(
+						$justinmimbs$time_extra$Time$Extra$posixFromDateTime,
+						zone,
+						A3(
+							$justinmimbs$date$Date$add,
+							$justinmimbs$date$Date$Days,
+							n,
+							A2($justinmimbs$date$Date$fromPosix, zone, posix)),
+						A2($justinmimbs$time_extra$Time$Extra$timeFromPosix, zone, posix));
+				case 'Month':
+					return A3(
+						$justinmimbs$time_extra$Time$Extra$posixFromDateTime,
+						zone,
+						A3(
+							$justinmimbs$date$Date$add,
+							$justinmimbs$date$Date$Months,
+							n,
+							A2($justinmimbs$date$Date$fromPosix, zone, posix)),
+						A2($justinmimbs$time_extra$Time$Extra$timeFromPosix, zone, posix));
+				case 'Year':
+					var $temp$interval = $justinmimbs$time_extra$Time$Extra$Month,
+						$temp$n = n * 12,
+						$temp$zone = zone,
+						$temp$posix = posix;
+					interval = $temp$interval;
+					n = $temp$n;
+					zone = $temp$zone;
+					posix = $temp$posix;
+					continue add;
+				case 'Quarter':
+					var $temp$interval = $justinmimbs$time_extra$Time$Extra$Month,
+						$temp$n = n * 3,
+						$temp$zone = zone,
+						$temp$posix = posix;
+					interval = $temp$interval;
+					n = $temp$n;
+					zone = $temp$zone;
+					posix = $temp$posix;
+					continue add;
+				case 'Week':
+					var $temp$interval = $justinmimbs$time_extra$Time$Extra$Day,
+						$temp$n = n * 7,
+						$temp$zone = zone,
+						$temp$posix = posix;
+					interval = $temp$interval;
+					n = $temp$n;
+					zone = $temp$zone;
+					posix = $temp$posix;
+					continue add;
+				default:
+					var weekday = interval;
+					var $temp$interval = $justinmimbs$time_extra$Time$Extra$Day,
+						$temp$n = n * 7,
+						$temp$zone = zone,
+						$temp$posix = posix;
+					interval = $temp$interval;
+					n = $temp$n;
+					zone = $temp$zone;
+					posix = $temp$posix;
+					continue add;
+			}
+		}
+	});
+var $mercurymedia$elm_datetime_picker$DurationDatePicker$classPrefix = 'elm-datetimepicker-duration--';
+var $mercurymedia$elm_datetime_picker$DatePicker$Utilities$generateListOfWeekDay = function (firstWeekDay) {
+	switch (firstWeekDay.$) {
+		case 'Mon':
+			return _List_fromArray(
+				[$elm$time$Time$Mon, $elm$time$Time$Tue, $elm$time$Time$Wed, $elm$time$Time$Thu, $elm$time$Time$Fri, $elm$time$Time$Sat, $elm$time$Time$Sun]);
+		case 'Tue':
+			return _List_fromArray(
+				[$elm$time$Time$Tue, $elm$time$Time$Wed, $elm$time$Time$Thu, $elm$time$Time$Fri, $elm$time$Time$Sat, $elm$time$Time$Sun, $elm$time$Time$Mon]);
+		case 'Wed':
+			return _List_fromArray(
+				[$elm$time$Time$Wed, $elm$time$Time$Thu, $elm$time$Time$Fri, $elm$time$Time$Sat, $elm$time$Time$Sun, $elm$time$Time$Mon, $elm$time$Time$Tue]);
+		case 'Thu':
+			return _List_fromArray(
+				[$elm$time$Time$Thu, $elm$time$Time$Fri, $elm$time$Time$Sat, $elm$time$Time$Sun, $elm$time$Time$Mon, $elm$time$Time$Tue, $elm$time$Time$Wed]);
+		case 'Fri':
+			return _List_fromArray(
+				[$elm$time$Time$Fri, $elm$time$Time$Sat, $elm$time$Time$Sun, $elm$time$Time$Mon, $elm$time$Time$Tue, $elm$time$Time$Wed, $elm$time$Time$Thu]);
+		case 'Sat':
+			return _List_fromArray(
+				[$elm$time$Time$Sat, $elm$time$Time$Sun, $elm$time$Time$Mon, $elm$time$Time$Tue, $elm$time$Time$Wed, $elm$time$Time$Thu, $elm$time$Time$Fri]);
+		default:
+			return _List_fromArray(
+				[$elm$time$Time$Sun, $elm$time$Time$Mon, $elm$time$Time$Tue, $elm$time$Time$Wed, $elm$time$Time$Thu, $elm$time$Time$Fri, $elm$time$Time$Sat]);
+	}
+};
+var $mercurymedia$elm_datetime_picker$DurationDatePicker$viewHeaderDay = F2(
+	function (formatDay, day) {
 		return A2(
 			$elm$html$Html$div,
 			_List_fromArray(
 				[
-					$elm$html$Html$Attributes$class('btn'),
+					$elm$html$Html$Attributes$class($mercurymedia$elm_datetime_picker$DurationDatePicker$classPrefix + 'calendar-header-day')
+				]),
+			_List_fromArray(
+				[
+					$elm$html$Html$text(
+					formatDay(day))
+				]));
+	});
+var $mercurymedia$elm_datetime_picker$DurationDatePicker$viewWeekHeader = function (settings) {
+	return A2(
+		$elm$html$Html$div,
+		_List_fromArray(
+			[
+				$elm$html$Html$Attributes$class($mercurymedia$elm_datetime_picker$DurationDatePicker$classPrefix + 'calendar-header-week')
+			]),
+		A2(
+			$elm$core$List$map,
+			$mercurymedia$elm_datetime_picker$DurationDatePicker$viewHeaderDay(settings.formattedDay),
+			$mercurymedia$elm_datetime_picker$DatePicker$Utilities$generateListOfWeekDay(settings.firstWeekDay)));
+};
+var $mercurymedia$elm_datetime_picker$DurationDatePicker$viewCalendarHeader = F2(
+	function (settings, viewTime) {
+		var year = $elm$core$String$fromInt(
+			A2($elm$time$Time$toYear, settings.zone, viewTime));
+		var monthName = settings.formattedMonth(
+			A2($elm$time$Time$toMonth, settings.zone, viewTime));
+		return A2(
+			$elm$html$Html$div,
+			_List_fromArray(
+				[
+					$elm$html$Html$Attributes$class($mercurymedia$elm_datetime_picker$DurationDatePicker$classPrefix + 'calendar-header')
+				]),
+			_List_fromArray(
+				[
+					A2(
+					$elm$html$Html$div,
+					_List_fromArray(
+						[
+							$elm$html$Html$Attributes$class($mercurymedia$elm_datetime_picker$DurationDatePicker$classPrefix + 'calendar-header-row')
+						]),
+					_List_fromArray(
+						[
+							A2(
+							$elm$html$Html$div,
+							_List_fromArray(
+								[
+									$elm$html$Html$Attributes$class($mercurymedia$elm_datetime_picker$DurationDatePicker$classPrefix + 'calendar-header-text')
+								]),
+							_List_fromArray(
+								[
+									A2(
+									$elm$html$Html$div,
+									_List_fromArray(
+										[
+											$elm$html$Html$Attributes$id('month')
+										]),
+									_List_fromArray(
+										[
+											$elm$html$Html$text(monthName)
+										]))
+								]))
+						])),
+					A2(
+					$elm$html$Html$div,
+					_List_fromArray(
+						[
+							$elm$html$Html$Attributes$class($mercurymedia$elm_datetime_picker$DurationDatePicker$classPrefix + 'calendar-header-row')
+						]),
+					_List_fromArray(
+						[
+							A2(
+							$elm$html$Html$div,
+							_List_fromArray(
+								[
+									$elm$html$Html$Attributes$class($mercurymedia$elm_datetime_picker$DurationDatePicker$classPrefix + 'calendar-header-text')
+								]),
+							_List_fromArray(
+								[
+									A2(
+									$elm$html$Html$div,
+									_List_fromArray(
+										[
+											$elm$html$Html$Attributes$id('year')
+										]),
+									_List_fromArray(
+										[
+											$elm$html$Html$text(year)
+										]))
+								]))
+						])),
+					$mercurymedia$elm_datetime_picker$DurationDatePicker$viewWeekHeader(settings)
+				]));
+	});
+var $mercurymedia$elm_datetime_picker$DurationDatePicker$ClearHoveredDay = {$: 'ClearHoveredDay'};
+var $elm_community$list_extra$List$Extra$findIndexHelp = F3(
+	function (index, predicate, list) {
+		findIndexHelp:
+		while (true) {
+			if (!list.b) {
+				return $elm$core$Maybe$Nothing;
+			} else {
+				var x = list.a;
+				var xs = list.b;
+				if (predicate(x)) {
+					return $elm$core$Maybe$Just(index);
+				} else {
+					var $temp$index = index + 1,
+						$temp$predicate = predicate,
+						$temp$list = xs;
+					index = $temp$index;
+					predicate = $temp$predicate;
+					list = $temp$list;
+					continue findIndexHelp;
+				}
+			}
+		}
+	});
+var $elm_community$list_extra$List$Extra$findIndex = $elm_community$list_extra$List$Extra$findIndexHelp(0);
+var $elm_community$list_extra$List$Extra$elemIndex = function (x) {
+	return $elm_community$list_extra$List$Extra$findIndex(
+		$elm$core$Basics$eq(x));
+};
+var $mercurymedia$elm_datetime_picker$DatePicker$Utilities$calculatePad = F3(
+	function (firstWeekDay, monthStartDay, isFrontPad) {
+		var listOfWeekday = $mercurymedia$elm_datetime_picker$DatePicker$Utilities$generateListOfWeekDay(firstWeekDay);
+		var calculatedPadInt = function () {
+			var _v0 = A2($elm_community$list_extra$List$Extra$elemIndex, monthStartDay, listOfWeekday);
+			if (_v0.$ === 'Just') {
+				var val = _v0.a;
+				return isFrontPad ? (-val) : (7 - val);
+			} else {
+				return 0;
+			}
+		}();
+		return calculatedPadInt;
+	});
+var $justinmimbs$time_extra$Time$Extra$ceiling = F3(
+	function (interval, zone, posix) {
+		var floored = A3($justinmimbs$time_extra$Time$Extra$floor, interval, zone, posix);
+		return _Utils_eq(floored, posix) ? posix : A4($justinmimbs$time_extra$Time$Extra$add, interval, 1, zone, floored);
+	});
+var $mercurymedia$elm_datetime_picker$DatePicker$Utilities$monthDataToPickerDays = F4(
+	function (zone, isDisabledFn, allowableTimesFn, posixList) {
+		return A2(
+			$elm$core$List$map,
+			function (posix) {
+				return A4($mercurymedia$elm_datetime_picker$DatePicker$Utilities$pickerDayFromPosix, zone, isDisabledFn, allowableTimesFn, posix);
+			},
+			posixList);
+	});
+var $justinmimbs$time_extra$Time$Extra$rangeHelp = F6(
+	function (interval, step, zone, until, revList, current) {
+		rangeHelp:
+		while (true) {
+			if (_Utils_cmp(
+				$elm$time$Time$posixToMillis(current),
+				$elm$time$Time$posixToMillis(until)) < 0) {
+				var $temp$interval = interval,
+					$temp$step = step,
+					$temp$zone = zone,
+					$temp$until = until,
+					$temp$revList = A2($elm$core$List$cons, current, revList),
+					$temp$current = A4($justinmimbs$time_extra$Time$Extra$add, interval, step, zone, current);
+				interval = $temp$interval;
+				step = $temp$step;
+				zone = $temp$zone;
+				until = $temp$until;
+				revList = $temp$revList;
+				current = $temp$current;
+				continue rangeHelp;
+			} else {
+				return $elm$core$List$reverse(revList);
+			}
+		}
+	});
+var $justinmimbs$time_extra$Time$Extra$range = F5(
+	function (interval, step, zone, start, until) {
+		return A6(
+			$justinmimbs$time_extra$Time$Extra$rangeHelp,
+			interval,
+			A2($elm$core$Basics$max, 1, step),
+			zone,
+			until,
+			_List_Nil,
+			A3($justinmimbs$time_extra$Time$Extra$ceiling, interval, zone, start));
+	});
+var $elm$core$List$drop = F2(
+	function (n, list) {
+		drop:
+		while (true) {
+			if (n <= 0) {
+				return list;
+			} else {
+				if (!list.b) {
+					return list;
+				} else {
+					var x = list.a;
+					var xs = list.b;
+					var $temp$n = n - 1,
+						$temp$list = xs;
+					n = $temp$n;
+					list = $temp$list;
+					continue drop;
+				}
+			}
+		}
+	});
+var $elm$core$List$takeReverse = F3(
+	function (n, list, kept) {
+		takeReverse:
+		while (true) {
+			if (n <= 0) {
+				return kept;
+			} else {
+				if (!list.b) {
+					return kept;
+				} else {
+					var x = list.a;
+					var xs = list.b;
+					var $temp$n = n - 1,
+						$temp$list = xs,
+						$temp$kept = A2($elm$core$List$cons, x, kept);
+					n = $temp$n;
+					list = $temp$list;
+					kept = $temp$kept;
+					continue takeReverse;
+				}
+			}
+		}
+	});
+var $elm$core$List$takeTailRec = F2(
+	function (n, list) {
+		return $elm$core$List$reverse(
+			A3($elm$core$List$takeReverse, n, list, _List_Nil));
+	});
+var $elm$core$List$takeFast = F3(
+	function (ctr, n, list) {
+		if (n <= 0) {
+			return _List_Nil;
+		} else {
+			var _v0 = _Utils_Tuple2(n, list);
+			_v0$1:
+			while (true) {
+				_v0$5:
+				while (true) {
+					if (!_v0.b.b) {
+						return list;
+					} else {
+						if (_v0.b.b.b) {
+							switch (_v0.a) {
+								case 1:
+									break _v0$1;
+								case 2:
+									var _v2 = _v0.b;
+									var x = _v2.a;
+									var _v3 = _v2.b;
+									var y = _v3.a;
+									return _List_fromArray(
+										[x, y]);
+								case 3:
+									if (_v0.b.b.b.b) {
+										var _v4 = _v0.b;
+										var x = _v4.a;
+										var _v5 = _v4.b;
+										var y = _v5.a;
+										var _v6 = _v5.b;
+										var z = _v6.a;
+										return _List_fromArray(
+											[x, y, z]);
+									} else {
+										break _v0$5;
+									}
+								default:
+									if (_v0.b.b.b.b && _v0.b.b.b.b.b) {
+										var _v7 = _v0.b;
+										var x = _v7.a;
+										var _v8 = _v7.b;
+										var y = _v8.a;
+										var _v9 = _v8.b;
+										var z = _v9.a;
+										var _v10 = _v9.b;
+										var w = _v10.a;
+										var tl = _v10.b;
+										return (ctr > 1000) ? A2(
+											$elm$core$List$cons,
+											x,
+											A2(
+												$elm$core$List$cons,
+												y,
+												A2(
+													$elm$core$List$cons,
+													z,
+													A2(
+														$elm$core$List$cons,
+														w,
+														A2($elm$core$List$takeTailRec, n - 4, tl))))) : A2(
+											$elm$core$List$cons,
+											x,
+											A2(
+												$elm$core$List$cons,
+												y,
+												A2(
+													$elm$core$List$cons,
+													z,
+													A2(
+														$elm$core$List$cons,
+														w,
+														A3($elm$core$List$takeFast, ctr + 1, n - 4, tl)))));
+									} else {
+										break _v0$5;
+									}
+							}
+						} else {
+							if (_v0.a === 1) {
+								break _v0$1;
+							} else {
+								break _v0$5;
+							}
+						}
+					}
+				}
+				return list;
+			}
+			var _v1 = _v0.b;
+			var x = _v1.a;
+			return _List_fromArray(
+				[x]);
+		}
+	});
+var $elm$core$List$take = F2(
+	function (n, list) {
+		return A3($elm$core$List$takeFast, 0, n, list);
+	});
+var $elm_community$list_extra$List$Extra$splitAt = F2(
+	function (n, xs) {
+		return _Utils_Tuple2(
+			A2($elm$core$List$take, n, xs),
+			A2($elm$core$List$drop, n, xs));
+	});
+var $mercurymedia$elm_datetime_picker$DatePicker$Utilities$splitIntoWeeks = F2(
+	function (weeks, days) {
+		splitIntoWeeks:
+		while (true) {
+			if ($elm$core$List$length(days) <= 7) {
+				return A2($elm$core$List$cons, days, weeks);
+			} else {
+				var _v0 = A2($elm_community$list_extra$List$Extra$splitAt, 7, days);
+				var week = _v0.a;
+				var restOfDays = _v0.b;
+				var newWeeks = A2($elm$core$List$cons, week, weeks);
+				var $temp$weeks = newWeeks,
+					$temp$days = restOfDays;
+				weeks = $temp$weeks;
+				days = $temp$days;
+				continue splitIntoWeeks;
+			}
+		}
+	});
+var $mercurymedia$elm_datetime_picker$DatePicker$Utilities$monthData = F5(
+	function (zone, isDisabledFn, firstWeekDay, allowableTimesFn, time) {
+		var monthStart = A3($justinmimbs$time_extra$Time$Extra$floor, $justinmimbs$time_extra$Time$Extra$Month, zone, time);
+		var monthStartDay = A2($elm$time$Time$toWeekday, zone, monthStart);
+		var nextMonthStart = A3(
+			$justinmimbs$time_extra$Time$Extra$ceiling,
+			$justinmimbs$time_extra$Time$Extra$Month,
+			zone,
+			A4($justinmimbs$time_extra$Time$Extra$add, $justinmimbs$time_extra$Time$Extra$Day, 1, zone, monthStart));
+		var nextMonthStartDay = A2($elm$time$Time$toWeekday, zone, nextMonthStart);
+		var frontPad = A5(
+			$justinmimbs$time_extra$Time$Extra$range,
+			$justinmimbs$time_extra$Time$Extra$Day,
+			1,
+			zone,
+			A4(
+				$justinmimbs$time_extra$Time$Extra$add,
+				$justinmimbs$time_extra$Time$Extra$Day,
+				A3($mercurymedia$elm_datetime_picker$DatePicker$Utilities$calculatePad, firstWeekDay, monthStartDay, true),
+				zone,
+				monthStart),
+			monthStart);
+		var endPad = A5(
+			$justinmimbs$time_extra$Time$Extra$range,
+			$justinmimbs$time_extra$Time$Extra$Day,
+			1,
+			zone,
+			nextMonthStart,
+			A4(
+				$justinmimbs$time_extra$Time$Extra$add,
+				$justinmimbs$time_extra$Time$Extra$Day,
+				A3($mercurymedia$elm_datetime_picker$DatePicker$Utilities$calculatePad, firstWeekDay, nextMonthStartDay, false),
+				zone,
+				nextMonthStart));
+		return $elm$core$List$reverse(
+			A2(
+				$mercurymedia$elm_datetime_picker$DatePicker$Utilities$splitIntoWeeks,
+				_List_Nil,
+				A4(
+					$mercurymedia$elm_datetime_picker$DatePicker$Utilities$monthDataToPickerDays,
+					zone,
+					isDisabledFn,
+					allowableTimesFn,
+					_Utils_ap(
+						frontPad,
+						_Utils_ap(
+							A5($justinmimbs$time_extra$Time$Extra$range, $justinmimbs$time_extra$Time$Extra$Day, 1, zone, monthStart, nextMonthStart),
+							endPad)))));
+	});
+var $elm$html$Html$Events$onMouseOut = function (msg) {
+	return A2(
+		$elm$html$Html$Events$on,
+		'mouseout',
+		$elm$json$Json$Decode$succeed(msg));
+};
+var $mercurymedia$elm_datetime_picker$DurationDatePicker$SetHoveredDay = function (a) {
+	return {$: 'SetHoveredDay', a: a};
+};
+var $mercurymedia$elm_datetime_picker$DurationDatePicker$SetRange = function (a) {
+	return {$: 'SetRange', a: a};
+};
+var $mercurymedia$elm_datetime_picker$DatePicker$DurationUtilities$isDayBetweenDates = F3(
+	function (day, dateOne, dateTwo) {
+		return ((_Utils_cmp(
+			$elm$time$Time$posixToMillis(dateOne.start),
+			$elm$time$Time$posixToMillis(day.end)) > 0) && (_Utils_cmp(
+			$elm$time$Time$posixToMillis(day.start),
+			$elm$time$Time$posixToMillis(dateTwo.end)) > 0)) || ((_Utils_cmp(
+			$elm$time$Time$posixToMillis(dateOne.end),
+			$elm$time$Time$posixToMillis(day.start)) < 0) && (_Utils_cmp(
+			$elm$time$Time$posixToMillis(day.end),
+			$elm$time$Time$posixToMillis(dateTwo.start)) < 0));
+	});
+var $mercurymedia$elm_datetime_picker$DatePicker$DurationUtilities$dayPickedOrBetween = F4(
+	function (zone, day, hovered, _v0) {
+		var startSelectionTuple = _v0.a;
+		var endSelectionTuple = _v0.b;
+		var _v1 = _Utils_Tuple2(startSelectionTuple, endSelectionTuple);
+		if (_v1.a.$ === 'Nothing') {
+			if (_v1.b.$ === 'Nothing') {
+				var _v2 = _v1.a;
+				var _v3 = _v1.b;
+				return _Utils_Tuple2(false, false);
+			} else {
+				var _v6 = _v1.a;
+				var _v7 = _v1.b.a;
+				var endPickerDay = _v7.a;
+				var between = A2(
+					$elm$core$Maybe$withDefault,
+					false,
+					A2(
+						$elm$core$Maybe$map,
+						function (h) {
+							return A3($mercurymedia$elm_datetime_picker$DatePicker$DurationUtilities$isDayBetweenDates, day, endPickerDay, h);
+						},
+						hovered));
+				return _Utils_Tuple2(
+					_Utils_eq(day, endPickerDay),
+					between);
+			}
+		} else {
+			if (_v1.b.$ === 'Nothing') {
+				var _v4 = _v1.a.a;
+				var startPickerDay = _v4.a;
+				var _v5 = _v1.b;
+				var between = A2(
+					$elm$core$Maybe$withDefault,
+					false,
+					A2(
+						$elm$core$Maybe$map,
+						function (h) {
+							return A3($mercurymedia$elm_datetime_picker$DatePicker$DurationUtilities$isDayBetweenDates, day, startPickerDay, h);
+						},
+						hovered));
+				return _Utils_Tuple2(
+					_Utils_eq(day, startPickerDay),
+					between);
+			} else {
+				var _v8 = _v1.a.a;
+				var startPickerDay = _v8.a;
+				var _v9 = _v1.b.a;
+				var endPickerDay = _v9.a;
+				return _Utils_Tuple2(
+					_Utils_eq(day, startPickerDay) || _Utils_eq(day, endPickerDay),
+					A3($mercurymedia$elm_datetime_picker$DatePicker$DurationUtilities$isDayBetweenDates, day, startPickerDay, endPickerDay));
+			}
+		}
+	});
+var $elm$json$Json$Encode$bool = _Json_wrap;
+var $elm$html$Html$Attributes$boolProperty = F2(
+	function (key, bool) {
+		return A2(
+			_VirtualDom_property,
+			key,
+			$elm$json$Json$Encode$bool(bool));
+	});
+var $elm$html$Html$Attributes$disabled = $elm$html$Html$Attributes$boolProperty('disabled');
+var $mercurymedia$elm_datetime_picker$DatePicker$Styles$durationDayClasses = F6(
+	function (classPrefix, isHidden, isDisabled, isPicked, isToday, isBetween) {
+		return isHidden ? (classPrefix + ('calendar-day ' + (classPrefix + 'hidden'))) : (isDisabled ? (classPrefix + ('calendar-day ' + (classPrefix + 'disabled'))) : (isPicked ? (classPrefix + ('calendar-day ' + (classPrefix + 'picked'))) : ((isBetween && isToday) ? (classPrefix + ('calendar-day ' + (classPrefix + 'today-between'))) : (isToday ? (classPrefix + ('calendar-day ' + (classPrefix + 'today'))) : (isBetween ? (classPrefix + ('calendar-day ' + (classPrefix + 'between'))) : (classPrefix + 'calendar-day'))))));
+	});
+var $elm$html$Html$Events$onMouseOver = function (msg) {
+	return A2(
+		$elm$html$Html$Events$on,
+		'mouseover',
+		$elm$json$Json$Decode$succeed(msg));
+};
+var $mercurymedia$elm_datetime_picker$DurationDatePicker$viewDay = F4(
+	function (settings, model, currentMonth, day) {
+		var isFocused = A2(
+			$elm$core$Maybe$withDefault,
+			false,
+			A2(
+				$elm$core$Maybe$map,
+				function (fday) {
+					return _Utils_eq(
+						A2($mercurymedia$elm_datetime_picker$DurationDatePicker$generatePickerDay, settings, fday),
+						day);
+				},
+				settings.focusedDate));
+		var dayParts = A2($justinmimbs$time_extra$Time$Extra$posixToParts, settings.zone, day.start);
+		var _v0 = A4(
+			$mercurymedia$elm_datetime_picker$DatePicker$DurationUtilities$dayPickedOrBetween,
+			settings.zone,
+			day,
+			model.hovered,
+			_Utils_Tuple2(model.startSelectionTuple, model.endSelectionTuple));
+		var isPicked = _v0.a;
+		var isBetween = _v0.b;
+		var dayClasses = A6(
+			$mercurymedia$elm_datetime_picker$DatePicker$Styles$durationDayClasses,
+			$mercurymedia$elm_datetime_picker$DurationDatePicker$classPrefix,
+			!_Utils_eq(dayParts.month, currentMonth),
+			day.disabled,
+			isPicked,
+			isFocused,
+			isBetween);
+		return A2(
+			$elm$html$Html$button,
+			_List_fromArray(
+				[
+					$elm$html$Html$Attributes$type_('button'),
+					$elm$html$Html$Attributes$disabled(day.disabled),
+					$elm$html$Html$Attributes$class(dayClasses),
+					$elm$html$Html$Events$onClick(
+					settings.internalMsg(
+						A3(
+							$mercurymedia$elm_datetime_picker$DurationDatePicker$update,
+							settings,
+							$mercurymedia$elm_datetime_picker$DurationDatePicker$SetRange(day),
+							$mercurymedia$elm_datetime_picker$DurationDatePicker$DatePicker(model)))),
+					$elm$html$Html$Events$onMouseOver(
+					settings.internalMsg(
+						A3(
+							$mercurymedia$elm_datetime_picker$DurationDatePicker$update,
+							settings,
+							$mercurymedia$elm_datetime_picker$DurationDatePicker$SetHoveredDay(day),
+							$mercurymedia$elm_datetime_picker$DurationDatePicker$DatePicker(model))))
+				]),
+			_List_fromArray(
+				[
+					$elm$html$Html$text(
+					$elm$core$String$fromInt(dayParts.day))
+				]));
+	});
+var $mercurymedia$elm_datetime_picker$DurationDatePicker$viewWeek = F4(
+	function (settings, model, currentMonth, week) {
+		return A2(
+			$elm$html$Html$div,
+			_List_fromArray(
+				[
+					$elm$html$Html$Attributes$class($mercurymedia$elm_datetime_picker$DurationDatePicker$classPrefix + 'calendar-week')
+				]),
+			A2(
+				$elm$core$List$map,
+				A3($mercurymedia$elm_datetime_picker$DurationDatePicker$viewDay, settings, model, currentMonth),
+				week));
+	});
+var $mercurymedia$elm_datetime_picker$DurationDatePicker$viewMonth = F3(
+	function (settings, model, viewTime) {
+		var currentMonth = A2($justinmimbs$time_extra$Time$Extra$posixToParts, settings.zone, viewTime).month;
+		var allowedTimesOfDayFn = A2(
+			$elm$core$Maybe$map,
+			function ($) {
+				return $.allowedTimesOfDay;
+			},
+			$mercurymedia$elm_datetime_picker$DurationDatePicker$getTimePickerSettings(settings));
+		var weeks = A5($mercurymedia$elm_datetime_picker$DatePicker$Utilities$monthData, settings.zone, settings.isDayDisabled, settings.firstWeekDay, allowedTimesOfDayFn, viewTime);
+		return A2(
+			$elm$html$Html$div,
+			_List_fromArray(
+				[
+					$elm$html$Html$Attributes$class($mercurymedia$elm_datetime_picker$DurationDatePicker$classPrefix + 'calendar-month'),
+					$elm$html$Html$Events$onMouseOut(
+					settings.internalMsg(
+						A3(
+							$mercurymedia$elm_datetime_picker$DurationDatePicker$update,
+							settings,
+							$mercurymedia$elm_datetime_picker$DurationDatePicker$ClearHoveredDay,
+							$mercurymedia$elm_datetime_picker$DurationDatePicker$DatePicker(model))))
+				]),
+			_List_fromArray(
+				[
+					A2(
+					$elm$html$Html$div,
+					_List_Nil,
+					A2(
+						$elm$core$List$map,
+						A3($mercurymedia$elm_datetime_picker$DurationDatePicker$viewWeek, settings, model, currentMonth),
+						weeks))
+				]));
+	});
+var $mercurymedia$elm_datetime_picker$DurationDatePicker$viewCalendar = F3(
+	function (settings, model, viewTime) {
+		return A2(
+			$elm$html$Html$div,
+			_List_Nil,
+			_List_fromArray(
+				[
+					A2($mercurymedia$elm_datetime_picker$DurationDatePicker$viewCalendarHeader, settings, viewTime),
+					A3($mercurymedia$elm_datetime_picker$DurationDatePicker$viewMonth, settings, model, viewTime)
+				]));
+	});
+var $mercurymedia$elm_datetime_picker$DurationDatePicker$ToggleTimePickerVisibility = {$: 'ToggleTimePickerVisibility'};
+var $mercurymedia$elm_datetime_picker$DatePicker$Icons$Icon = function (a) {
+	return {$: 'Icon', a: a};
+};
+var $mercurymedia$elm_datetime_picker$DatePicker$Icons$defaultAttributes = function (name) {
+	return {
+		_class: $elm$core$Maybe$Just('feather feather-' + name),
+		size: 24,
+		sizeUnit: '',
+		strokeWidth: 2,
+		viewBox: '0 0 24 24'
+	};
+};
+var $mercurymedia$elm_datetime_picker$DatePicker$Icons$makeBuilder = F2(
+	function (name, src) {
+		return $mercurymedia$elm_datetime_picker$DatePicker$Icons$Icon(
+			{
+				attrs: $mercurymedia$elm_datetime_picker$DatePicker$Icons$defaultAttributes(name),
+				src: src
+			});
+	});
+var $elm$svg$Svg$Attributes$points = _VirtualDom_attribute('points');
+var $elm$svg$Svg$trustedNode = _VirtualDom_nodeNS('http://www.w3.org/2000/svg');
+var $elm$svg$Svg$polyline = $elm$svg$Svg$trustedNode('polyline');
+var $mercurymedia$elm_datetime_picker$DatePicker$Icons$chevronDown = A2(
+	$mercurymedia$elm_datetime_picker$DatePicker$Icons$makeBuilder,
+	'chevron-down',
+	_List_fromArray(
+		[
+			A2(
+			$elm$svg$Svg$polyline,
+			_List_fromArray(
+				[
+					$elm$svg$Svg$Attributes$points('6 9 12 15 18 9')
+				]),
+			_List_Nil)
+		]));
+var $mercurymedia$elm_datetime_picker$DatePicker$Icons$chevronUp = A2(
+	$mercurymedia$elm_datetime_picker$DatePicker$Icons$makeBuilder,
+	'chevron-up',
+	_List_fromArray(
+		[
+			A2(
+			$elm$svg$Svg$polyline,
+			_List_fromArray(
+				[
+					$elm$svg$Svg$Attributes$points('18 15 12 9 6 15')
+				]),
+			_List_Nil)
+		]));
+var $mercurymedia$elm_datetime_picker$DatePicker$DurationUtilities$previewSelection = F4(
+	function (zone, previousStartSelectionTuple, previousEndSelectionTuple, hoveredPickerDay) {
+		var _v0 = _Utils_Tuple2(previousStartSelectionTuple, previousEndSelectionTuple);
+		if ((_v0.a.$ === 'Just') && (_v0.b.$ === 'Just')) {
+			var startSelectionTuple = _v0.a.a;
+			var endSelectionTuple = _v0.b.a;
+			return _Utils_Tuple2(
+				$elm$core$Maybe$Just(startSelectionTuple),
+				$elm$core$Maybe$Just(endSelectionTuple));
+		} else {
+			return A4($mercurymedia$elm_datetime_picker$DatePicker$DurationUtilities$selectDay, zone, previousStartSelectionTuple, previousEndSelectionTuple, hoveredPickerDay);
+		}
+	});
+var $mercurymedia$elm_datetime_picker$DurationDatePicker$showHoveredIfEnabled = function (hovered) {
+	return hovered.disabled ? $elm$core$Maybe$Nothing : $elm$core$Maybe$Just(hovered);
+};
+var $mercurymedia$elm_datetime_picker$DurationDatePicker$determineDateTimeRange = F4(
+	function (zone, startSelectionTuple, endSelectionTuple, hoveredDay) {
+		var hovered = A2($elm$core$Maybe$andThen, $mercurymedia$elm_datetime_picker$DurationDatePicker$showHoveredIfEnabled, hoveredDay);
+		if (hovered.$ === 'Just') {
+			var h = hovered.a;
+			return A4($mercurymedia$elm_datetime_picker$DatePicker$DurationUtilities$previewSelection, zone, startSelectionTuple, endSelectionTuple, h);
+		} else {
+			return _Utils_Tuple2(startSelectionTuple, endSelectionTuple);
+		}
+	});
+var $mercurymedia$elm_datetime_picker$DurationDatePicker$End = {$: 'End'};
+var $mercurymedia$elm_datetime_picker$DurationDatePicker$Start = {$: 'Start'};
+var $mercurymedia$elm_datetime_picker$DurationDatePicker$timeIsEndOfDay = F2(
+	function (settings, time) {
+		var _v0 = A2($justinmimbs$time_extra$Time$Extra$posixToParts, settings.zone, time);
+		var hour = _v0.hour;
+		var minute = _v0.minute;
+		return (hour === 23) && (minute === 59);
+	});
+var $mercurymedia$elm_datetime_picker$DurationDatePicker$timeIsStartOfDay = F2(
+	function (settings, time) {
+		var _v0 = A2($justinmimbs$time_extra$Time$Extra$posixToParts, settings.zone, time);
+		var hour = _v0.hour;
+		var minute = _v0.minute;
+		return (!hour) && (!minute);
+	});
+var $mercurymedia$elm_datetime_picker$DurationDatePicker$viewDate = F2(
+	function (settings, dateTime) {
+		return A2(
+			$elm$html$Html$span,
+			_List_Nil,
+			_List_fromArray(
+				[
+					$elm$html$Html$text(
+					A2(settings.dateStringFn, settings.zone, dateTime))
+				]));
+	});
+var $mercurymedia$elm_datetime_picker$DurationDatePicker$viewDateTime = F4(
+	function (settings, timeStringFn, classString, dateTime) {
+		return A2(
+			$elm$html$Html$span,
+			_List_Nil,
+			_List_fromArray(
+				[
+					$elm$html$Html$text(
+					A2(settings.dateStringFn, settings.zone, dateTime)),
+					A2(
+					$elm$html$Html$span,
+					_List_fromArray(
+						[
+							$elm$html$Html$Attributes$class(
+							_Utils_ap($mercurymedia$elm_datetime_picker$DurationDatePicker$classPrefix, classString))
+						]),
+					_List_fromArray(
+						[
+							$elm$html$Html$text(
+							A2(timeStringFn, settings.zone, dateTime))
+						]))
+				]));
+	});
+var $mercurymedia$elm_datetime_picker$DurationDatePicker$viewDateOrDateTime = F3(
+	function (settings, startOrEnd, dateTime) {
+		return A2(
+			$elm$core$Maybe$withDefault,
+			A2($mercurymedia$elm_datetime_picker$DurationDatePicker$viewDate, settings, dateTime),
+			A2(
+				$elm$core$Maybe$map,
+				function (timePickerSettings) {
+					if (startOrEnd.$ === 'Start') {
+						return A2($mercurymedia$elm_datetime_picker$DurationDatePicker$timeIsStartOfDay, settings, dateTime) ? A2($mercurymedia$elm_datetime_picker$DurationDatePicker$viewDate, settings, dateTime) : A4($mercurymedia$elm_datetime_picker$DurationDatePicker$viewDateTime, settings, timePickerSettings.timeStringFn, 'selection-time', dateTime);
+					} else {
+						return A2($mercurymedia$elm_datetime_picker$DurationDatePicker$timeIsEndOfDay, settings, dateTime) ? A2($mercurymedia$elm_datetime_picker$DurationDatePicker$viewDate, settings, dateTime) : A4($mercurymedia$elm_datetime_picker$DurationDatePicker$viewDateTime, settings, timePickerSettings.timeStringFn, 'selection-time', dateTime);
+					}
+				},
+				$mercurymedia$elm_datetime_picker$DurationDatePicker$getTimePickerSettings(settings)));
+	});
+var $mercurymedia$elm_datetime_picker$DurationDatePicker$viewEmpty = A2(
+	$elm$html$Html$span,
+	_List_Nil,
+	_List_fromArray(
+		[
+			$elm$html$Html$text('')
+		]));
+var $mercurymedia$elm_datetime_picker$DurationDatePicker$determineDateTimeView = F3(
+	function (settings, startSelectionTuple, endSelectionTuple) {
+		var _v0 = _Utils_Tuple2(startSelectionTuple, endSelectionTuple);
+		if (_v0.a.$ === 'Nothing') {
+			if (_v0.b.$ === 'Nothing') {
+				var _v1 = _v0.a;
+				var _v2 = _v0.b;
+				return $mercurymedia$elm_datetime_picker$DurationDatePicker$viewEmpty;
+			} else {
+				var _v5 = _v0.a;
+				var _v6 = _v0.b.a;
+				var endSelection = _v6.b;
+				return A2(
+					$elm$html$Html$span,
+					_List_Nil,
+					_List_fromArray(
+						[
+							$elm$html$Html$text(' - '),
+							A3($mercurymedia$elm_datetime_picker$DurationDatePicker$viewDateOrDateTime, settings, $mercurymedia$elm_datetime_picker$DurationDatePicker$End, endSelection)
+						]));
+			}
+		} else {
+			if (_v0.b.$ === 'Nothing') {
+				var _v3 = _v0.a.a;
+				var startSelection = _v3.b;
+				var _v4 = _v0.b;
+				return A2(
+					$elm$html$Html$span,
+					_List_Nil,
+					_List_fromArray(
+						[
+							A3($mercurymedia$elm_datetime_picker$DurationDatePicker$viewDateOrDateTime, settings, $mercurymedia$elm_datetime_picker$DurationDatePicker$Start, startSelection),
+							$elm$html$Html$text(' - ')
+						]));
+			} else {
+				var _v7 = _v0.a.a;
+				var startPickerDay = _v7.a;
+				var startSelection = _v7.b;
+				var _v8 = _v0.b.a;
+				var endPickerDay = _v8.a;
+				var endSelection = _v8.b;
+				return (_Utils_eq(startPickerDay, endPickerDay) && (A2($mercurymedia$elm_datetime_picker$DurationDatePicker$timeIsStartOfDay, settings, startSelection) && A2($mercurymedia$elm_datetime_picker$DurationDatePicker$timeIsEndOfDay, settings, endSelection))) ? A2($mercurymedia$elm_datetime_picker$DurationDatePicker$viewDate, settings, startSelection) : A2(
+					$elm$html$Html$span,
+					_List_Nil,
+					_List_fromArray(
+						[
+							A3($mercurymedia$elm_datetime_picker$DurationDatePicker$viewDateOrDateTime, settings, $mercurymedia$elm_datetime_picker$DurationDatePicker$Start, startSelection),
+							$elm$html$Html$text(' - '),
+							A3($mercurymedia$elm_datetime_picker$DurationDatePicker$viewDateOrDateTime, settings, $mercurymedia$elm_datetime_picker$DurationDatePicker$End, endSelection)
+						]));
+			}
+		}
+	});
+var $elm$svg$Svg$Attributes$class = _VirtualDom_attribute('class');
+var $elm$svg$Svg$Attributes$fill = _VirtualDom_attribute('fill');
+var $elm$core$String$fromFloat = _String_fromNumber;
+var $elm$svg$Svg$Attributes$height = _VirtualDom_attribute('height');
+var $elm$virtual_dom$VirtualDom$map = _VirtualDom_map;
+var $elm$svg$Svg$map = $elm$virtual_dom$VirtualDom$map;
+var $elm$svg$Svg$Attributes$stroke = _VirtualDom_attribute('stroke');
+var $elm$svg$Svg$Attributes$strokeLinecap = _VirtualDom_attribute('stroke-linecap');
+var $elm$svg$Svg$Attributes$strokeLinejoin = _VirtualDom_attribute('stroke-linejoin');
+var $elm$svg$Svg$Attributes$strokeWidth = _VirtualDom_attribute('stroke-width');
+var $elm$svg$Svg$svg = $elm$svg$Svg$trustedNode('svg');
+var $elm$svg$Svg$Attributes$viewBox = _VirtualDom_attribute('viewBox');
+var $elm$svg$Svg$Attributes$width = _VirtualDom_attribute('width');
+var $mercurymedia$elm_datetime_picker$DatePicker$Icons$toHtml = F2(
+	function (attributes, _v0) {
+		var src = _v0.a.src;
+		var attrs = _v0.a.attrs;
+		var strSize = $elm$core$String$fromFloat(attrs.size);
+		var baseAttributes = _List_fromArray(
+			[
+				$elm$svg$Svg$Attributes$fill('none'),
+				$elm$svg$Svg$Attributes$height(
+				_Utils_ap(strSize, attrs.sizeUnit)),
+				$elm$svg$Svg$Attributes$width(
+				_Utils_ap(strSize, attrs.sizeUnit)),
+				$elm$svg$Svg$Attributes$stroke('currentColor'),
+				$elm$svg$Svg$Attributes$strokeLinecap('round'),
+				$elm$svg$Svg$Attributes$strokeLinejoin('round'),
+				$elm$svg$Svg$Attributes$strokeWidth(
+				$elm$core$String$fromFloat(attrs.strokeWidth)),
+				$elm$svg$Svg$Attributes$viewBox(attrs.viewBox)
+			]);
+		var combinedAttributes = _Utils_ap(
+			function () {
+				var _v1 = attrs._class;
+				if (_v1.$ === 'Just') {
+					var c = _v1.a;
+					return A2(
+						$elm$core$List$cons,
+						$elm$svg$Svg$Attributes$class(c),
+						baseAttributes);
+				} else {
+					return baseAttributes;
+				}
+			}(),
+			attributes);
+		return A2(
+			$elm$svg$Svg$svg,
+			combinedAttributes,
+			A2(
+				$elm$core$List$map,
+				$elm$svg$Svg$map($elm$core$Basics$never),
+				src));
+	});
+var $mercurymedia$elm_datetime_picker$DurationDatePicker$determineDateTimeViews = F3(
+	function (settings, startSelectionTuple, endSelectionTuple) {
+		var _v0 = _Utils_Tuple2(startSelectionTuple, endSelectionTuple);
+		if (_v0.a.$ === 'Nothing') {
+			if (_v0.b.$ === 'Nothing') {
+				var _v1 = _v0.a;
+				var _v2 = _v0.b;
+				return _Utils_Tuple2($mercurymedia$elm_datetime_picker$DurationDatePicker$viewEmpty, $mercurymedia$elm_datetime_picker$DurationDatePicker$viewEmpty);
+			} else {
+				var _v5 = _v0.a;
+				var _v6 = _v0.b.a;
+				var endSelection = _v6.b;
+				return _Utils_Tuple2(
+					$mercurymedia$elm_datetime_picker$DurationDatePicker$viewEmpty,
+					A3($mercurymedia$elm_datetime_picker$DurationDatePicker$viewDateOrDateTime, settings, $mercurymedia$elm_datetime_picker$DurationDatePicker$End, endSelection));
+			}
+		} else {
+			if (_v0.b.$ === 'Nothing') {
+				var _v3 = _v0.a.a;
+				var startSelection = _v3.b;
+				var _v4 = _v0.b;
+				return _Utils_Tuple2(
+					A3($mercurymedia$elm_datetime_picker$DurationDatePicker$viewDateOrDateTime, settings, $mercurymedia$elm_datetime_picker$DurationDatePicker$Start, startSelection),
+					$mercurymedia$elm_datetime_picker$DurationDatePicker$viewEmpty);
+			} else {
+				var _v7 = _v0.a.a;
+				var startPickerDay = _v7.a;
+				var startSelection = _v7.b;
+				var _v8 = _v0.b.a;
+				var endPickerDay = _v8.a;
+				var endSelection = _v8.b;
+				return _Utils_Tuple2(
+					A3($mercurymedia$elm_datetime_picker$DurationDatePicker$viewDateOrDateTime, settings, $mercurymedia$elm_datetime_picker$DurationDatePicker$Start, startSelection),
+					A3($mercurymedia$elm_datetime_picker$DurationDatePicker$viewDateOrDateTime, settings, $mercurymedia$elm_datetime_picker$DurationDatePicker$End, endSelection));
+			}
+		}
+	});
+var $mercurymedia$elm_datetime_picker$DatePicker$Utilities$hourBoundsForSelectedMinute = F2(
+	function (zone, _v0) {
+		var pickerDay = _v0.a;
+		var selection = _v0.b;
+		var _v1 = A2($mercurymedia$elm_datetime_picker$DatePicker$Utilities$timeOfDayFromPosix, zone, pickerDay.start);
+		var startBoundaryHour = _v1.a;
+		var startBoundaryMinute = _v1.b;
+		var _v2 = A2($mercurymedia$elm_datetime_picker$DatePicker$Utilities$timeOfDayFromPosix, zone, selection);
+		var selectedMinute = _v2.b;
+		var earliestSelectableHour = (_Utils_cmp(selectedMinute, startBoundaryMinute) < 0) ? (startBoundaryHour + 1) : startBoundaryHour;
+		var _v3 = A2($mercurymedia$elm_datetime_picker$DatePicker$Utilities$timeOfDayFromPosix, zone, pickerDay.end);
+		var endBoundaryHour = _v3.a;
+		var endBoundaryMinute = _v3.b;
+		var latestSelectableHour = (_Utils_cmp(selectedMinute, endBoundaryMinute) > 0) ? (endBoundaryHour - 1) : endBoundaryHour;
+		return _Utils_Tuple2(earliestSelectableHour, latestSelectableHour);
+	});
+var $mercurymedia$elm_datetime_picker$DatePicker$DurationUtilities$selectableHours = F3(
+	function (zone, _v0, _v1) {
+		var startPickerDay = _v0.a;
+		var startSelection = _v0.b;
+		var endPickerDay = _v1.a;
+		var endSelection = _v1.b;
+		var selectedStartHour = A2($elm$time$Time$toHour, zone, startSelection);
+		var selectedEndHour = A2($elm$time$Time$toHour, zone, endSelection);
+		var _v2 = A2(
+			$mercurymedia$elm_datetime_picker$DatePicker$Utilities$hourBoundsForSelectedMinute,
+			zone,
+			_Utils_Tuple2(startPickerDay, startSelection));
+		var earliestSelectableStartHour = _v2.a;
+		var latestSelectableStartHour = _v2.b;
+		var _v3 = A2(
+			$mercurymedia$elm_datetime_picker$DatePicker$Utilities$hourBoundsForSelectedMinute,
+			zone,
+			_Utils_Tuple2(endPickerDay, endSelection));
+		var earliestSelectableEndHour = _v3.a;
+		var latestSelectableEndHour = _v3.b;
+		return _Utils_eq(startPickerDay, endPickerDay) ? _Utils_Tuple2(
+			A2($elm$core$List$range, earliestSelectableStartHour, selectedEndHour),
+			A2($elm$core$List$range, selectedStartHour, latestSelectableEndHour)) : _Utils_Tuple2(
+			A2($elm$core$List$range, earliestSelectableStartHour, latestSelectableStartHour),
+			A2($elm$core$List$range, earliestSelectableEndHour, latestSelectableEndHour));
+	});
+var $mercurymedia$elm_datetime_picker$DatePicker$DurationUtilities$selectableMinutes = F3(
+	function (zone, _v0, _v1) {
+		var startPickerDay = _v0.a;
+		var startSelection = _v0.b;
+		var endPickerDay = _v1.a;
+		var endSelection = _v1.b;
+		var _v2 = A2($mercurymedia$elm_datetime_picker$DatePicker$Utilities$timeOfDayFromPosix, zone, startSelection);
+		var selectedStartHour = _v2.a;
+		var selectedStartMinute = _v2.b;
+		var _v3 = A2($mercurymedia$elm_datetime_picker$DatePicker$Utilities$timeOfDayFromPosix, zone, endSelection);
+		var selectedEndHour = _v3.a;
+		var selectedEndMinute = _v3.b;
+		var _v4 = A2(
+			$mercurymedia$elm_datetime_picker$DatePicker$Utilities$minuteBoundsForSelectedHour,
+			zone,
+			_Utils_Tuple2(startPickerDay, startSelection));
+		var earliestSelectableStartMinute = _v4.a;
+		var latestSelectableStartMinute = _v4.b;
+		var _v5 = A2(
+			$mercurymedia$elm_datetime_picker$DatePicker$Utilities$minuteBoundsForSelectedHour,
+			zone,
+			_Utils_Tuple2(endPickerDay, endSelection));
+		var earliestSelectableEndMinute = _v5.a;
+		var latestSelectableEndMinute = _v5.b;
+		return (_Utils_eq(startPickerDay, endPickerDay) && _Utils_eq(selectedStartHour, selectedEndHour)) ? _Utils_Tuple2(
+			A2($elm$core$List$range, earliestSelectableStartMinute, selectedEndMinute),
+			A2($elm$core$List$range, selectedStartMinute, latestSelectableEndMinute)) : _Utils_Tuple2(
+			A2($elm$core$List$range, earliestSelectableStartMinute, latestSelectableStartMinute),
+			A2($elm$core$List$range, earliestSelectableEndMinute, latestSelectableEndMinute));
+	});
+var $mercurymedia$elm_datetime_picker$DatePicker$DurationUtilities$filterSelectableTimes = F4(
+	function (zone, baseDay, startSelectionTuple, endSelectionTuple) {
+		var _v0 = _Utils_Tuple2(startSelectionTuple, endSelectionTuple);
+		if (_v0.a.$ === 'Just') {
+			if (_v0.b.$ === 'Just') {
+				var _v1 = _v0.a.a;
+				var startPickerDay = _v1.a;
+				var startSelection = _v1.b;
+				var _v2 = _v0.b.a;
+				var endPickerDay = _v2.a;
+				var endSelection = _v2.b;
+				var _v3 = A3(
+					$mercurymedia$elm_datetime_picker$DatePicker$DurationUtilities$selectableMinutes,
+					zone,
+					_Utils_Tuple2(startPickerDay, startSelection),
+					_Utils_Tuple2(endPickerDay, endSelection));
+				var selectableStartMinutes = _v3.a;
+				var selectableEndMinutes = _v3.b;
+				var _v4 = A3(
+					$mercurymedia$elm_datetime_picker$DatePicker$DurationUtilities$selectableHours,
+					zone,
+					_Utils_Tuple2(startPickerDay, startSelection),
+					_Utils_Tuple2(endPickerDay, endSelection));
+				var selectableStartHours = _v4.a;
+				var selectableEndHours = _v4.b;
+				return {selectableEndHours: selectableEndHours, selectableEndMinutes: selectableEndMinutes, selectableStartHours: selectableStartHours, selectableStartMinutes: selectableStartMinutes};
+			} else {
+				var _v5 = _v0.a.a;
+				var startPickerDay = _v5.a;
+				var startSelection = _v5.b;
+				var _v6 = _v0.b;
+				var _v7 = A2($mercurymedia$elm_datetime_picker$DatePicker$Utilities$timeOfDayFromPosix, zone, startSelection);
+				var selectedStartHour = _v7.a;
+				var selectedStartMinute = _v7.b;
+				var _v8 = A2(
+					$mercurymedia$elm_datetime_picker$DatePicker$Utilities$minuteBoundsForSelectedHour,
+					zone,
+					_Utils_Tuple2(startPickerDay, startSelection));
+				var earliestSelectableStartMinute = _v8.a;
+				var latestSelectableStartMinute = _v8.b;
+				var _v9 = A2(
+					$mercurymedia$elm_datetime_picker$DatePicker$Utilities$hourBoundsForSelectedMinute,
+					zone,
+					_Utils_Tuple2(startPickerDay, startSelection));
+				var earliestSelectableStartHour = _v9.a;
+				var latestSelectableStartHour = _v9.b;
+				return {
+					selectableEndHours: A2($elm$core$List$range, selectedStartHour, latestSelectableStartHour),
+					selectableEndMinutes: A2($elm$core$List$range, selectedStartMinute, latestSelectableStartMinute),
+					selectableStartHours: A2($elm$core$List$range, earliestSelectableStartHour, latestSelectableStartHour),
+					selectableStartMinutes: A2($elm$core$List$range, earliestSelectableStartMinute, latestSelectableStartMinute)
+				};
+			}
+		} else {
+			if (_v0.b.$ === 'Just') {
+				var _v10 = _v0.a;
+				var _v11 = _v0.b.a;
+				var endPickerDay = _v11.a;
+				var endSelection = _v11.b;
+				var _v12 = A2($mercurymedia$elm_datetime_picker$DatePicker$Utilities$timeOfDayFromPosix, zone, endSelection);
+				var selectedEndHour = _v12.a;
+				var selectedEndMinute = _v12.b;
+				var _v13 = A2(
+					$mercurymedia$elm_datetime_picker$DatePicker$Utilities$minuteBoundsForSelectedHour,
+					zone,
+					_Utils_Tuple2(endPickerDay, endSelection));
+				var earliestSelectableEndMinute = _v13.a;
+				var latestSelectableEndMinute = _v13.b;
+				var _v14 = A2(
+					$mercurymedia$elm_datetime_picker$DatePicker$Utilities$hourBoundsForSelectedMinute,
+					zone,
+					_Utils_Tuple2(endPickerDay, endSelection));
+				var earliestSelectableEndHour = _v14.a;
+				var latestSelectableEndHour = _v14.b;
+				return {
+					selectableEndHours: A2($elm$core$List$range, earliestSelectableEndHour, latestSelectableEndHour),
+					selectableEndMinutes: A2($elm$core$List$range, earliestSelectableEndMinute, latestSelectableEndMinute),
+					selectableStartHours: A2($elm$core$List$range, earliestSelectableEndHour, selectedEndHour),
+					selectableStartMinutes: A2($elm$core$List$range, earliestSelectableEndMinute, selectedEndMinute)
+				};
+			} else {
+				var _v15 = _v0.a;
+				var _v16 = _v0.b;
+				var _v17 = A2(
+					$mercurymedia$elm_datetime_picker$DatePicker$Utilities$minuteBoundsForSelectedHour,
+					zone,
+					_Utils_Tuple2(baseDay, baseDay.start));
+				var earliestSelectableMinute = _v17.a;
+				var latestSelectableMinute = _v17.b;
+				var _v18 = A2(
+					$mercurymedia$elm_datetime_picker$DatePicker$Utilities$hourBoundsForSelectedMinute,
+					zone,
+					_Utils_Tuple2(baseDay, baseDay.start));
+				var earliestSelectableHour = _v18.a;
+				var latestSelectableHour = _v18.b;
+				return {
+					selectableEndHours: A2($elm$core$List$range, earliestSelectableHour, latestSelectableHour),
+					selectableEndMinutes: A2($elm$core$List$range, earliestSelectableMinute, latestSelectableMinute),
+					selectableStartHours: A2($elm$core$List$range, earliestSelectableHour, latestSelectableHour),
+					selectableStartMinutes: A2($elm$core$List$range, earliestSelectableMinute, latestSelectableMinute)
+				};
+			}
+		}
+	});
+var $mercurymedia$elm_datetime_picker$DurationDatePicker$SetHour = F2(
+	function (a, b) {
+		return {$: 'SetHour', a: a, b: b};
+	});
+var $mercurymedia$elm_datetime_picker$DurationDatePicker$SetMinute = F2(
+	function (a, b) {
+		return {$: 'SetMinute', a: a, b: b};
+	});
+var $mercurymedia$elm_datetime_picker$DatePicker$Utilities$addLeadingZero = function (value) {
+	var string = $elm$core$String$fromInt(value);
+	return ($elm$core$String$length(string) === 1) ? ('0' + string) : string;
+};
+var $elm$html$Html$option = _VirtualDom_node('option');
+var $elm$html$Html$Attributes$selected = $elm$html$Html$Attributes$boolProperty('selected');
+var $mercurymedia$elm_datetime_picker$DatePicker$Utilities$generateHourOptions = F3(
+	function (zone, selectionTuple, selectableHours) {
+		var isSelected = function (h) {
+			return A2(
+				$elm$core$Maybe$withDefault,
+				false,
+				A2(
+					$elm$core$Maybe$map,
+					function (_v0) {
+						var selection = _v0.b;
+						return _Utils_eq(
+							A2($elm$time$Time$toHour, zone, selection),
+							h);
+					},
+					selectionTuple));
+		};
+		return A2(
+			$elm$core$List$map,
+			function (hour) {
+				return A2(
+					$elm$html$Html$option,
+					_List_fromArray(
+						[
+							$elm$html$Html$Attributes$value(
+							$elm$core$String$fromInt(hour)),
+							$elm$html$Html$Attributes$selected(
+							isSelected(hour))
+						]),
+					_List_fromArray(
+						[
+							$elm$html$Html$text(
+							$mercurymedia$elm_datetime_picker$DatePicker$Utilities$addLeadingZero(hour))
+						]));
+			},
+			selectableHours);
+	});
+var $mercurymedia$elm_datetime_picker$DatePicker$Utilities$generateMinuteOptions = F3(
+	function (zone, selectionTuple, selectableMinutes) {
+		var isSelected = function (m) {
+			return A2(
+				$elm$core$Maybe$withDefault,
+				false,
+				A2(
+					$elm$core$Maybe$map,
+					function (_v0) {
+						var selection = _v0.b;
+						return _Utils_eq(
+							A2($elm$time$Time$toMinute, zone, selection),
+							m);
+					},
+					selectionTuple));
+		};
+		return A2(
+			$elm$core$List$map,
+			function (minute) {
+				return A2(
+					$elm$html$Html$option,
+					_List_fromArray(
+						[
+							$elm$html$Html$Attributes$value(
+							$elm$core$String$fromInt(minute)),
+							$elm$html$Html$Attributes$selected(
+							isSelected(minute))
+						]),
+					_List_fromArray(
+						[
+							$elm$html$Html$text(
+							$mercurymedia$elm_datetime_picker$DatePicker$Utilities$addLeadingZero(minute))
+						]));
+			},
+			selectableMinutes);
+	});
+var $elm$html$Html$select = _VirtualDom_node('select');
+var $elm_community$html_extra$Html$Events$Extra$customDecoder = F2(
+	function (d, f) {
+		var resultDecoder = function (x) {
+			if (x.$ === 'Ok') {
+				var a = x.a;
+				return $elm$json$Json$Decode$succeed(a);
+			} else {
+				var e = x.a;
+				return $elm$json$Json$Decode$fail(e);
+			}
+		};
+		return A2(
+			$elm$json$Json$Decode$andThen,
+			resultDecoder,
+			A2($elm$json$Json$Decode$map, f, d));
+	});
+var $elm$core$Result$fromMaybe = F2(
+	function (err, maybe) {
+		if (maybe.$ === 'Just') {
+			var v = maybe.a;
+			return $elm$core$Result$Ok(v);
+		} else {
+			return $elm$core$Result$Err(err);
+		}
+	});
+var $elm_community$html_extra$Html$Events$Extra$maybeStringToResult = $elm$core$Result$fromMaybe('could not convert string');
+var $elm_community$html_extra$Html$Events$Extra$targetValueIntParse = A2(
+	$elm_community$html_extra$Html$Events$Extra$customDecoder,
+	$elm$html$Html$Events$targetValue,
+	A2($elm$core$Basics$composeR, $elm$core$String$toInt, $elm_community$html_extra$Html$Events$Extra$maybeStringToResult));
+var $mercurymedia$elm_datetime_picker$DurationDatePicker$viewTimePicker = F7(
+	function (settings, model, startOrEnd, baseDay, selectableHours, selectableMinutes, selectionTuple) {
+		return A2(
+			$elm$html$Html$div,
+			_List_fromArray(
+				[
+					$elm$html$Html$Attributes$class($mercurymedia$elm_datetime_picker$DurationDatePicker$classPrefix + 'time-picker')
+				]),
+			_List_fromArray(
+				[
+					A2(
+					$elm$html$Html$div,
+					_List_fromArray(
+						[
+							$elm$html$Html$Attributes$class($mercurymedia$elm_datetime_picker$DurationDatePicker$classPrefix + 'select-container')
+						]),
+					_List_fromArray(
+						[
+							A2(
+							$elm$html$Html$div,
+							_List_fromArray(
+								[
+									$elm$html$Html$Attributes$class($mercurymedia$elm_datetime_picker$DurationDatePicker$classPrefix + 'select')
+								]),
+							_List_fromArray(
+								[
+									A2(
+									$elm$html$Html$select,
+									_List_fromArray(
+										[
+											$elm$html$Html$Attributes$class('hour-select'),
+											A2(
+											$elm$html$Html$Events$on,
+											'change',
+											A2(
+												$elm$json$Json$Decode$map,
+												settings.internalMsg,
+												A2(
+													$elm$json$Json$Decode$map,
+													function (msg) {
+														return A3(
+															$mercurymedia$elm_datetime_picker$DurationDatePicker$update,
+															settings,
+															msg,
+															$mercurymedia$elm_datetime_picker$DurationDatePicker$DatePicker(model));
+													},
+													A2(
+														$elm$json$Json$Decode$map,
+														$mercurymedia$elm_datetime_picker$DurationDatePicker$SetHour(startOrEnd),
+														$elm_community$html_extra$Html$Events$Extra$targetValueIntParse))))
+										]),
+									A3($mercurymedia$elm_datetime_picker$DatePicker$Utilities$generateHourOptions, settings.zone, selectionTuple, selectableHours))
+								])),
+							A2(
+							$elm$html$Html$div,
+							_List_fromArray(
+								[
+									$elm$html$Html$Attributes$class($mercurymedia$elm_datetime_picker$DurationDatePicker$classPrefix + 'select-spacer')
+								]),
+							_List_fromArray(
+								[
+									$elm$html$Html$text(':')
+								])),
+							A2(
+							$elm$html$Html$div,
+							_List_fromArray(
+								[
+									$elm$html$Html$Attributes$class($mercurymedia$elm_datetime_picker$DurationDatePicker$classPrefix + 'select')
+								]),
+							_List_fromArray(
+								[
+									A2(
+									$elm$html$Html$select,
+									_List_fromArray(
+										[
+											$elm$html$Html$Attributes$class('minute-select'),
+											A2(
+											$elm$html$Html$Events$on,
+											'change',
+											A2(
+												$elm$json$Json$Decode$map,
+												settings.internalMsg,
+												A2(
+													$elm$json$Json$Decode$map,
+													function (msg) {
+														return A3(
+															$mercurymedia$elm_datetime_picker$DurationDatePicker$update,
+															settings,
+															msg,
+															$mercurymedia$elm_datetime_picker$DurationDatePicker$DatePicker(model));
+													},
+													A2(
+														$elm$json$Json$Decode$map,
+														$mercurymedia$elm_datetime_picker$DurationDatePicker$SetMinute(startOrEnd),
+														$elm_community$html_extra$Html$Events$Extra$targetValueIntParse))))
+										]),
+									A3($mercurymedia$elm_datetime_picker$DatePicker$Utilities$generateMinuteOptions, settings.zone, selectionTuple, selectableMinutes))
+								]))
+						]))
+				]));
+	});
+var $mercurymedia$elm_datetime_picker$DurationDatePicker$viewExpandedPickers = F5(
+	function (settings, model, baseDay, startSelectionTuple, endSelectionTuple) {
+		var _v0 = A4($mercurymedia$elm_datetime_picker$DatePicker$DurationUtilities$filterSelectableTimes, settings.zone, baseDay, startSelectionTuple, endSelectionTuple);
+		var selectableStartHours = _v0.selectableStartHours;
+		var selectableStartMinutes = _v0.selectableStartMinutes;
+		var selectableEndHours = _v0.selectableEndHours;
+		var selectableEndMinutes = _v0.selectableEndMinutes;
+		var _v1 = A3($mercurymedia$elm_datetime_picker$DurationDatePicker$determineDateTimeViews, settings, startSelectionTuple, endSelectionTuple);
+		var startDisplayDate = _v1.a;
+		var endDisplayDate = _v1.b;
+		return A2(
+			$elm$html$Html$div,
+			_List_Nil,
+			_List_fromArray(
+				[
+					A2(
+					$elm$html$Html$div,
+					_List_fromArray(
+						[
+							$elm$html$Html$Attributes$class($mercurymedia$elm_datetime_picker$DurationDatePicker$classPrefix + 'time-picker-information-container')
+						]),
+					_List_fromArray(
+						[
+							A2(
+							$elm$html$Html$div,
+							_List_fromArray(
+								[
+									$elm$html$Html$Attributes$id('start-select'),
+									$elm$html$Html$Attributes$class($mercurymedia$elm_datetime_picker$DurationDatePicker$classPrefix + 'time-picker-container')
+								]),
+							_List_fromArray(
+								[
+									$elm$html$Html$text('Start'),
+									A7($mercurymedia$elm_datetime_picker$DurationDatePicker$viewTimePicker, settings, model, $mercurymedia$elm_datetime_picker$DurationDatePicker$Start, baseDay, selectableStartHours, selectableStartMinutes, startSelectionTuple)
+								])),
+							A2(
+							$elm$html$Html$div,
+							_List_fromArray(
+								[
+									$elm$html$Html$Attributes$class($mercurymedia$elm_datetime_picker$DurationDatePicker$classPrefix + 'date-display-container')
+								]),
+							_List_fromArray(
+								[startDisplayDate]))
+						])),
+					A2(
+					$elm$html$Html$div,
+					_List_fromArray(
+						[
+							$elm$html$Html$Attributes$class($mercurymedia$elm_datetime_picker$DurationDatePicker$classPrefix + 'time-picker-information-container')
+						]),
+					_List_fromArray(
+						[
+							A2(
+							$elm$html$Html$div,
+							_List_fromArray(
+								[
+									$elm$html$Html$Attributes$id('end-select'),
+									$elm$html$Html$Attributes$class($mercurymedia$elm_datetime_picker$DurationDatePicker$classPrefix + 'time-picker-container')
+								]),
+							_List_fromArray(
+								[
+									$elm$html$Html$text('End'),
+									A7($mercurymedia$elm_datetime_picker$DurationDatePicker$viewTimePicker, settings, model, $mercurymedia$elm_datetime_picker$DurationDatePicker$End, baseDay, selectableEndHours, selectableEndMinutes, endSelectionTuple)
+								])),
+							A2(
+							$elm$html$Html$div,
+							_List_fromArray(
+								[
+									$elm$html$Html$Attributes$class($mercurymedia$elm_datetime_picker$DurationDatePicker$classPrefix + 'date-display-container')
+								]),
+							_List_fromArray(
+								[endDisplayDate]))
+						]))
+				]));
+	});
+var $mercurymedia$elm_datetime_picker$DatePicker$Icons$withSize = F2(
+	function (size, _v0) {
+		var attrs = _v0.a.attrs;
+		var src = _v0.a.src;
+		return $mercurymedia$elm_datetime_picker$DatePicker$Icons$Icon(
+			{
+				attrs: _Utils_update(
+					attrs,
+					{size: size}),
+				src: src
+			});
+	});
+var $mercurymedia$elm_datetime_picker$DurationDatePicker$viewFooter = F4(
+	function (settings, timePickerVisible, baseDay, model) {
+		var _v0 = A4($mercurymedia$elm_datetime_picker$DurationDatePicker$determineDateTimeRange, settings.zone, model.startSelectionTuple, model.endSelectionTuple, model.hovered);
+		var startSelectionTuple = _v0.a;
+		var endSelectionTuple = _v0.b;
+		return A2(
+			$elm$html$Html$div,
+			_List_fromArray(
+				[
+					$elm$html$Html$Attributes$class($mercurymedia$elm_datetime_picker$DurationDatePicker$classPrefix + 'footer')
+				]),
+			_List_fromArray(
+				[
+					A2(
+					$elm$html$Html$div,
+					_List_fromArray(
+						[
+							$elm$html$Html$Attributes$class($mercurymedia$elm_datetime_picker$DurationDatePicker$classPrefix + 'time-pickers-container')
+						]),
+					_List_fromArray(
+						[
+							function () {
+							var _v1 = settings.timePickerVisibility;
+							switch (_v1.$) {
+								case 'NeverVisible':
+									return A2(
+										$elm$html$Html$div,
+										_List_Nil,
+										_List_fromArray(
+											[
+												A2(
+												$elm$html$Html$div,
+												_List_fromArray(
+													[
+														$elm$html$Html$Attributes$class($mercurymedia$elm_datetime_picker$DurationDatePicker$classPrefix + 'date-display-container-no-pickers')
+													]),
+												_List_fromArray(
+													[
+														A3($mercurymedia$elm_datetime_picker$DurationDatePicker$determineDateTimeView, settings, startSelectionTuple, endSelectionTuple)
+													]))
+											]));
+								case 'Toggleable':
+									var timePickerSettings = _v1.a;
+									return timePickerVisible ? A2(
+										$elm$html$Html$div,
+										_List_Nil,
+										_List_fromArray(
+											[
+												A2(
+												$elm$html$Html$div,
+												_List_fromArray(
+													[
+														$elm$html$Html$Attributes$class($mercurymedia$elm_datetime_picker$DurationDatePicker$classPrefix + 'time-picker-toggle'),
+														$elm$html$Html$Events$onClick(
+														settings.internalMsg(
+															A3(
+																$mercurymedia$elm_datetime_picker$DurationDatePicker$update,
+																settings,
+																$mercurymedia$elm_datetime_picker$DurationDatePicker$ToggleTimePickerVisibility,
+																$mercurymedia$elm_datetime_picker$DurationDatePicker$DatePicker(model))))
+													]),
+												_List_fromArray(
+													[
+														A2(
+														$mercurymedia$elm_datetime_picker$DatePicker$Icons$toHtml,
+														_List_Nil,
+														A2($mercurymedia$elm_datetime_picker$DatePicker$Icons$withSize, 12, $mercurymedia$elm_datetime_picker$DatePicker$Icons$chevronUp))
+													])),
+												A5($mercurymedia$elm_datetime_picker$DurationDatePicker$viewExpandedPickers, settings, model, baseDay, startSelectionTuple, endSelectionTuple)
+											])) : A2(
+										$elm$html$Html$div,
+										_List_Nil,
+										_List_fromArray(
+											[
+												A2(
+												$elm$html$Html$div,
+												_List_fromArray(
+													[
+														$elm$html$Html$Attributes$class($mercurymedia$elm_datetime_picker$DurationDatePicker$classPrefix + 'time-picker-toggle'),
+														$elm$html$Html$Events$onClick(
+														settings.internalMsg(
+															A3(
+																$mercurymedia$elm_datetime_picker$DurationDatePicker$update,
+																settings,
+																$mercurymedia$elm_datetime_picker$DurationDatePicker$ToggleTimePickerVisibility,
+																$mercurymedia$elm_datetime_picker$DurationDatePicker$DatePicker(model))))
+													]),
+												_List_fromArray(
+													[
+														A2(
+														$mercurymedia$elm_datetime_picker$DatePicker$Icons$toHtml,
+														_List_Nil,
+														A2($mercurymedia$elm_datetime_picker$DatePicker$Icons$withSize, 12, $mercurymedia$elm_datetime_picker$DatePicker$Icons$chevronDown))
+													])),
+												A2(
+												$elm$html$Html$div,
+												_List_fromArray(
+													[
+														$elm$html$Html$Attributes$class($mercurymedia$elm_datetime_picker$DurationDatePicker$classPrefix + 'date-display-container-no-pickers')
+													]),
+												_List_fromArray(
+													[
+														A3($mercurymedia$elm_datetime_picker$DurationDatePicker$determineDateTimeView, settings, startSelectionTuple, endSelectionTuple)
+													]))
+											]));
+								default:
+									var timePickerSettings = _v1.a;
+									return A5($mercurymedia$elm_datetime_picker$DurationDatePicker$viewExpandedPickers, settings, model, baseDay, startSelectionTuple, endSelectionTuple);
+							}
+						}()
+						]))
+				]));
+	});
+var $mercurymedia$elm_datetime_picker$DurationDatePicker$NextMonth = {$: 'NextMonth'};
+var $mercurymedia$elm_datetime_picker$DurationDatePicker$NextYear = {$: 'NextYear'};
+var $mercurymedia$elm_datetime_picker$DurationDatePicker$PrevMonth = {$: 'PrevMonth'};
+var $mercurymedia$elm_datetime_picker$DurationDatePicker$PrevYear = {$: 'PrevYear'};
+var $mercurymedia$elm_datetime_picker$DatePicker$Icons$chevronLeft = A2(
+	$mercurymedia$elm_datetime_picker$DatePicker$Icons$makeBuilder,
+	'chevron-left',
+	_List_fromArray(
+		[
+			A2(
+			$elm$svg$Svg$polyline,
+			_List_fromArray(
+				[
+					$elm$svg$Svg$Attributes$points('15 18 9 12 15 6')
+				]),
+			_List_Nil)
+		]));
+var $mercurymedia$elm_datetime_picker$DatePicker$Icons$chevronRight = A2(
+	$mercurymedia$elm_datetime_picker$DatePicker$Icons$makeBuilder,
+	'chevron-right',
+	_List_fromArray(
+		[
+			A2(
+			$elm$svg$Svg$polyline,
+			_List_fromArray(
+				[
+					$elm$svg$Svg$Attributes$points('9 18 15 12 9 6')
+				]),
+			_List_Nil)
+		]));
+var $mercurymedia$elm_datetime_picker$DatePicker$Icons$chevronsLeft = A2(
+	$mercurymedia$elm_datetime_picker$DatePicker$Icons$makeBuilder,
+	'chevrons-left',
+	_List_fromArray(
+		[
+			A2(
+			$elm$svg$Svg$polyline,
+			_List_fromArray(
+				[
+					$elm$svg$Svg$Attributes$points('11 17 6 12 11 7')
+				]),
+			_List_Nil),
+			A2(
+			$elm$svg$Svg$polyline,
+			_List_fromArray(
+				[
+					$elm$svg$Svg$Attributes$points('18 17 13 12 18 7')
+				]),
+			_List_Nil)
+		]));
+var $mercurymedia$elm_datetime_picker$DatePicker$Icons$chevronsRight = A2(
+	$mercurymedia$elm_datetime_picker$DatePicker$Icons$makeBuilder,
+	'chevrons-right',
+	_List_fromArray(
+		[
+			A2(
+			$elm$svg$Svg$polyline,
+			_List_fromArray(
+				[
+					$elm$svg$Svg$Attributes$points('13 17 18 12 13 7')
+				]),
+			_List_Nil),
+			A2(
+			$elm$svg$Svg$polyline,
+			_List_fromArray(
+				[
+					$elm$svg$Svg$Attributes$points('6 17 11 12 6 7')
+				]),
+			_List_Nil)
+		]));
+var $mercurymedia$elm_datetime_picker$DurationDatePicker$viewPickerHeader = F2(
+	function (settings, model) {
+		return A2(
+			$elm$html$Html$div,
+			_List_Nil,
+			_List_fromArray(
+				[
+					A2(
+					$elm$html$Html$div,
+					_List_fromArray(
+						[
+							$elm$html$Html$Attributes$class($mercurymedia$elm_datetime_picker$DurationDatePicker$classPrefix + 'picker-header-chevrons')
+						]),
+					_List_fromArray(
+						[
+							A2(
+							$elm$html$Html$div,
+							_List_fromArray(
+								[
+									$elm$html$Html$Attributes$id('previous-month'),
+									$elm$html$Html$Attributes$class($mercurymedia$elm_datetime_picker$DurationDatePicker$classPrefix + 'picker-header-chevron'),
+									$elm$html$Html$Events$onClick(
+									settings.internalMsg(
+										A3(
+											$mercurymedia$elm_datetime_picker$DurationDatePicker$update,
+											settings,
+											$mercurymedia$elm_datetime_picker$DurationDatePicker$PrevMonth,
+											$mercurymedia$elm_datetime_picker$DurationDatePicker$DatePicker(model))))
+								]),
+							_List_fromArray(
+								[
+									A2(
+									$mercurymedia$elm_datetime_picker$DatePicker$Icons$toHtml,
+									_List_Nil,
+									A2($mercurymedia$elm_datetime_picker$DatePicker$Icons$withSize, 15, $mercurymedia$elm_datetime_picker$DatePicker$Icons$chevronLeft))
+								])),
+							A2(
+							$elm$html$Html$div,
+							_List_fromArray(
+								[
+									$elm$html$Html$Attributes$id('next-month'),
+									$elm$html$Html$Attributes$class($mercurymedia$elm_datetime_picker$DurationDatePicker$classPrefix + 'picker-header-chevron'),
+									$elm$html$Html$Events$onClick(
+									settings.internalMsg(
+										A3(
+											$mercurymedia$elm_datetime_picker$DurationDatePicker$update,
+											settings,
+											$mercurymedia$elm_datetime_picker$DurationDatePicker$NextMonth,
+											$mercurymedia$elm_datetime_picker$DurationDatePicker$DatePicker(model))))
+								]),
+							_List_fromArray(
+								[
+									A2(
+									$mercurymedia$elm_datetime_picker$DatePicker$Icons$toHtml,
+									_List_Nil,
+									A2($mercurymedia$elm_datetime_picker$DatePicker$Icons$withSize, 15, $mercurymedia$elm_datetime_picker$DatePicker$Icons$chevronRight))
+								]))
+						])),
+					A2(
+					$elm$html$Html$div,
+					_List_fromArray(
+						[
+							$elm$html$Html$Attributes$class($mercurymedia$elm_datetime_picker$DurationDatePicker$classPrefix + 'picker-header-chevrons')
+						]),
+					_List_fromArray(
+						[
+							A2(
+							$elm$html$Html$div,
+							_List_fromArray(
+								[
+									$elm$html$Html$Attributes$id('previous-year'),
+									$elm$html$Html$Attributes$class($mercurymedia$elm_datetime_picker$DurationDatePicker$classPrefix + 'picker-header-chevron'),
+									$elm$html$Html$Events$onClick(
+									settings.internalMsg(
+										A3(
+											$mercurymedia$elm_datetime_picker$DurationDatePicker$update,
+											settings,
+											$mercurymedia$elm_datetime_picker$DurationDatePicker$PrevYear,
+											$mercurymedia$elm_datetime_picker$DurationDatePicker$DatePicker(model))))
+								]),
+							_List_fromArray(
+								[
+									A2(
+									$mercurymedia$elm_datetime_picker$DatePicker$Icons$toHtml,
+									_List_Nil,
+									A2($mercurymedia$elm_datetime_picker$DatePicker$Icons$withSize, 15, $mercurymedia$elm_datetime_picker$DatePicker$Icons$chevronsLeft))
+								])),
+							A2(
+							$elm$html$Html$div,
+							_List_fromArray(
+								[
+									$elm$html$Html$Attributes$id('next-year'),
+									$elm$html$Html$Attributes$class($mercurymedia$elm_datetime_picker$DurationDatePicker$classPrefix + 'picker-header-chevron'),
+									$elm$html$Html$Events$onClick(
+									settings.internalMsg(
+										A3(
+											$mercurymedia$elm_datetime_picker$DurationDatePicker$update,
+											settings,
+											$mercurymedia$elm_datetime_picker$DurationDatePicker$NextYear,
+											$mercurymedia$elm_datetime_picker$DurationDatePicker$DatePicker(model))))
+								]),
+							_List_fromArray(
+								[
+									A2(
+									$mercurymedia$elm_datetime_picker$DatePicker$Icons$toHtml,
+									_List_Nil,
+									A2($mercurymedia$elm_datetime_picker$DatePicker$Icons$withSize, 15, $mercurymedia$elm_datetime_picker$DatePicker$Icons$chevronsRight))
+								]))
+						]))
+				]));
+	});
+var $mercurymedia$elm_datetime_picker$DurationDatePicker$view = F2(
+	function (settings, _v0) {
+		var model = _v0.a;
+		var _v1 = model.status;
+		if (_v1.$ === 'Open') {
+			var timePickerVisible = _v1.a;
+			var baseDay = _v1.b;
+			var rightViewTime = A4($justinmimbs$time_extra$Time$Extra$add, $justinmimbs$time_extra$Time$Extra$Month, model.viewOffset + 1, settings.zone, baseDay.start);
+			var leftViewTime = A4($justinmimbs$time_extra$Time$Extra$add, $justinmimbs$time_extra$Time$Extra$Month, model.viewOffset, settings.zone, baseDay.start);
+			return A2(
+				$elm$html$Html$div,
+				_List_fromArray(
+					[
+						$elm$html$Html$Attributes$id($mercurymedia$elm_datetime_picker$DurationDatePicker$datePickerId),
+						$elm$html$Html$Attributes$class($mercurymedia$elm_datetime_picker$DurationDatePicker$classPrefix + 'picker-container')
+					]),
+				_List_fromArray(
+					[
+						A2($mercurymedia$elm_datetime_picker$DurationDatePicker$viewPickerHeader, settings, model),
+						A2(
+						$elm$html$Html$div,
+						_List_fromArray(
+							[
+								$elm$html$Html$Attributes$class($mercurymedia$elm_datetime_picker$DurationDatePicker$classPrefix + 'calendars-container')
+							]),
+						_List_fromArray(
+							[
+								A2(
+								$elm$html$Html$div,
+								_List_fromArray(
+									[
+										$elm$html$Html$Attributes$id('left-container'),
+										$elm$html$Html$Attributes$class($mercurymedia$elm_datetime_picker$DurationDatePicker$classPrefix + 'calendar')
+									]),
+								_List_fromArray(
+									[
+										A3($mercurymedia$elm_datetime_picker$DurationDatePicker$viewCalendar, settings, model, leftViewTime)
+									])),
+								A2(
+								$elm$html$Html$div,
+								_List_fromArray(
+									[
+										$elm$html$Html$Attributes$class($mercurymedia$elm_datetime_picker$DurationDatePicker$classPrefix + 'calendar-spacer')
+									]),
+								_List_Nil),
+								A2(
+								$elm$html$Html$div,
+								_List_fromArray(
+									[
+										$elm$html$Html$Attributes$id('right-container'),
+										$elm$html$Html$Attributes$class($mercurymedia$elm_datetime_picker$DurationDatePicker$classPrefix + 'calendar')
+									]),
+								_List_fromArray(
+									[
+										A3($mercurymedia$elm_datetime_picker$DurationDatePicker$viewCalendar, settings, model, rightViewTime)
+									]))
+							])),
+						A2(
+						$elm$html$Html$div,
+						_List_fromArray(
+							[
+								$elm$html$Html$Attributes$class($mercurymedia$elm_datetime_picker$DurationDatePicker$classPrefix + 'footer-container')
+							]),
+						_List_fromArray(
+							[
+								A4($mercurymedia$elm_datetime_picker$DurationDatePicker$viewFooter, settings, timePickerVisible, baseDay, model)
+							]))
+					]));
+		} else {
+			return $elm$html$Html$text('');
+		}
+	});
+var $author$project$Main$viewInsert = function (maybeInsert) {
+	if (maybeInsert.$ === 'Nothing') {
+		return A2(
+			$elm$html$Html$div,
+			_List_fromArray(
+				[
+					$elm$html$Html$Attributes$class('btn btn-secondary'),
 					$elm$html$Html$Events$onClick($author$project$Main$OpenInsert)
 				]),
 			_List_fromArray(
@@ -7334,13 +11317,58 @@ var $author$project$Main$viewInsert = function (insert) {
 					$elm$html$Html$text('Add')
 				]));
 	} else {
-		var i = insert.a;
+		var insert = maybeInsert.a;
+		var startStopTime = function () {
+			var _v1 = insert.startStop;
+			if (_v1.$ === 'Nothing') {
+				return 'No time selected';
+			} else {
+				var _v2 = _v1.a;
+				var s = _v2.a;
+				var t = _v2.b;
+				return $author$project$Main$posixToString(s) + (' - ' + $author$project$Main$posixToString(t));
+			}
+		}();
 		return A2(
 			$elm$html$Html$div,
 			_List_Nil,
 			_List_fromArray(
 				[
-					$elm$html$Html$text('INSERT')
+					A2(
+					$elm$html$Html$span,
+					_List_fromArray(
+						[
+							$elm$html$Html$Events$onClick($author$project$Main$OpenPicker)
+						]),
+					_List_fromArray(
+						[
+							$elm$html$Html$text(startStopTime)
+						])),
+					A2(
+					$mercurymedia$elm_datetime_picker$DurationDatePicker$view,
+					A2($mercurymedia$elm_datetime_picker$DurationDatePicker$defaultSettings, $elm$time$Time$utc, $author$project$Main$UpdatePicker),
+					insert.picker),
+					A2(
+					$elm$html$Html$input,
+					_List_fromArray(
+						[
+							$elm$html$Html$Attributes$id('comment'),
+							$elm$html$Html$Attributes$type_('text'),
+							$elm$html$Html$Attributes$value(insert.comment),
+							$elm$html$Html$Events$onInput($author$project$Main$SaveInsertComment)
+						]),
+					_List_Nil),
+					A2(
+					$elm$html$Html$button,
+					_List_fromArray(
+						[
+							$elm$html$Html$Attributes$class('btn btn-primary'),
+							$elm$html$Html$Events$onClick($author$project$Main$SendInsert)
+						]),
+					_List_fromArray(
+						[
+							$elm$html$Html$text('Insert')
+						]))
 				]));
 	}
 };
@@ -7512,13 +11540,6 @@ var $author$project$Main$view = function (model) {
 			]));
 };
 var $author$project$Main$main = $elm$browser$Browser$element(
-	{
-		init: $author$project$Main$init,
-		subscriptions: function (_v0) {
-			return $elm$core$Platform$Sub$none;
-		},
-		update: $author$project$Main$update,
-		view: $author$project$Main$view
-	});
+	{init: $author$project$Main$init, subscriptions: $author$project$Main$subscriptions, update: $author$project$Main$update, view: $author$project$Main$view});
 _Platform_export({'Main':{'init':$author$project$Main$main(
 	$elm$json$Json$Decode$succeed(_Utils_Tuple0))(0)}});}(this));

@@ -1,6 +1,7 @@
 module Main exposing (main)
 
 import Browser
+import DurationDatePicker
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
@@ -18,7 +19,7 @@ main =
         { init = init
         , view = view
         , update = update
-        , subscriptions = \_ -> Sub.none
+        , subscriptions = subscriptions
         }
 
 
@@ -28,18 +29,20 @@ type alias Model =
     , fetchErrMsg : Maybe String
     , comment : String
     , insert : Maybe Insert
+    , currentTime : Time.Posix
     }
+
 
 type alias Insert =
-    { start : Time.Posix
-    , stop : Time.Posix
+    { startStop : Maybe ( Time.Posix, Time.Posix )
     , comment : String
+    , picker : DurationDatePicker.DatePicker
     }
-
 
 
 type Msg
     = ReceiveState (Result Http.Error Periode.State)
+    | Tick Time.Posix
     | SaveComment String
     | SendStart
     | SendStop
@@ -47,6 +50,10 @@ type Msg
     | ReceiveEvent (Result Http.Error ())
     | OpenInsert
     | CloseInsert
+    | OpenPicker
+    | UpdatePicker ( DurationDatePicker.DatePicker, Maybe ( Time.Posix, Time.Posix ) )
+    | SaveInsertComment String
+    | SendInsert
 
 
 init : flags -> ( Model, Cmd Msg )
@@ -56,6 +63,7 @@ init _ =
       , fetchErrMsg = Nothing
       , comment = ""
       , insert = Nothing
+      , currentTime = Time.millisToPosix 0
       }
     , Periode.fetch ReceiveState
     )
@@ -84,6 +92,9 @@ update msg model =
                     ( { model | periodes = [], current = Periode.Stopped, fetchErrMsg = Just (buildErrorMessage e) }
                     , Cmd.none
                     )
+
+        Tick newTime ->
+            ( { model | currentTime = newTime }, Cmd.none )
 
         SaveComment comment ->
             ( { model | comment = comment }
@@ -116,16 +127,99 @@ update msg model =
                     ( { model | periodes = [], current = Periode.Stopped, fetchErrMsg = Just (buildErrorMessage e) }
                     , Cmd.none
                     )
-        
+
         OpenInsert ->
-            ( {model | insert = Just {start= Time.millisToPosix 0, stop =Time.millisToPosix 0, comment =""}}
+            ( { model | insert = Just emptyInsert }
             , Cmd.none
             )
 
         CloseInsert ->
-            ( {model | insert = Nothing}
+            ( { model | insert = Nothing }
             , Cmd.none
             )
+
+        OpenPicker ->
+            let
+                insert =
+                    case model.insert of
+                        Nothing ->
+                            emptyInsert
+
+                        Just i ->
+                            i
+
+                ( start, stop ) =
+                    case insert.startStop of
+                        Nothing ->
+                            ( Nothing, Nothing )
+
+                        Just ( s, t ) ->
+                            ( Just s, Just t )
+            in
+            ( { model | insert = Just { insert | picker = DurationDatePicker.openPicker (DurationDatePicker.defaultSettings Time.utc UpdatePicker) model.currentTime start stop insert.picker } }
+            , Cmd.none
+            )
+
+        UpdatePicker ( newPicker, maybeRuntime ) ->
+            let
+                insert =
+                    case model.insert of
+                        Nothing ->
+                            emptyInsert
+
+                        Just i ->
+                            i
+
+                runtime =
+                    Maybe.map (\rt -> Just rt) maybeRuntime |> Maybe.withDefault insert.startStop
+            in
+            ( { model | insert = Just { insert | picker = newPicker, startStop = runtime } }
+            , Cmd.none
+            )
+
+        SaveInsertComment comment ->
+            let
+                insert =
+                    case model.insert of
+                        Nothing ->
+                            emptyInsert
+
+                        Just i ->
+                            i
+            in
+            ( { model | insert = Just { insert | comment = comment } }
+            , Cmd.none
+            )
+
+        SendInsert ->
+            let
+                insert =
+                    case model.insert of
+                        Nothing ->
+                            emptyInsert
+
+                        Just i ->
+                            i
+
+                cmd =
+                    case insert.startStop of
+                        Nothing ->
+                            Cmd.none
+
+                        Just ( start, stop ) ->
+                            sendInsert ReceiveEvent start stop (Just insert.comment)
+            in
+            ( {model | insert = Nothing}
+            , cmd
+            )
+
+
+emptyInsert : Insert
+emptyInsert =
+    { startStop = Nothing
+    , comment = ""
+    , picker = DurationDatePicker.init
+    }
 
 
 sendStartStop : String -> (Result Http.Error () -> Msg) -> String -> Cmd Msg
@@ -133,6 +227,15 @@ sendStartStop startStop result comment =
     Http.post
         { url = "/api/" ++ startStop
         , body = Http.jsonBody (commentEncoder comment)
+        , expect = Http.expectWhatever result
+        }
+
+
+sendInsert : (Result Http.Error () -> Msg) -> Time.Posix -> Time.Posix -> Maybe String -> Cmd Msg
+sendInsert result start stop comment =
+    Http.post
+        { url = "/api/periode"
+        , body = Http.jsonBody (insertEncoder start stop comment)
         , expect = Http.expectWhatever result
         }
 
@@ -156,11 +259,30 @@ commentEncoder comment =
         [ ( "comment", Encode.string comment ) ]
 
 
+insertEncoder : Time.Posix -> Time.Posix -> Maybe String -> Encode.Value
+insertEncoder start stop maybeComment =
+    let
+        comment =
+            case maybeComment of
+                Nothing ->
+                    []
+
+                Just s ->
+                    [ ( "comment", Encode.string s ) ]
+    in
+    Encode.object
+        ([ ( "start", (Time.posixToMillis start // 1000) |> Encode.int )
+         , ( "stop", (Time.posixToMillis stop // 1000) |> Encode.int )
+         ]
+            ++ comment
+        )
+
+
 view : Model -> Html Msg
 view model =
     div []
         [ viewCurrent model.current model.comment
-          , viewInsert model.insert
+        , viewInsert model.insert
         , viewPeriodes model.periodes model.fetchErrMsg
         ]
 
@@ -246,13 +368,33 @@ viewPeriodeLine periode =
 
 
 viewInsert : Maybe Insert -> Html Msg
-viewInsert insert =
-    case insert of 
+viewInsert maybeInsert =
+    case maybeInsert of
         Nothing ->
-            div [class "btn", onClick OpenInsert ] [text "Add"]
-        
-        Just i ->
-            div [] [text "INSERT"]
+            div [ class "btn btn-secondary", onClick OpenInsert ] [ text "Add" ]
+
+        Just insert ->
+            let
+                startStopTime =
+                    case insert.startStop of
+                        Nothing ->
+                            "No time selected"
+
+                        Just ( s, t ) ->
+                            posixToString s ++ " - " ++ posixToString t
+            in
+            div []
+                [ span [ onClick OpenPicker ] [ text startStopTime ]
+                , DurationDatePicker.view (DurationDatePicker.defaultSettings Time.utc UpdatePicker) insert.picker
+                , input
+                    [ id "comment"
+                    , type_ "text"
+                    , value insert.comment
+                    , onInput SaveInsertComment
+                    ]
+                    []
+                , button [ class "btn btn-primary", onClick SendInsert ] [ text "Insert" ]
+                ]
 
 
 posixToString : Time.Posix -> String
@@ -277,3 +419,20 @@ buildErrorMessage httpError =
 
         Http.BadBody message ->
             message
+
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    let
+        insert =
+            case model.insert of
+                Nothing ->
+                    emptyInsert
+
+                Just i ->
+                    i
+    in
+    Sub.batch
+        [ DurationDatePicker.subscriptions (DurationDatePicker.defaultSettings Time.utc UpdatePicker) UpdatePicker insert.picker
+        , Time.every 1000 Tick
+        ]
