@@ -27,7 +27,15 @@ type alias Model =
     , current : Periode.Current
     , fetchErrMsg : Maybe String
     , comment : String
+    , insert : Maybe Insert
     }
+
+type alias Insert =
+    { start : Time.Posix
+    , stop : Time.Posix
+    , comment : String
+    }
+
 
 
 type Msg
@@ -37,6 +45,8 @@ type Msg
     | SendStop
     | SendDelete Periode.ID
     | ReceiveEvent (Result Http.Error ())
+    | OpenInsert
+    | CloseInsert
 
 
 init : flags -> ( Model, Cmd Msg )
@@ -45,6 +55,7 @@ init _ =
       , current = Periode.Stopped
       , fetchErrMsg = Nothing
       , comment = ""
+      , insert = Nothing
       }
     , Periode.fetch ReceiveState
     )
@@ -105,6 +116,16 @@ update msg model =
                     ( { model | periodes = [], current = Periode.Stopped, fetchErrMsg = Just (buildErrorMessage e) }
                     , Cmd.none
                     )
+        
+        OpenInsert ->
+            ( {model | insert = Just {start= Time.millisToPosix 0, stop =Time.millisToPosix 0, comment =""}}
+            , Cmd.none
+            )
+
+        CloseInsert ->
+            ( {model | insert = Nothing}
+            , Cmd.none
+            )
 
 
 sendStartStop : String -> (Result Http.Error () -> Msg) -> String -> Cmd Msg
@@ -139,6 +160,7 @@ view : Model -> Html Msg
 view model =
     div []
         [ viewCurrent model.current model.comment
+          , viewInsert model.insert
         , viewPeriodes model.periodes model.fetchErrMsg
         ]
 
@@ -221,6 +243,16 @@ viewPeriodeLine periode =
         , td [] [ text (Maybe.withDefault "" periode.comment) ]
         , td [] [ button [ type_ "button", class "btn btn-danger", onClick (SendDelete periode.id) ] [ text "X" ] ]
         ]
+
+
+viewInsert : Maybe Insert -> Html Msg
+viewInsert insert =
+    case insert of 
+        Nothing ->
+            div [class "btn", onClick OpenInsert ] [text "Add"]
+        
+        Just i ->
+            div [] [text "INSERT"]
 
 
 posixToString : Time.Posix -> String

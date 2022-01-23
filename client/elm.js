@@ -6397,7 +6397,7 @@ var $author$project$Periode$fetch = function (result) {
 };
 var $author$project$Main$init = function (_v0) {
 	return _Utils_Tuple2(
-		{comment: '', current: $author$project$Periode$Stopped, fetchErrMsg: $elm$core$Maybe$Nothing, periodes: _List_Nil},
+		{comment: '', current: $author$project$Periode$Stopped, fetchErrMsg: $elm$core$Maybe$Nothing, insert: $elm$core$Maybe$Nothing, periodes: _List_Nil},
 		$author$project$Periode$fetch($author$project$Main$ReceiveState));
 };
 var $elm$core$Platform$Sub$batch = _Platform_batch;
@@ -6564,7 +6564,7 @@ var $author$project$Main$update = F2(
 				return _Utils_Tuple2(
 					model,
 					A2($author$project$Main$sendDelete, $author$project$Main$ReceiveEvent, id));
-			default:
+			case 'ReceiveEvent':
 				var response = msg.a;
 				if (response.$ === 'Ok') {
 					return _Utils_Tuple2(
@@ -6583,6 +6583,25 @@ var $author$project$Main$update = F2(
 							}),
 						$elm$core$Platform$Cmd$none);
 				}
+			case 'OpenInsert':
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{
+							insert: $elm$core$Maybe$Just(
+								{
+									comment: '',
+									start: $elm$time$Time$millisToPosix(0),
+									stop: $elm$time$Time$millisToPosix(0)
+								})
+						}),
+					$elm$core$Platform$Cmd$none);
+			default:
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{insert: $elm$core$Maybe$Nothing}),
+					$elm$core$Platform$Cmd$none);
 		}
 	});
 var $elm$html$Html$div = _VirtualDom_node('div');
@@ -7300,6 +7319,31 @@ var $author$project$Main$viewCurrent = F2(
 					]));
 		}
 	});
+var $author$project$Main$OpenInsert = {$: 'OpenInsert'};
+var $author$project$Main$viewInsert = function (insert) {
+	if (insert.$ === 'Nothing') {
+		return A2(
+			$elm$html$Html$div,
+			_List_fromArray(
+				[
+					$elm$html$Html$Attributes$class('btn'),
+					$elm$html$Html$Events$onClick($author$project$Main$OpenInsert)
+				]),
+			_List_fromArray(
+				[
+					$elm$html$Html$text('Add')
+				]));
+	} else {
+		var i = insert.a;
+		return A2(
+			$elm$html$Html$div,
+			_List_Nil,
+			_List_fromArray(
+				[
+					$elm$html$Html$text('INSERT')
+				]));
+	}
+};
 var $elm$core$List$sortBy = _List_sortBy;
 var $author$project$Periode$sort = function (periodes) {
 	return A2(
@@ -7463,6 +7507,7 @@ var $author$project$Main$view = function (model) {
 		_List_fromArray(
 			[
 				A2($author$project$Main$viewCurrent, model.current, model.comment),
+				$author$project$Main$viewInsert(model.insert),
 				A2($author$project$Main$viewPeriodes, model.periodes, model.fetchErrMsg)
 			]));
 };
