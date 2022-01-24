@@ -9,15 +9,11 @@ import (
 	"os"
 	"os/signal"
 
+	"github.com/ostcar/timer/config"
 	"github.com/ostcar/timer/grpc"
 	"github.com/ostcar/timer/model"
 	"github.com/ostcar/timer/web"
 	"golang.org/x/sync/errgroup"
-)
-
-const (
-	grpcAddr = ":4040"
-	httpAddr = ":8080"
 )
 
 //go:embed client/index.html
@@ -45,11 +41,16 @@ func run() error {
 		return fmt.Errorf("loading model: %w", err)
 	}
 
+	config, err := config.LoadConfig("config.toml")
+	if err != nil {
+		return fmt.Errorf("loading config: %w", err)
+	}
+
 	var group *errgroup.Group
 	group, ctx = errgroup.WithContext(ctx)
 
 	group.Go(func() error {
-		if err := grpc.Run(ctx, model, grpcAddr); err != nil {
+		if err := grpc.Run(ctx, model, config.GRPCListenAddr); err != nil {
 			return fmt.Errorf("running grpc server: %w", err)
 		}
 		return nil
@@ -67,7 +68,7 @@ func run() error {
 			Static: static,
 		}
 
-		if err := web.Run(ctx, model, httpAddr, defaultFiles); err != nil {
+		if err := web.Run(ctx, model, config.WebListenAddr, defaultFiles); err != nil {
 			return fmt.Errorf("running http server: %w", err)
 		}
 		return nil
