@@ -35,9 +35,12 @@ tasks:
       - main.go
     generates:
       - timer
+    
+    deps:
+      - client
 
   client:
-    dir: client
+    dir: web/client
     cmds:
       - elm make src/Main.elm --output elm.js
     sources:
@@ -52,7 +55,6 @@ tasks:
     deps:
       - timeme
       - server
-      - client
 
   start:
     desc: |

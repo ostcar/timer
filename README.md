@@ -2,6 +2,14 @@
 
 Timer is a time tracking software with a web frontend.
 
+## Install
+
+To install the timer with go, run
+
+```
+go install github.com/ostcar/timer@latest
+```
+
 
 ## Server
 
@@ -37,4 +45,4 @@ and start it with
 
 ## Web Client
 
-Comming soon.
+The webclient is running on port 8080 per default.
