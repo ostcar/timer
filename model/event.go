@@ -114,10 +114,10 @@ func (e eventStop) execute(model *Model, eventTime time.Time) error {
 }
 
 type eventInsert struct {
-	ID      int          `json:"id"`
-	Start   time.Time    `json:"start"`
-	Stop    time.Time    `json:"stop"`
-	Comment maybe.String `json:"comment"`
+	ID      int            `json:"id"`
+	Start   maybe.JSONTime `json:"start"`
+	Stop    maybe.JSONTime `json:"stop"`
+	Comment maybe.String   `json:"comment"`
 }
 
 func (e eventInsert) String() string {
@@ -145,8 +145,8 @@ func (e eventInsert) validate(model *Model) error {
 func (e eventInsert) execute(model *Model, eventTime time.Time) error {
 	p := Periode{
 		ID:      e.ID,
-		Start:   e.Start,
-		Stop:    e.Stop,
+		Start:   time.Time(e.Start),
+		Stop:    time.Time(e.Stop),
 		Comment: e.Comment,
 	}
 
@@ -217,11 +217,11 @@ func (e eventEdit) execute(model *Model, eventTime time.Time) error {
 	p := model.periodes[e.ID]
 
 	if start, ok := e.Start.Value(); ok {
-		p.Start = start
+		p.Start = time.Time(start)
 	}
 
 	if stop, ok := e.Stop.Value(); ok {
-		p.Stop = stop
+		p.Stop = time.Time(stop)
 	}
 
 	if _, ok := e.Comment.Value(); ok {

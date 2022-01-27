@@ -200,12 +200,12 @@ func handlePeriode(router *mux.Router, model *model.Model) {
 
 		start := maybe.Time{}
 		if v, ok := content.Start.Value(); ok {
-			start = maybe.NewTime(time.Unix(v, 0))
+			start = maybe.NewTime(maybe.JSONTime(time.Unix(v, 0)))
 		}
 
 		stop := maybe.Time{}
 		if v, ok := content.Stop.Value(); ok {
-			stop = maybe.NewTime(time.Unix(v, 0))
+			stop = maybe.NewTime(maybe.JSONTime(time.Unix(v, 0)))
 		}
 
 		if err := model.Edit(id, start, stop, content.Content); err != nil {

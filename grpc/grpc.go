@@ -86,12 +86,12 @@ func (s grpcServer) List(ctx context.Context, req *proto.ListRequest) (*proto.Li
 func (s grpcServer) Edit(ctx context.Context, req *proto.EditRequest) (*proto.EditResponse, error) {
 	start := maybe.Time{}
 	if req.HasStart {
-		start = maybe.NewTime(time.Unix(req.Start, 0))
+		start = maybe.NewTime(maybe.JSONTime(time.Unix(req.Start, 0)))
 	}
 
 	stop := maybe.Time{}
 	if req.HasStop {
-		stop = maybe.NewTime(time.Unix(req.Stop, 0))
+		stop = maybe.NewTime(maybe.JSONTime(time.Unix(req.Stop, 0)))
 	}
 
 	comment := maybe.String{}

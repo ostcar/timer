@@ -133,7 +133,7 @@ func (m *Model) writeEvent(e Event) (err error) {
 		}
 	}()
 
-	now := time.Now()
+	now := time.Now().UTC()
 	event := struct {
 		Time    string `json:"time"`
 		Type    string `json:"type"`
@@ -209,7 +209,7 @@ func (m *Model) Delete(id int) error {
 func (m *Model) Insert(start, stop time.Time, comment maybe.String) (int, error) {
 	log.Printf("insert event")
 	nextID := m.nextID()
-	if err := m.writeEvent(eventInsert{ID: nextID, Start: start, Stop: stop, Comment: comment}); err != nil {
+	if err := m.writeEvent(eventInsert{ID: nextID, Start: maybe.JSONTime(start), Stop: maybe.JSONTime(stop), Comment: comment}); err != nil {
 		return 0, fmt.Errorf("writing event: %w", err)
 	}
 	return nextID, nil

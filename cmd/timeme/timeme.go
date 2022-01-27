@@ -189,20 +189,20 @@ func editCmd() *cobra.Command {
 
 		var unixStart int64
 		if hasStart {
-			t, err := time.Parse(*timeFormat, *start)
+			t, err := time.ParseInLocation(*timeFormat, *start, time.Local)
 			if err != nil {
 				return fmt.Errorf("parsing start time: %w", err)
 			}
-			unixStart = t.Unix()
+			unixStart = t.UTC().Unix()
 		}
 
 		var unixStop int64
 		if hasStop {
-			t, err := time.Parse(*timeFormat, *stop)
+			t, err := time.ParseInLocation(*timeFormat, *stop, time.Local)
 			if err != nil {
 				return fmt.Errorf("parsing stop time: %w", err)
 			}
-			unixStop = t.Unix()
+			unixStop = t.UTC().Unix()
 		}
 
 		if _, err := client.Edit(context.Background(), &proto.EditRequest{
@@ -242,12 +242,12 @@ func insertCmd() *cobra.Command {
 			return fmt.Errorf("Not enough arguments")
 		}
 
-		start, err := time.Parse(*timeFormat, args[0])
+		start, err := time.ParseInLocation(*timeFormat, args[0], time.Local)
 		if err != nil {
 			return fmt.Errorf("parsing start time: %w", err)
 		}
 
-		stop, err := time.Parse(*timeFormat, args[1])
+		stop, err := time.ParseInLocation(*timeFormat, args[1], time.Local)
 		if err != nil {
 			return fmt.Errorf("parsing stop time: %w", err)
 		}
@@ -260,8 +260,8 @@ func insertCmd() *cobra.Command {
 		}
 
 		if _, err := client.Insert(context.Background(), &proto.InsertRequest{
-			Start:      start.Unix(),
-			Stop:       stop.Unix(),
+			Start:      start.UTC().Unix(),
+			Stop:       stop.UTC().Unix(),
 			HasComment: hasComment,
 			Comment:    comment,
 		}); err != nil {

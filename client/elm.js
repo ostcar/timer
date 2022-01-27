@@ -7940,7 +7940,553 @@ var $mercurymedia$elm_datetime_picker$DurationDatePicker$subscriptions = F3(
 			return $elm$core$Platform$Sub$none;
 		}
 	});
-var $elm$time$Time$utc = A2($elm$time$Time$Zone, 0, _List_Nil);
+var $justinmimbs$timezone_data$TimeZone$Specification$DateTime = F5(
+	function (year, month, day, time, clock) {
+		return {clock: clock, day: day, month: month, time: time, year: year};
+	});
+var $justinmimbs$timezone_data$TimeZone$Specification$Rules = function (a) {
+	return {$: 'Rules', a: a};
+};
+var $justinmimbs$timezone_data$TimeZone$Specification$Save = function (a) {
+	return {$: 'Save', a: a};
+};
+var $justinmimbs$timezone_data$TimeZone$Specification$WallClock = {$: 'WallClock'};
+var $justinmimbs$timezone_data$TimeZone$Specification$Zone = F2(
+	function (history, current) {
+		return {current: current, history: history};
+	});
+var $justinmimbs$timezone_data$TimeZone$Specification$ZoneState = F2(
+	function (standardOffset, zoneRules) {
+		return {standardOffset: standardOffset, zoneRules: zoneRules};
+	});
+var $justinmimbs$timezone_data$TimeZone$maxYear = 2037;
+var $justinmimbs$timezone_data$TimeZone$minYear = 1970;
+var $justinmimbs$timezone_data$TimeZone$Specification$Universal = {$: 'Universal'};
+var $justinmimbs$timezone_data$TimeZone$Specification$dropChangesBeforeEpoch = function (_v0) {
+	dropChangesBeforeEpoch:
+	while (true) {
+		var initial = _v0.a;
+		var changes = _v0.b;
+		if (changes.b) {
+			var change = changes.a;
+			var rest = changes.b;
+			if (change.start <= 0) {
+				var $temp$_v0 = _Utils_Tuple2(change.offset, rest);
+				_v0 = $temp$_v0;
+				continue dropChangesBeforeEpoch;
+			} else {
+				return _Utils_Tuple2(initial, changes);
+			}
+		} else {
+			return _Utils_Tuple2(initial, _List_Nil);
+		}
+	}
+};
+var $elm$core$Tuple$second = function (_v0) {
+	var y = _v0.b;
+	return y;
+};
+var $justinmimbs$timezone_data$RataDie$weekdayNumber = function (rd) {
+	var _v0 = A2($elm$core$Basics$modBy, 7, rd);
+	if (!_v0) {
+		return 7;
+	} else {
+		var n = _v0;
+		return n;
+	}
+};
+var $justinmimbs$timezone_data$RataDie$weekdayToNumber = function (wd) {
+	switch (wd.$) {
+		case 'Mon':
+			return 1;
+		case 'Tue':
+			return 2;
+		case 'Wed':
+			return 3;
+		case 'Thu':
+			return 4;
+		case 'Fri':
+			return 5;
+		case 'Sat':
+			return 6;
+		default:
+			return 7;
+	}
+};
+var $justinmimbs$timezone_data$RataDie$floorWeekday = F2(
+	function (weekday, rd) {
+		var daysSincePreviousWeekday = A2(
+			$elm$core$Basics$modBy,
+			7,
+			($justinmimbs$timezone_data$RataDie$weekdayNumber(rd) + 7) - $justinmimbs$timezone_data$RataDie$weekdayToNumber(weekday));
+		return rd - daysSincePreviousWeekday;
+	});
+var $justinmimbs$timezone_data$RataDie$ceilingWeekday = F2(
+	function (weekday, rd) {
+		var floored = A2($justinmimbs$timezone_data$RataDie$floorWeekday, weekday, rd);
+		return _Utils_eq(rd, floored) ? rd : (floored + 7);
+	});
+var $elm$core$List$append = F2(
+	function (xs, ys) {
+		if (!ys.b) {
+			return xs;
+		} else {
+			return A3($elm$core$List$foldr, $elm$core$List$cons, ys, xs);
+		}
+	});
+var $elm$core$List$concat = function (lists) {
+	return A3($elm$core$List$foldr, $elm$core$List$append, _List_Nil, lists);
+};
+var $elm$core$List$concatMap = F2(
+	function (f, list) {
+		return $elm$core$List$concat(
+			A2($elm$core$List$map, f, list));
+	});
+var $justinmimbs$timezone_data$RataDie$isLeapYear = function (y) {
+	return ((!A2($elm$core$Basics$modBy, 4, y)) && (!(!A2($elm$core$Basics$modBy, 100, y)))) || (!A2($elm$core$Basics$modBy, 400, y));
+};
+var $justinmimbs$timezone_data$RataDie$daysBeforeMonth = F2(
+	function (y, m) {
+		var leapDays = $justinmimbs$timezone_data$RataDie$isLeapYear(y) ? 1 : 0;
+		switch (m.$) {
+			case 'Jan':
+				return 0;
+			case 'Feb':
+				return 31;
+			case 'Mar':
+				return 59 + leapDays;
+			case 'Apr':
+				return 90 + leapDays;
+			case 'May':
+				return 120 + leapDays;
+			case 'Jun':
+				return 151 + leapDays;
+			case 'Jul':
+				return 181 + leapDays;
+			case 'Aug':
+				return 212 + leapDays;
+			case 'Sep':
+				return 243 + leapDays;
+			case 'Oct':
+				return 273 + leapDays;
+			case 'Nov':
+				return 304 + leapDays;
+			default:
+				return 334 + leapDays;
+		}
+	});
+var $justinmimbs$timezone_data$RataDie$daysBeforeYear = function (y1) {
+	var y = y1 - 1;
+	var leapYears = (((y / 4) | 0) - ((y / 100) | 0)) + ((y / 400) | 0);
+	return (365 * y) + leapYears;
+};
+var $justinmimbs$timezone_data$RataDie$dayOfMonth = F3(
+	function (y, m, d) {
+		return ($justinmimbs$timezone_data$RataDie$daysBeforeYear(y) + A2($justinmimbs$timezone_data$RataDie$daysBeforeMonth, y, m)) + d;
+	});
+var $elm$core$List$filter = F2(
+	function (isGood, list) {
+		return A3(
+			$elm$core$List$foldr,
+			F2(
+				function (x, xs) {
+					return isGood(x) ? A2($elm$core$List$cons, x, xs) : xs;
+				}),
+			_List_Nil,
+			list);
+	});
+var $justinmimbs$timezone_data$RataDie$daysInMonth = F2(
+	function (y, m) {
+		switch (m.$) {
+			case 'Jan':
+				return 31;
+			case 'Feb':
+				return $justinmimbs$timezone_data$RataDie$isLeapYear(y) ? 29 : 28;
+			case 'Mar':
+				return 31;
+			case 'Apr':
+				return 30;
+			case 'May':
+				return 31;
+			case 'Jun':
+				return 30;
+			case 'Jul':
+				return 31;
+			case 'Aug':
+				return 31;
+			case 'Sep':
+				return 30;
+			case 'Oct':
+				return 31;
+			case 'Nov':
+				return 30;
+			default:
+				return 31;
+		}
+	});
+var $justinmimbs$timezone_data$RataDie$lastOfMonth = F2(
+	function (y, m) {
+		return ($justinmimbs$timezone_data$RataDie$daysBeforeYear(y) + A2($justinmimbs$timezone_data$RataDie$daysBeforeMonth, y, m)) + A2($justinmimbs$timezone_data$RataDie$daysInMonth, y, m);
+	});
+var $justinmimbs$timezone_data$TimeZone$Specification$minutesFromRataDie = function (rd) {
+	return (rd - 719163) * 1440;
+};
+var $elm$core$List$sortBy = _List_sortBy;
+var $justinmimbs$timezone_data$TimeZone$Specification$utcAdjustment = F2(
+	function (clock, _v0) {
+		var standard = _v0.standard;
+		var save = _v0.save;
+		switch (clock.$) {
+			case 'Universal':
+				return 0;
+			case 'Standard':
+				return 0 - standard;
+			default:
+				return 0 - (standard + save);
+		}
+	});
+var $justinmimbs$timezone_data$TimeZone$Specification$minutesFromDateTime = function (_v0) {
+	var year = _v0.year;
+	var month = _v0.month;
+	var day = _v0.day;
+	var time = _v0.time;
+	return $justinmimbs$timezone_data$TimeZone$Specification$minutesFromRataDie(
+		A3($justinmimbs$timezone_data$RataDie$dayOfMonth, year, month, day)) + time;
+};
+var $justinmimbs$timezone_data$TimeZone$Specification$utcMinutesFromDateTime = F2(
+	function (offset, datetime) {
+		return $justinmimbs$timezone_data$TimeZone$Specification$minutesFromDateTime(datetime) + A2($justinmimbs$timezone_data$TimeZone$Specification$utcAdjustment, datetime.clock, offset);
+	});
+var $justinmimbs$timezone_data$TimeZone$Specification$rulesToOffsetChanges = F5(
+	function (previousOffset, start, until, standardOffset, rules) {
+		var transitions = A2(
+			$elm$core$List$concatMap,
+			function (year) {
+				return A2(
+					$elm$core$List$sortBy,
+					function ($) {
+						return $.start;
+					},
+					A2(
+						$elm$core$List$map,
+						function (rule) {
+							return {
+								clock: rule.clock,
+								save: rule.save,
+								start: $justinmimbs$timezone_data$TimeZone$Specification$minutesFromRataDie(
+									function () {
+										var _v2 = rule.day;
+										switch (_v2.$) {
+											case 'Day':
+												var day = _v2.a;
+												return A3($justinmimbs$timezone_data$RataDie$dayOfMonth, year, rule.month, day);
+											case 'Next':
+												var weekday = _v2.a;
+												var after = _v2.b;
+												return A2(
+													$justinmimbs$timezone_data$RataDie$ceilingWeekday,
+													weekday,
+													A3($justinmimbs$timezone_data$RataDie$dayOfMonth, year, rule.month, after));
+											case 'Prev':
+												var weekday = _v2.a;
+												var before = _v2.b;
+												return A2(
+													$justinmimbs$timezone_data$RataDie$floorWeekday,
+													weekday,
+													A3($justinmimbs$timezone_data$RataDie$dayOfMonth, year, rule.month, before));
+											default:
+												var weekday = _v2.a;
+												return A2(
+													$justinmimbs$timezone_data$RataDie$floorWeekday,
+													weekday,
+													A2($justinmimbs$timezone_data$RataDie$lastOfMonth, year, rule.month));
+										}
+									}()) + rule.time
+							};
+						},
+						A2(
+							$elm$core$List$filter,
+							function (rule) {
+								return (_Utils_cmp(rule.from, year) < 1) && (_Utils_cmp(year, rule.to) < 1);
+							},
+							rules)));
+			},
+			A2($elm$core$List$range, start.year - 1, until.year));
+		var initialOffset = {save: 0, standard: standardOffset};
+		var initialChange = {
+			offset: standardOffset,
+			start: A2($justinmimbs$timezone_data$TimeZone$Specification$utcMinutesFromDateTime, previousOffset, start)
+		};
+		var _v0 = A3(
+			$elm$core$List$foldl,
+			F2(
+				function (transition, _v1) {
+					var currentOffset = _v1.a;
+					var changes = _v1.b;
+					var newOffset = {save: transition.save, standard: standardOffset};
+					if (_Utils_cmp(
+						transition.start + A2($justinmimbs$timezone_data$TimeZone$Specification$utcAdjustment, transition.clock, previousOffset),
+						initialChange.start) < 1) {
+						var updatedInitialChange = {offset: standardOffset + transition.save, start: initialChange.start};
+						return _Utils_Tuple2(
+							newOffset,
+							_List_fromArray(
+								[updatedInitialChange]));
+					} else {
+						if (_Utils_cmp(
+							transition.start + A2($justinmimbs$timezone_data$TimeZone$Specification$utcAdjustment, transition.clock, currentOffset),
+							A2($justinmimbs$timezone_data$TimeZone$Specification$utcMinutesFromDateTime, currentOffset, until)) < 0) {
+							var change = {
+								offset: standardOffset + transition.save,
+								start: transition.start + A2($justinmimbs$timezone_data$TimeZone$Specification$utcAdjustment, transition.clock, currentOffset)
+							};
+							return _Utils_Tuple2(
+								newOffset,
+								A2($elm$core$List$cons, change, changes));
+						} else {
+							return _Utils_Tuple2(currentOffset, changes);
+						}
+					}
+				}),
+			_Utils_Tuple2(
+				initialOffset,
+				_List_fromArray(
+					[initialChange])),
+			transitions);
+		var nextOffset = _v0.a;
+		var descendingChanges = _v0.b;
+		return _Utils_Tuple2(
+			$elm$core$List$reverse(descendingChanges),
+			nextOffset);
+	});
+var $justinmimbs$timezone_data$TimeZone$Specification$stateToOffsetChanges = F4(
+	function (previousOffset, start, until, _v0) {
+		var standardOffset = _v0.standardOffset;
+		var zoneRules = _v0.zoneRules;
+		if (zoneRules.$ === 'Save') {
+			var save = zoneRules.a;
+			return _Utils_Tuple2(
+				_List_fromArray(
+					[
+						{
+						offset: standardOffset + save,
+						start: A2($justinmimbs$timezone_data$TimeZone$Specification$utcMinutesFromDateTime, previousOffset, start)
+					}
+					]),
+				{save: save, standard: standardOffset});
+		} else {
+			var rules = zoneRules.a;
+			return A5($justinmimbs$timezone_data$TimeZone$Specification$rulesToOffsetChanges, previousOffset, start, until, standardOffset, rules);
+		}
+	});
+var $justinmimbs$timezone_data$TimeZone$Specification$stripDuplicatesByHelp = F4(
+	function (f, a, rev, list) {
+		stripDuplicatesByHelp:
+		while (true) {
+			if (!list.b) {
+				return $elm$core$List$reverse(rev);
+			} else {
+				var x = list.a;
+				var xs = list.b;
+				var b = f(x);
+				var rev_ = (!_Utils_eq(a, b)) ? A2($elm$core$List$cons, x, rev) : rev;
+				var $temp$f = f,
+					$temp$a = b,
+					$temp$rev = rev_,
+					$temp$list = xs;
+				f = $temp$f;
+				a = $temp$a;
+				rev = $temp$rev;
+				list = $temp$list;
+				continue stripDuplicatesByHelp;
+			}
+		}
+	});
+var $justinmimbs$timezone_data$TimeZone$Specification$zoneToRanges = F3(
+	function (zoneStart, zoneUntil, zone) {
+		var _v0 = A3(
+			$elm$core$List$foldl,
+			F2(
+				function (_v1, _v2) {
+					var state = _v1.a;
+					var nextStart = _v1.b;
+					var start = _v2.a;
+					var ranges = _v2.b;
+					return _Utils_Tuple2(
+						nextStart,
+						A2(
+							$elm$core$List$cons,
+							_Utils_Tuple3(start, state, nextStart),
+							ranges));
+				}),
+			_Utils_Tuple2(zoneStart, _List_Nil),
+			zone.history);
+		var currentStart = _v0.a;
+		var historyRanges = _v0.b;
+		return $elm$core$List$reverse(
+			A2(
+				$elm$core$List$cons,
+				_Utils_Tuple3(currentStart, zone.current, zoneUntil),
+				historyRanges));
+	});
+var $justinmimbs$timezone_data$TimeZone$Specification$toOffsets = F3(
+	function (minYear, maxYear, zone) {
+		var initialState = function () {
+			var _v5 = zone.history;
+			if (_v5.b) {
+				var _v6 = _v5.a;
+				var earliest = _v6.a;
+				return earliest;
+			} else {
+				return zone.current;
+			}
+		}();
+		var initialOffset = {
+			save: function () {
+				var _v4 = initialState.zoneRules;
+				if (_v4.$ === 'Save') {
+					var save = _v4.a;
+					return save;
+				} else {
+					return 0;
+				}
+			}(),
+			standard: initialState.standardOffset
+		};
+		var ascendingChanges = A4(
+			$justinmimbs$timezone_data$TimeZone$Specification$stripDuplicatesByHelp,
+			function ($) {
+				return $.offset;
+			},
+			initialOffset.standard + initialOffset.save,
+			_List_Nil,
+			A3(
+				$elm$core$List$foldl,
+				F2(
+					function (_v1, _v2) {
+						var start = _v1.a;
+						var state = _v1.b;
+						var until = _v1.c;
+						var prevOffset = _v2.a;
+						var prevChanges = _v2.b;
+						var _v3 = A4($justinmimbs$timezone_data$TimeZone$Specification$stateToOffsetChanges, prevOffset, start, until, state);
+						var nextChanges = _v3.a;
+						var nextOffset = _v3.b;
+						return _Utils_Tuple2(
+							nextOffset,
+							_Utils_ap(prevChanges, nextChanges));
+					}),
+				_Utils_Tuple2(initialOffset, _List_Nil),
+				A3(
+					$justinmimbs$timezone_data$TimeZone$Specification$zoneToRanges,
+					A5($justinmimbs$timezone_data$TimeZone$Specification$DateTime, minYear, $elm$time$Time$Jan, 1, 0, $justinmimbs$timezone_data$TimeZone$Specification$Universal),
+					A5($justinmimbs$timezone_data$TimeZone$Specification$DateTime, maxYear + 1, $elm$time$Time$Jan, 1, 0, $justinmimbs$timezone_data$TimeZone$Specification$Universal),
+					zone)).b);
+		var _v0 = $justinmimbs$timezone_data$TimeZone$Specification$dropChangesBeforeEpoch(
+			_Utils_Tuple2(initialOffset.standard + initialOffset.save, ascendingChanges));
+		var initial = _v0.a;
+		var ascending = _v0.b;
+		return _Utils_Tuple2(
+			$elm$core$List$reverse(ascending),
+			initial);
+	});
+var $justinmimbs$timezone_data$TimeZone$fromSpecification = function (zone) {
+	var _v0 = A3($justinmimbs$timezone_data$TimeZone$Specification$toOffsets, $justinmimbs$timezone_data$TimeZone$minYear, $justinmimbs$timezone_data$TimeZone$maxYear, zone);
+	var descending = _v0.a;
+	var bottom = _v0.b;
+	return A2($elm$time$Time$customZone, bottom, descending);
+};
+var $justinmimbs$timezone_data$TimeZone$Specification$Day = function (a) {
+	return {$: 'Day', a: a};
+};
+var $justinmimbs$timezone_data$TimeZone$Specification$Last = function (a) {
+	return {$: 'Last', a: a};
+};
+var $justinmimbs$timezone_data$TimeZone$Specification$Next = F2(
+	function (a, b) {
+		return {$: 'Next', a: a, b: b};
+	});
+var $justinmimbs$timezone_data$TimeZone$Specification$Rule = F7(
+	function (from, to, month, day, time, clock, save) {
+		return {clock: clock, day: day, from: from, month: month, save: save, time: time, to: to};
+	});
+var $elm$time$Time$Sun = {$: 'Sun'};
+var $justinmimbs$timezone_data$TimeZone$rules_EU = _List_fromArray(
+	[
+		A7(
+		$justinmimbs$timezone_data$TimeZone$Specification$Rule,
+		1977,
+		1980,
+		$elm$time$Time$Apr,
+		A2($justinmimbs$timezone_data$TimeZone$Specification$Next, $elm$time$Time$Sun, 1),
+		60,
+		$justinmimbs$timezone_data$TimeZone$Specification$Universal,
+		60),
+		A7(
+		$justinmimbs$timezone_data$TimeZone$Specification$Rule,
+		1977,
+		1977,
+		$elm$time$Time$Sep,
+		$justinmimbs$timezone_data$TimeZone$Specification$Last($elm$time$Time$Sun),
+		60,
+		$justinmimbs$timezone_data$TimeZone$Specification$Universal,
+		0),
+		A7(
+		$justinmimbs$timezone_data$TimeZone$Specification$Rule,
+		1978,
+		1978,
+		$elm$time$Time$Oct,
+		$justinmimbs$timezone_data$TimeZone$Specification$Day(1),
+		60,
+		$justinmimbs$timezone_data$TimeZone$Specification$Universal,
+		0),
+		A7(
+		$justinmimbs$timezone_data$TimeZone$Specification$Rule,
+		1979,
+		1995,
+		$elm$time$Time$Sep,
+		$justinmimbs$timezone_data$TimeZone$Specification$Last($elm$time$Time$Sun),
+		60,
+		$justinmimbs$timezone_data$TimeZone$Specification$Universal,
+		0),
+		A7(
+		$justinmimbs$timezone_data$TimeZone$Specification$Rule,
+		1981,
+		$justinmimbs$timezone_data$TimeZone$maxYear,
+		$elm$time$Time$Mar,
+		$justinmimbs$timezone_data$TimeZone$Specification$Last($elm$time$Time$Sun),
+		60,
+		$justinmimbs$timezone_data$TimeZone$Specification$Universal,
+		60),
+		A7(
+		$justinmimbs$timezone_data$TimeZone$Specification$Rule,
+		1996,
+		$justinmimbs$timezone_data$TimeZone$maxYear,
+		$elm$time$Time$Oct,
+		$justinmimbs$timezone_data$TimeZone$Specification$Last($elm$time$Time$Sun),
+		60,
+		$justinmimbs$timezone_data$TimeZone$Specification$Universal,
+		0)
+	]);
+var $justinmimbs$timezone_data$TimeZone$europe__berlin = function (_v0) {
+	return $justinmimbs$timezone_data$TimeZone$fromSpecification(
+		A2(
+			$justinmimbs$timezone_data$TimeZone$Specification$Zone,
+			_List_fromArray(
+				[
+					_Utils_Tuple2(
+					A2(
+						$justinmimbs$timezone_data$TimeZone$Specification$ZoneState,
+						60,
+						$justinmimbs$timezone_data$TimeZone$Specification$Save(0)),
+					A5($justinmimbs$timezone_data$TimeZone$Specification$DateTime, 1980, $elm$time$Time$Jan, 1, 0, $justinmimbs$timezone_data$TimeZone$Specification$WallClock))
+				]),
+			A2(
+				$justinmimbs$timezone_data$TimeZone$Specification$ZoneState,
+				60,
+				$justinmimbs$timezone_data$TimeZone$Specification$Rules($justinmimbs$timezone_data$TimeZone$rules_EU))));
+};
+var $author$project$Main$timeZone = $justinmimbs$timezone_data$TimeZone$europe__berlin(_Utils_Tuple0);
 var $author$project$Main$subscriptions = function (model) {
 	var insert = function () {
 		var _v0 = model.insert;
@@ -7956,7 +8502,7 @@ var $author$project$Main$subscriptions = function (model) {
 			[
 				A3(
 				$mercurymedia$elm_datetime_picker$DurationDatePicker$subscriptions,
-				A2($mercurymedia$elm_datetime_picker$DurationDatePicker$defaultSettings, $elm$time$Time$utc, $author$project$Main$UpdatePicker),
+				A2($mercurymedia$elm_datetime_picker$DurationDatePicker$defaultSettings, $author$project$Main$timeZone, $author$project$Main$UpdatePicker),
 				$author$project$Main$UpdatePicker,
 				insert.picker),
 				A2($elm$time$Time$every, 1000, $author$project$Main$Tick)
@@ -8012,7 +8558,6 @@ var $justinmimbs$date$Date$Week = {$: 'Week'};
 var $justinmimbs$date$Date$Year = {$: 'Year'};
 var $elm$time$Time$Fri = {$: 'Fri'};
 var $elm$time$Time$Sat = {$: 'Sat'};
-var $elm$time$Time$Sun = {$: 'Sun'};
 var $elm$time$Time$Thu = {$: 'Thu'};
 var $elm$time$Time$Tue = {$: 'Tue'};
 var $elm$time$Time$Wed = {$: 'Wed'};
@@ -8726,7 +9271,7 @@ var $author$project$Main$update = F2(
 									{
 										picker: A5(
 											$mercurymedia$elm_datetime_picker$DurationDatePicker$openPicker,
-											A2($mercurymedia$elm_datetime_picker$DurationDatePicker$defaultSettings, $elm$time$Time$utc, $author$project$Main$UpdatePicker),
+											A2($mercurymedia$elm_datetime_picker$DurationDatePicker$defaultSettings, $author$project$Main$timeZone, $author$project$Main$UpdatePicker),
 											model.currentTime,
 											start,
 											stop,
@@ -9237,7 +9782,7 @@ var $CoderDennis$elm_time_format$Time$Format$format = F4(
 			formatStr);
 	});
 var $author$project$Main$posixToString = function (time) {
-	return A4($CoderDennis$elm_time_format$Time$Format$format, $CoderDennis$elm_time_format$Time$Format$Config$Config_de_de$config, '%Y-%m-%d %H:%M', $elm$time$Time$utc, time);
+	return A4($CoderDennis$elm_time_format$Time$Format$format, $CoderDennis$elm_time_format$Time$Format$Config$Config_de_de$config, '%Y-%m-%d %H:%M', $author$project$Main$timeZone, time);
 };
 var $elm$virtual_dom$VirtualDom$text = _VirtualDom_text;
 var $elm$html$Html$text = $elm$virtual_dom$VirtualDom$text;
@@ -11346,7 +11891,7 @@ var $author$project$Main$viewInsert = function (maybeInsert) {
 						])),
 					A2(
 					$mercurymedia$elm_datetime_picker$DurationDatePicker$view,
-					A2($mercurymedia$elm_datetime_picker$DurationDatePicker$defaultSettings, $elm$time$Time$utc, $author$project$Main$UpdatePicker),
+					A2($mercurymedia$elm_datetime_picker$DurationDatePicker$defaultSettings, $author$project$Main$timeZone, $author$project$Main$UpdatePicker),
 					insert.picker),
 					A2(
 					$elm$html$Html$input,
@@ -11372,7 +11917,6 @@ var $author$project$Main$viewInsert = function (maybeInsert) {
 				]));
 	}
 };
-var $elm$core$List$sortBy = _List_sortBy;
 var $author$project$Periode$sort = function (periodes) {
 	return A2(
 		$elm$core$List$sortBy,

@@ -8,9 +8,15 @@ import Html.Events exposing (..)
 import Http
 import Json.Encode as Encode
 import Periode
-import Time exposing (utc)
+import Time
 import Time.Format
 import Time.Format.Config.Config_de_de
+import TimeZone
+
+
+timeZone : Time.Zone
+timeZone =
+    TimeZone.europe__berlin ()
 
 
 main : Program () Model Msg
@@ -156,7 +162,7 @@ update msg model =
                         Just ( s, t ) ->
                             ( Just s, Just t )
             in
-            ( { model | insert = Just { insert | picker = DurationDatePicker.openPicker (DurationDatePicker.defaultSettings Time.utc UpdatePicker) model.currentTime start stop insert.picker } }
+            ( { model | insert = Just { insert | picker = DurationDatePicker.openPicker (DurationDatePicker.defaultSettings timeZone UpdatePicker) model.currentTime start stop insert.picker } }
             , Cmd.none
             )
 
@@ -209,7 +215,7 @@ update msg model =
                         Just ( start, stop ) ->
                             sendInsert ReceiveEvent start stop (Just insert.comment)
             in
-            ( {model | insert = Nothing}
+            ( { model | insert = Nothing }
             , cmd
             )
 
@@ -385,7 +391,7 @@ viewInsert maybeInsert =
             in
             div []
                 [ span [ onClick OpenPicker ] [ text startStopTime ]
-                , DurationDatePicker.view (DurationDatePicker.defaultSettings Time.utc UpdatePicker) insert.picker
+                , DurationDatePicker.view (DurationDatePicker.defaultSettings timeZone UpdatePicker) insert.picker
                 , input
                     [ id "comment"
                     , type_ "text"
@@ -399,7 +405,7 @@ viewInsert maybeInsert =
 
 posixToString : Time.Posix -> String
 posixToString time =
-    Time.Format.format Time.Format.Config.Config_de_de.config "%Y-%m-%d %H:%M" utc time
+    Time.Format.format Time.Format.Config.Config_de_de.config "%Y-%m-%d %H:%M" timeZone time
 
 
 buildErrorMessage : Http.Error -> String
@@ -433,6 +439,6 @@ subscriptions model =
                     i
     in
     Sub.batch
-        [ DurationDatePicker.subscriptions (DurationDatePicker.defaultSettings Time.utc UpdatePicker) UpdatePicker insert.picker
+        [ DurationDatePicker.subscriptions (DurationDatePicker.defaultSettings timeZone UpdatePicker) UpdatePicker insert.picker
         , Time.every 1000 Tick
         ]
