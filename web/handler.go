@@ -1,8 +1,10 @@
 package web
 
 import (
+	"crypto/subtle"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/fs"
 	"log"
 	"net/http"
@@ -12,6 +14,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/ostcar/timer/config"
 	"github.com/ostcar/timer/maybe"
 	"github.com/ostcar/timer/model"
 )
@@ -19,9 +22,10 @@ import (
 const (
 	pathPrefixAPI    = "/api"
 	pathPrefixStatic = "/static"
+	cookieName       = "timer"
 )
 
-func registerHandlers(router *mux.Router, model *model.Model, defaultFiles DefaultFiles) {
+func registerHandlers(router *mux.Router, model *model.Model, cfg config.Config, defaultFiles DefaultFiles) {
 	fileSystem := MultiFS{
 		fs: []fs.FS{
 			os.DirFS("./static"),
@@ -34,10 +38,11 @@ func registerHandlers(router *mux.Router, model *model.Model, defaultFiles Defau
 	handleElmJS(router, defaultFiles.Elm)
 	handleIndex(router, defaultFiles.Index)
 	handleStatic(router, fileSystem)
-	handleStart(router, model)
-	handleStop(router, model)
+	handleAuth(router, cfg)
 
-	handlePeriode(router, model)
+	handleStart(router, model, cfg)
+	handleStop(router, model, cfg)
+	handlePeriode(router, model, cfg)
 }
 
 type responselogger struct {
@@ -109,7 +114,46 @@ func handleStatic(router *mux.Router, fileSystem fs.FS) {
 	router.PathPrefix(pathPrefixStatic).Handler(http.StripPrefix(pathPrefixStatic, http.FileServer(http.FS(fileSystem))))
 }
 
-func handlePeriode(router *mux.Router, model *model.Model) {
+func handleAuth(router *mux.Router, cfg config.Config) {
+	router.Path(pathPrefixAPI + "/auth").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var content struct {
+			Password string `json:"password"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&content); err != nil {
+			handleError(w, err)
+			return
+		}
+
+		var tokenString string
+		if subtle.ConstantTimeCompare([]byte(content.Password), []byte(cfg.PasswordWrite)) == 1 {
+			s, err := createToken("write", cfg.Secred)
+			if err != nil {
+				handleError(w, err)
+				return
+			}
+			tokenString = s
+		}
+
+		if subtle.ConstantTimeCompare([]byte(content.Password), []byte(cfg.PasswordRead)) == 1 {
+			s, err := createToken("read", cfg.Secred)
+			if err != nil {
+				handleError(w, err)
+				return
+			}
+			tokenString = s
+		}
+
+		if tokenString == "" {
+			w.WriteHeader(401)
+			fmt.Fprintf(w, "Invalid password")
+			return
+		}
+
+		http.SetCookie(w, &http.Cookie{Name: cookieName, Value: tokenString, Secure: true})
+	})
+}
+
+func handlePeriode(router *mux.Router, model *model.Model, cfg config.Config) {
 	pathList := pathPrefixAPI + "/periode"
 	pathSingle := pathList + "/{id}"
 
@@ -122,6 +166,11 @@ func handlePeriode(router *mux.Router, model *model.Model) {
 
 	// List Handler
 	router.Path(pathList).Methods("GET").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !canRead(r, cfg) {
+			w.WriteHeader(403)
+			return
+		}
+
 		modelPeriodes := model.List()
 		outPeriodes := make([]periode, len(modelPeriodes))
 		for i, p := range modelPeriodes {
@@ -155,6 +204,11 @@ func handlePeriode(router *mux.Router, model *model.Model) {
 
 	// Create Handler
 	router.Path(pathList).Methods("POST").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !canWrite(r, cfg) {
+			w.WriteHeader(403)
+			return
+		}
+
 		var content struct {
 			Start   int64        `json:"start"`
 			Stop    int64        `json:"stop"`
@@ -185,6 +239,11 @@ func handlePeriode(router *mux.Router, model *model.Model) {
 
 	// Edit Handler
 	router.Path(pathSingle).Methods("PUT").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !canWrite(r, cfg) {
+			w.WriteHeader(403)
+			return
+		}
+
 		id, _ := strconv.Atoi(mux.Vars(r)["id"])
 
 		var content struct {
@@ -216,6 +275,11 @@ func handlePeriode(router *mux.Router, model *model.Model) {
 
 	// Delete Handler
 	router.Path(pathSingle).Methods("DELETE").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !canWrite(r, cfg) {
+			w.WriteHeader(403)
+			return
+		}
+
 		id, _ := strconv.Atoi(mux.Vars(r)["id"])
 
 		if err := model.Delete(id); err != nil {
@@ -225,8 +289,13 @@ func handlePeriode(router *mux.Router, model *model.Model) {
 	})
 }
 
-func handleStart(router *mux.Router, model *model.Model) {
+func handleStart(router *mux.Router, model *model.Model, cfg config.Config) {
 	handler := func(w http.ResponseWriter, r *http.Request) {
+		if !canWrite(r, cfg) {
+			w.WriteHeader(403)
+			return
+		}
+
 		var content struct {
 			Comment maybe.String `json:"comment"`
 		}
@@ -244,8 +313,13 @@ func handleStart(router *mux.Router, model *model.Model) {
 	router.Path(pathPrefixAPI + "/start").Methods("POST").HandlerFunc(handler)
 }
 
-func handleStop(router *mux.Router, model *model.Model) {
+func handleStop(router *mux.Router, model *model.Model, cfg config.Config) {
 	handler := func(w http.ResponseWriter, r *http.Request) {
+		if !canWrite(r, cfg) {
+			w.WriteHeader(403)
+			return
+		}
+
 		var content struct {
 			Comment maybe.String `json:"comment"`
 		}
@@ -301,4 +375,24 @@ func handleError(w http.ResponseWriter, err error) {
 
 	http.Error(w, msg, status)
 	return
+}
+
+func canRead(r *http.Request, cfg config.Config) bool {
+	c, err := r.Cookie(cookieName)
+	if err != nil {
+		return false
+	}
+
+	v, _ := checkClaim(c.Value, cfg.Secred, []string{"read", "write"})
+	return v
+}
+
+func canWrite(r *http.Request, cfg config.Config) bool {
+	c, err := r.Cookie(cookieName)
+	if err != nil {
+		return false
+	}
+
+	v, _ := checkClaim(c.Value, cfg.Secred, []string{"write"})
+	return v
 }

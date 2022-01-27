@@ -2,5 +2,5 @@
 /timeme
 /db.jsonl
 /.task
-/client/elm-stuff
+/web/client/elm-stuff
 /config.toml

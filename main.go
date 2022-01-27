@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math/rand"
 	"os"
 	"os/signal"
+	"time"
 
 	"github.com/ostcar/timer/config"
 	"github.com/ostcar/timer/grpc"
@@ -15,6 +17,8 @@ import (
 )
 
 func main() {
+	rand.Seed(time.Now().UnixNano())
+
 	if err := run(); err != nil {
 		log.Printf("Error: %v", err)
 		os.Exit(1)
@@ -46,7 +50,7 @@ func run() error {
 	})
 
 	group.Go(func() error {
-		if err := web.Run(ctx, model, config.WebListenAddr); err != nil {
+		if err := web.Run(ctx, model, config); err != nil {
 			return fmt.Errorf("running http server: %w", err)
 		}
 		return nil

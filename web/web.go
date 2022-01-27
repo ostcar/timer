@@ -9,6 +9,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/ostcar/timer/config"
 	"github.com/ostcar/timer/model"
 )
 
@@ -22,7 +23,7 @@ var defaultElm []byte
 var defaultStatic embed.FS
 
 // Run starts the webserver on the given port
-func Run(ctx context.Context, model *model.Model, addr string) error {
+func Run(ctx context.Context, model *model.Model, cfg config.Config) error {
 	static, err := fs.Sub(defaultStatic, "static")
 	if err != nil {
 		return fmt.Errorf("open static folder: %w", err)
@@ -35,9 +36,9 @@ func Run(ctx context.Context, model *model.Model, addr string) error {
 	}
 
 	router := mux.NewRouter()
-	registerHandlers(router, model, defaultFiles)
+	registerHandlers(router, model, cfg, defaultFiles)
 
-	srv := &http.Server{Addr: addr, Handler: router}
+	srv := &http.Server{Addr: cfg.WebListenAddr, Handler: router}
 
 	// Shutdown logic in separate goroutine.
 	wait := make(chan error)
@@ -52,7 +53,7 @@ func Run(ctx context.Context, model *model.Model, addr string) error {
 		wait <- nil
 	}()
 
-	log.Printf("Listen webserver on: %s", addr)
+	log.Printf("Listen webserver on: %s", cfg.WebListenAddr)
 	if err := srv.ListenAndServe(); err != http.ErrServerClosed {
 		return fmt.Errorf("HTTP Server failed: %v", err)
 	}
