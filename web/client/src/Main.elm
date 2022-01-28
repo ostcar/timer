@@ -197,7 +197,7 @@ update msg model =
                     )
 
                 Err e ->
-                    ( { model | periodes = [], current = Periode.Stopped, fetchErrMsg = Just (buildErrorMessage e) }
+                    ( { model | periodes = [], current = Periode.Stopped, fetchErrMsg = Just (buildErrorMessage e), permission = PermissionNone }
                     , Cmd.none
                     )
 
