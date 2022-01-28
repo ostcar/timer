@@ -12853,10 +12853,102 @@ var $author$project$Periode$sort = function (periodes) {
 };
 var $elm$html$Html$table = _VirtualDom_node('table');
 var $elm$html$Html$tbody = _VirtualDom_node('tbody');
+var $ianmackenzie$elm_units$Quantity$Quantity = function (a) {
+	return {$: 'Quantity', a: a};
+};
+var $ianmackenzie$elm_units$Duration$seconds = function (numSeconds) {
+	return $ianmackenzie$elm_units$Quantity$Quantity(numSeconds);
+};
+var $ianmackenzie$elm_units$Duration$milliseconds = function (numMilliseconds) {
+	return $ianmackenzie$elm_units$Duration$seconds(0.001 * numMilliseconds);
+};
+var $ianmackenzie$elm_units$Duration$from = F2(
+	function (startTime, endTime) {
+		var numMilliseconds = $elm$time$Time$posixToMillis(endTime) - $elm$time$Time$posixToMillis(startTime);
+		return $ianmackenzie$elm_units$Duration$milliseconds(numMilliseconds);
+	});
+var $ianmackenzie$elm_units$Duration$inSeconds = function (_v0) {
+	var numSeconds = _v0.a;
+	return numSeconds;
+};
+var $ianmackenzie$elm_units$Duration$inMilliseconds = function (duration) {
+	return $ianmackenzie$elm_units$Duration$inSeconds(duration) * 1000;
+};
+var $author$project$Main$periodeAddMillis = F2(
+	function (periode, millis) {
+		var duration = A2($ianmackenzie$elm_units$Duration$from, periode.start, periode.stop);
+		return millis + $ianmackenzie$elm_units$Duration$inMilliseconds(duration);
+	});
+var $elm$html$Html$td = _VirtualDom_node('td');
+var $elm$html$Html$tr = _VirtualDom_node('tr');
+var $ianmackenzie$elm_units$Constants$second = 1;
+var $ianmackenzie$elm_units$Constants$minute = 60 * $ianmackenzie$elm_units$Constants$second;
+var $ianmackenzie$elm_units$Constants$hour = 60 * $ianmackenzie$elm_units$Constants$minute;
+var $ianmackenzie$elm_units$Duration$inHours = function (duration) {
+	return $ianmackenzie$elm_units$Duration$inSeconds(duration) / $ianmackenzie$elm_units$Constants$hour;
+};
+var $ianmackenzie$elm_units$Duration$inMinutes = function (duration) {
+	return $ianmackenzie$elm_units$Duration$inSeconds(duration) / 60;
+};
+var $author$project$Main$viewDuration = function (duration) {
+	var minutesRaw = $elm$core$String$fromInt(
+		A2(
+			$elm$core$Basics$modBy,
+			60,
+			$elm$core$Basics$floor(
+				$ianmackenzie$elm_units$Duration$inMinutes(duration))));
+	var minutes = ($elm$core$String$length(minutesRaw) === 1) ? ('0' + minutesRaw) : minutesRaw;
+	var hours = $elm$core$String$fromInt(
+		$elm$core$Basics$floor(
+			$ianmackenzie$elm_units$Duration$inHours(duration)));
+	return hours + (':' + minutes);
+};
+var $author$project$Main$viewPeriodeFoot = F2(
+	function (permission, periodes) {
+		var millis = $ianmackenzie$elm_units$Duration$milliseconds(
+			A3($elm$core$List$foldl, $author$project$Main$periodeAddMillis, 0, periodes));
+		return A2(
+			$elm$html$Html$tr,
+			_List_Nil,
+			_List_fromArray(
+				[
+					A2(
+					$elm$html$Html$td,
+					_List_Nil,
+					_List_fromArray(
+						[
+							$elm$html$Html$text('')
+						])),
+					A2(
+					$elm$html$Html$td,
+					_List_Nil,
+					_List_fromArray(
+						[
+							$elm$html$Html$text(
+							$author$project$Main$viewDuration(millis))
+						])),
+					A2(
+					$elm$html$Html$td,
+					_List_Nil,
+					_List_fromArray(
+						[
+							$elm$html$Html$text('')
+						])),
+					A2(
+					$author$project$Main$canWrite,
+					permission,
+					A2(
+						$elm$html$Html$td,
+						_List_Nil,
+						_List_fromArray(
+							[
+								$elm$html$Html$text('')
+							])))
+				]));
+	});
 var $elm$html$Html$Attributes$scope = $elm$html$Html$Attributes$stringProperty('scope');
 var $elm$html$Html$th = _VirtualDom_node('th');
 var $elm$html$Html$thead = _VirtualDom_node('thead');
-var $elm$html$Html$tr = _VirtualDom_node('tr');
 var $author$project$Main$viewPeriodeHeader = function (permission) {
 	return A2(
 		$elm$html$Html$thead,
@@ -12888,7 +12980,7 @@ var $author$project$Main$viewPeriodeHeader = function (permission) {
 							]),
 						_List_fromArray(
 							[
-								$elm$html$Html$text('Stop')
+								$elm$html$Html$text('Dauer')
 							])),
 						A2(
 						$elm$html$Html$th,
@@ -12920,9 +13012,9 @@ var $author$project$Main$viewPeriodeHeader = function (permission) {
 var $author$project$Main$SendDelete = function (a) {
 	return {$: 'SendDelete', a: a};
 };
-var $elm$html$Html$td = _VirtualDom_node('td');
 var $author$project$Main$viewPeriodeLine = F2(
 	function (permission, periode) {
+		var duration = A2($ianmackenzie$elm_units$Duration$from, periode.start, periode.stop);
 		return A2(
 			$elm$html$Html$tr,
 			_List_Nil,
@@ -12941,8 +13033,28 @@ var $author$project$Main$viewPeriodeLine = F2(
 					_List_Nil,
 					_List_fromArray(
 						[
-							$elm$html$Html$text(
-							$author$project$Main$posixToString(periode.stop))
+							A2(
+							$elm$html$Html$div,
+							_List_fromArray(
+								[
+									$elm$html$Html$Attributes$class('my-tooltip')
+								]),
+							_List_fromArray(
+								[
+									$elm$html$Html$text(
+									$author$project$Main$viewDuration(duration)),
+									A2(
+									$elm$html$Html$div,
+									_List_fromArray(
+										[
+											$elm$html$Html$Attributes$class('tooltiptext')
+										]),
+									_List_fromArray(
+										[
+											$elm$html$Html$text(
+											$author$project$Main$posixToString(periode.stop))
+										]))
+								]))
 						])),
 					A2(
 					$elm$html$Html$td,
@@ -12993,7 +13105,8 @@ var $author$project$Main$viewPeriodes = F2(
 					A2(
 						$elm$core$List$map,
 						$author$project$Main$viewPeriodeLine(permission),
-						$author$project$Periode$sort(periodes)))
+						$author$project$Periode$sort(periodes))),
+					A2($author$project$Main$viewPeriodeFoot, permission, periodes)
 				]));
 	});
 var $author$project$Main$view = function (model) {

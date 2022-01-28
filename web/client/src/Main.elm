@@ -1,6 +1,7 @@
 module Main exposing (main)
 
 import Browser
+import Duration
 import DurationDatePicker
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -291,7 +292,7 @@ update msg model =
             )
 
         SendPassword ->
-            ( {model | inputPassword = "" }
+            ( { model | inputPassword = "" }
             , sendPassword ReceiveAuth model.inputPassword
             )
 
@@ -494,6 +495,7 @@ viewPeriodes permission periodes =
     table [ Html.Attributes.class "table" ]
         [ viewPeriodeHeader permission
         , tbody [] (List.map (viewPeriodeLine permission) (Periode.sort periodes))
+        , viewPeriodeFoot permission periodes
         ]
 
 
@@ -502,7 +504,7 @@ viewPeriodeHeader permission =
     thead []
         [ tr []
             [ th [ scope "col", class "time" ] [ text "Start" ]
-            , th [ scope "col", class "time" ] [ text "Stop" ]
+            , th [ scope "col", class "time" ] [ text "Dauer" ]
             , th [ scope "col" ] [ text "Comment" ]
             , th [ scope "col", class "actions" ] [ text "#" ] |> canWrite permission
             ]
@@ -511,12 +513,58 @@ viewPeriodeHeader permission =
 
 viewPeriodeLine : Permission -> Periode.Periode -> Html Msg
 viewPeriodeLine permission periode =
+    let
+        duration =
+            Duration.from periode.start periode.stop
+    in
     tr []
         [ td [] [ text (posixToString periode.start) ]
-        , td [] [ text (posixToString periode.stop) ]
+        , td [] [ div [ class "my-tooltip" ] [ text (viewDuration duration), div [ class "tooltiptext" ] [ text (posixToString periode.stop) ] ] ]
         , td [] [ text (Maybe.withDefault "" periode.comment) ]
         , td [] [ button [ type_ "button", class "btn btn-danger", onClick (SendDelete periode.id) ] [ text "X" ] ] |> canWrite permission
         ]
+
+
+viewDuration : Duration.Duration -> String
+viewDuration duration =
+    let
+        hours =
+            Duration.inHours duration |> floor |> String.fromInt
+
+        minutesRaw =
+            Duration.inMinutes duration |> floor |> modBy 60 |> String.fromInt
+
+        minutes =
+            if String.length minutesRaw == 1 then
+                "0" ++ minutesRaw
+
+            else
+                minutesRaw
+    in
+    hours ++ ":" ++ minutes
+
+
+viewPeriodeFoot : Permission -> List Periode.Periode -> Html Msg
+viewPeriodeFoot permission periodes =
+    let
+        millis =
+            List.foldl periodeAddMillis 0 periodes |> Duration.milliseconds
+    in
+    tr []
+        [ td [] [ text "" ]
+        , td [] [ text (viewDuration millis) ]
+        , td [] [ text "" ]
+        , td [] [ text "" ] |> canWrite permission
+        ]
+
+
+periodeAddMillis : Periode.Periode -> Float -> Float
+periodeAddMillis periode millis =
+    let
+        duration =
+            Duration.from periode.start periode.stop
+    in
+    millis + Duration.inMilliseconds duration
 
 
 viewInsert : Maybe Insert -> Html Msg
