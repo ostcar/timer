@@ -148,6 +148,10 @@ func handleAuth(router *mux.Router, cfg config.Config) {
 		http.SetCookie(w, &http.Cookie{Name: cookieName, Value: tokenString, Path: "/", Secure: true})
 		fmt.Fprintln(w, level)
 	})
+
+	router.Path(pathPrefixAPI + "/auth/logout").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.SetCookie(w, &http.Cookie{Name: cookieName, Value: "", Path: "/", Secure: true})
+	})
 }
 
 func handlePeriode(router *mux.Router, model *model.Model, cfg config.Config) {
@@ -372,24 +376,4 @@ func handleError(w http.ResponseWriter, err error) {
 
 	http.Error(w, msg, status)
 	return
-}
-
-func canRead(r *http.Request, cfg config.Config) bool {
-	c, err := r.Cookie(cookieName)
-	if err != nil {
-		return false
-	}
-
-	v, _ := checkClaim(c.Value, []byte(cfg.Secred), []string{"read", "write"})
-	return v
-}
-
-func canWrite(r *http.Request, cfg config.Config) bool {
-	c, err := r.Cookie(cookieName)
-	if err != nil {
-		return false
-	}
-
-	v, _ := checkClaim(c.Value, []byte(cfg.Secred), []string{"write"})
-	return v
 }

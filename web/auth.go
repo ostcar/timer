@@ -2,8 +2,11 @@ package web
 
 import (
 	"fmt"
+	"log"
+	"net/http"
 
 	"github.com/golang-jwt/jwt/v4"
+	"github.com/ostcar/timer/config"
 )
 
 type authPayload struct {
@@ -33,7 +36,33 @@ func checkClaim(tokenString string, secred []byte, levels []string) (bool, error
 	}
 
 	for _, level := range levels {
-		return claim.Level == level, nil
+		if claim.Level == level {
+			return true, nil
+		}
 	}
 	return false, nil
+}
+
+func canRead(r *http.Request, cfg config.Config) bool {
+	c, err := r.Cookie(cookieName)
+	if err != nil {
+		return false
+	}
+
+	v, _ := checkClaim(c.Value, []byte(cfg.Secred), []string{"read", "write"})
+	return v
+}
+
+func canWrite(r *http.Request, cfg config.Config) bool {
+	c, err := r.Cookie(cookieName)
+	if err != nil {
+		log.Println(err)
+		return false
+	}
+
+	v, err := checkClaim(c.Value, []byte(cfg.Secred), []string{"write"})
+	if err != nil {
+		log.Println(err)
+	}
+	return v
 }

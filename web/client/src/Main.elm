@@ -73,6 +73,7 @@ type Msg
     | SavePassword String
     | SendPassword
     | ReceiveAuth (Result Http.Error String)
+    | Logout
 
 
 init : String -> ( Model, Cmd Msg )
@@ -186,7 +187,12 @@ update msg model =
             case response of
                 Ok _ ->
                     ( model
-                    , Periode.fetch ReceiveState
+                    , case model.permission of
+                        PermissionNone ->
+                            Cmd.none
+
+                        _ ->
+                            Periode.fetch ReceiveState
                     )
 
                 Err e ->
@@ -285,7 +291,7 @@ update msg model =
             )
 
         SendPassword ->
-            ( model
+            ( {model | inputPassword = "" }
             , sendPassword ReceiveAuth model.inputPassword
             )
 
@@ -300,6 +306,14 @@ update msg model =
                     ( { model | periodes = [], current = Periode.Stopped, fetchErrMsg = Just (buildErrorMessage e) }
                     , Cmd.none
                     )
+
+        Logout ->
+            ( { model | permission = PermissionNone }
+            , Http.get
+                { url = "/api/auth/logout"
+                , expect = Http.expectWhatever ReceiveEvent
+                }
+            )
 
 
 emptyInsert : Insert
@@ -383,32 +397,44 @@ passwordEncoder pass =
 
 view : Model -> Html Msg
 view model =
-    case model.permission of
-        PermissionNone ->
-            viewLogin model.inputPassword
+    case model.fetchErrMsg of
+        Just err ->
+            div [] [ text err ]
 
-        _ ->
-            div []
-                [ viewCurrent model.current model.comment |> canWrite model.permission
-                , viewInsert model.insert |> canWrite model.permission
-                , viewPeriodes model.permission model.periodes model.fetchErrMsg
-                ]
+        Nothing ->
+            case model.permission of
+                PermissionNone ->
+                    viewLogin model.inputPassword
+
+                _ ->
+                    div []
+                        [ viewCurrent model.current model.comment |> canWrite model.permission
+                        , viewInsert model.insert |> canWrite model.permission
+                        , viewPeriodes model.permission model.periodes
+                        , viewFooter
+                        ]
+
 
 canWrite : Permission -> Html Msg -> Html Msg
 canWrite permission html =
     case permission of
         PermissionWrite ->
             html
+
         _ ->
             viewEmpty
 
+
 viewEmpty : Html Msg
-viewEmpty = text ""
+viewEmpty =
+    text ""
+
 
 viewLogin : String -> Html Msg
 viewLogin pass =
     div []
-        [ input
+        [ h5 [] [ text "Login" ]
+        , input
             [ type_ "password"
             , value pass
             , onInput SavePassword
@@ -463,17 +489,12 @@ viewStartStopButton startStop comment =
         ]
 
 
-viewPeriodes : Permission -> List Periode.Periode -> Maybe String -> Html Msg
-viewPeriodes permission periodes error =
-    case error of
-        Just err ->
-            div [] [ text err ]
-
-        Nothing ->
-            table [ Html.Attributes.class "table" ]
-                [ viewPeriodeHeader permission
-                , tbody [] (List.map (viewPeriodeLine permission) (Periode.sort periodes))
-                ]
+viewPeriodes : Permission -> List Periode.Periode -> Html Msg
+viewPeriodes permission periodes =
+    table [ Html.Attributes.class "table" ]
+        [ viewPeriodeHeader permission
+        , tbody [] (List.map (viewPeriodeLine permission) (Periode.sort periodes))
+        ]
 
 
 viewPeriodeHeader : Permission -> Html Msg
@@ -526,6 +547,15 @@ viewInsert maybeInsert =
                     []
                 , button [ class "btn btn-primary", onClick SendInsert ] [ text "Insert" ]
                 ]
+
+
+viewFooter : Html Msg
+viewFooter =
+    footer [ class "fixed-bottom container" ]
+        [ a [ href "https://github.com/ostcar/timer" ] [ text "github" ]
+        , text " · "
+        , a [ href "#", class "link-primary", onClick Logout ] [ text "logout" ]
+        ]
 
 
 posixToString : Time.Posix -> String

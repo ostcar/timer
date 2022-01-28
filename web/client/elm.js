@@ -9307,6 +9307,23 @@ var $author$project$Main$buildErrorMessage = function (httpError) {
 			return message;
 	}
 };
+var $elm$http$Http$expectBytesResponse = F2(
+	function (toMsg, toResult) {
+		return A3(
+			_Http_expect,
+			'arraybuffer',
+			_Http_toDataView,
+			A2($elm$core$Basics$composeR, toResult, toMsg));
+	});
+var $elm$http$Http$expectWhatever = function (toMsg) {
+	return A2(
+		$elm$http$Http$expectBytesResponse,
+		toMsg,
+		$elm$http$Http$resolve(
+			function (_v0) {
+				return $elm$core$Result$Ok(_Utils_Tuple0);
+			}));
+};
 var $justinmimbs$time_extra$Time$Extra$Month = {$: 'Month'};
 var $justinmimbs$time_extra$Time$Extra$Day = {$: 'Day'};
 var $justinmimbs$time_extra$Time$Extra$Millisecond = {$: 'Millisecond'};
@@ -9791,23 +9808,6 @@ var $mercurymedia$elm_datetime_picker$DurationDatePicker$openPicker = F5(
 					viewOffset: viewOffset
 				}));
 	});
-var $elm$http$Http$expectBytesResponse = F2(
-	function (toMsg, toResult) {
-		return A3(
-			_Http_expect,
-			'arraybuffer',
-			_Http_toDataView,
-			A2($elm$core$Basics$composeR, toResult, toMsg));
-	});
-var $elm$http$Http$expectWhatever = function (toMsg) {
-	return A2(
-		$elm$http$Http$expectBytesResponse,
-		toMsg,
-		$elm$http$Http$resolve(
-			function (_v0) {
-				return $elm$core$Result$Ok(_Utils_Tuple0);
-			}));
-};
 var $author$project$Periode$idToString = function (_v0) {
 	var id = _v0.a;
 	return $elm$core$String$fromInt(id);
@@ -10000,7 +10000,14 @@ var $author$project$Main$update = F2(
 				if (response.$ === 'Ok') {
 					return _Utils_Tuple2(
 						model,
-						$author$project$Periode$fetch($author$project$Main$ReceiveState));
+						function () {
+							var _v4 = model.permission;
+							if (_v4.$ === 'PermissionNone') {
+								return $elm$core$Platform$Cmd$none;
+							} else {
+								return $author$project$Periode$fetch($author$project$Main$ReceiveState);
+							}
+						}());
 				} else {
 					var e = response.a;
 					return _Utils_Tuple2(
@@ -10030,29 +10037,29 @@ var $author$project$Main$update = F2(
 					$elm$core$Platform$Cmd$none);
 			case 'OpenPicker':
 				var insert = function () {
-					var _v7 = model.insert;
-					if (_v7.$ === 'Nothing') {
+					var _v8 = model.insert;
+					if (_v8.$ === 'Nothing') {
 						return $author$project$Main$emptyInsert;
 					} else {
-						var i = _v7.a;
+						var i = _v8.a;
 						return i;
 					}
 				}();
-				var _v4 = function () {
-					var _v5 = insert.startStop;
-					if (_v5.$ === 'Nothing') {
+				var _v5 = function () {
+					var _v6 = insert.startStop;
+					if (_v6.$ === 'Nothing') {
 						return _Utils_Tuple2($elm$core$Maybe$Nothing, $elm$core$Maybe$Nothing);
 					} else {
-						var _v6 = _v5.a;
-						var s = _v6.a;
-						var t = _v6.b;
+						var _v7 = _v6.a;
+						var s = _v7.a;
+						var t = _v7.b;
 						return _Utils_Tuple2(
 							$elm$core$Maybe$Just(s),
 							$elm$core$Maybe$Just(t));
 					}
 				}();
-				var start = _v4.a;
-				var stop = _v4.b;
+				var start = _v5.a;
+				var stop = _v5.b;
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
@@ -10072,15 +10079,15 @@ var $author$project$Main$update = F2(
 						}),
 					$elm$core$Platform$Cmd$none);
 			case 'UpdatePicker':
-				var _v8 = msg.a;
-				var newPicker = _v8.a;
-				var maybeRuntime = _v8.b;
+				var _v9 = msg.a;
+				var newPicker = _v9.a;
+				var maybeRuntime = _v9.b;
 				var insert = function () {
-					var _v9 = model.insert;
-					if (_v9.$ === 'Nothing') {
+					var _v10 = model.insert;
+					if (_v10.$ === 'Nothing') {
 						return $author$project$Main$emptyInsert;
 					} else {
-						var i = _v9.a;
+						var i = _v10.a;
 						return i;
 					}
 				}();
@@ -10106,11 +10113,11 @@ var $author$project$Main$update = F2(
 			case 'SaveInsertComment':
 				var comment = msg.a;
 				var insert = function () {
-					var _v10 = model.insert;
-					if (_v10.$ === 'Nothing') {
+					var _v11 = model.insert;
+					if (_v11.$ === 'Nothing') {
 						return $author$project$Main$emptyInsert;
 					} else {
-						var i = _v10.a;
+						var i = _v11.a;
 						return i;
 					}
 				}();
@@ -10126,22 +10133,22 @@ var $author$project$Main$update = F2(
 					$elm$core$Platform$Cmd$none);
 			case 'SendInsert':
 				var insert = function () {
-					var _v13 = model.insert;
-					if (_v13.$ === 'Nothing') {
+					var _v14 = model.insert;
+					if (_v14.$ === 'Nothing') {
 						return $author$project$Main$emptyInsert;
 					} else {
-						var i = _v13.a;
+						var i = _v14.a;
 						return i;
 					}
 				}();
 				var cmd = function () {
-					var _v11 = insert.startStop;
-					if (_v11.$ === 'Nothing') {
+					var _v12 = insert.startStop;
+					if (_v12.$ === 'Nothing') {
 						return $elm$core$Platform$Cmd$none;
 					} else {
-						var _v12 = _v11.a;
-						var start = _v12.a;
-						var stop = _v12.b;
+						var _v13 = _v12.a;
+						var start = _v13.a;
+						var stop = _v13.b;
 						return A4(
 							$author$project$Main$sendInsert,
 							$author$project$Main$ReceiveEvent,
@@ -10164,9 +10171,11 @@ var $author$project$Main$update = F2(
 					$elm$core$Platform$Cmd$none);
 			case 'SendPassword':
 				return _Utils_Tuple2(
-					model,
+					_Utils_update(
+						model,
+						{inputPassword: ''}),
 					A2($author$project$Main$sendPassword, $author$project$Main$ReceiveAuth, model.inputPassword));
-			default:
+			case 'ReceiveAuth':
 				var response = msg.a;
 				if (response.$ === 'Ok') {
 					var level = response.a;
@@ -10190,6 +10199,16 @@ var $author$project$Main$update = F2(
 							}),
 						$elm$core$Platform$Cmd$none);
 				}
+			default:
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{permission: $author$project$Main$PermissionNone}),
+					$elm$http$Http$get(
+						{
+							expect: $elm$http$Http$expectWhatever($author$project$Main$ReceiveEvent),
+							url: '/api/auth/logout'
+						}));
 		}
 	});
 var $elm$virtual_dom$VirtualDom$text = _VirtualDom_text;
@@ -10747,6 +10766,47 @@ var $author$project$Main$viewCurrent = F2(
 					]));
 		}
 	});
+var $author$project$Main$Logout = {$: 'Logout'};
+var $elm$html$Html$a = _VirtualDom_node('a');
+var $elm$html$Html$footer = _VirtualDom_node('footer');
+var $elm$html$Html$Attributes$href = function (url) {
+	return A2(
+		$elm$html$Html$Attributes$stringProperty,
+		'href',
+		_VirtualDom_noJavaScriptUri(url));
+};
+var $author$project$Main$viewFooter = A2(
+	$elm$html$Html$footer,
+	_List_fromArray(
+		[
+			$elm$html$Html$Attributes$class('fixed-bottom container')
+		]),
+	_List_fromArray(
+		[
+			A2(
+			$elm$html$Html$a,
+			_List_fromArray(
+				[
+					$elm$html$Html$Attributes$href('https://github.com/ostcar/timer')
+				]),
+			_List_fromArray(
+				[
+					$elm$html$Html$text('github')
+				])),
+			$elm$html$Html$text(' · '),
+			A2(
+			$elm$html$Html$a,
+			_List_fromArray(
+				[
+					$elm$html$Html$Attributes$href('#'),
+					$elm$html$Html$Attributes$class('link-primary'),
+					$elm$html$Html$Events$onClick($author$project$Main$Logout)
+				]),
+			_List_fromArray(
+				[
+					$elm$html$Html$text('logout')
+				]))
+		]));
 var $author$project$Main$OpenInsert = {$: 'OpenInsert'};
 var $author$project$Main$OpenPicker = {$: 'OpenPicker'};
 var $author$project$Main$SaveInsertComment = function (a) {
@@ -12747,12 +12807,20 @@ var $author$project$Main$SavePassword = function (a) {
 	return {$: 'SavePassword', a: a};
 };
 var $author$project$Main$SendPassword = {$: 'SendPassword'};
+var $elm$html$Html$h5 = _VirtualDom_node('h5');
 var $author$project$Main$viewLogin = function (pass) {
 	return A2(
 		$elm$html$Html$div,
 		_List_Nil,
 		_List_fromArray(
 			[
+				A2(
+				$elm$html$Html$h5,
+				_List_Nil,
+				_List_fromArray(
+					[
+						$elm$html$Html$text('Login')
+					])),
 				A2(
 				$elm$html$Html$input,
 				_List_fromArray(
@@ -12908,57 +12976,59 @@ var $author$project$Main$viewPeriodeLine = F2(
 							])))
 				]));
 	});
-var $author$project$Main$viewPeriodes = F3(
-	function (permission, periodes, error) {
-		if (error.$ === 'Just') {
-			var err = error.a;
-			return A2(
-				$elm$html$Html$div,
-				_List_Nil,
-				_List_fromArray(
-					[
-						$elm$html$Html$text(err)
-					]));
-		} else {
-			return A2(
-				$elm$html$Html$table,
-				_List_fromArray(
-					[
-						$elm$html$Html$Attributes$class('table')
-					]),
-				_List_fromArray(
-					[
-						$author$project$Main$viewPeriodeHeader(permission),
-						A2(
-						$elm$html$Html$tbody,
-						_List_Nil,
-						A2(
-							$elm$core$List$map,
-							$author$project$Main$viewPeriodeLine(permission),
-							$author$project$Periode$sort(periodes)))
-					]));
-		}
+var $author$project$Main$viewPeriodes = F2(
+	function (permission, periodes) {
+		return A2(
+			$elm$html$Html$table,
+			_List_fromArray(
+				[
+					$elm$html$Html$Attributes$class('table')
+				]),
+			_List_fromArray(
+				[
+					$author$project$Main$viewPeriodeHeader(permission),
+					A2(
+					$elm$html$Html$tbody,
+					_List_Nil,
+					A2(
+						$elm$core$List$map,
+						$author$project$Main$viewPeriodeLine(permission),
+						$author$project$Periode$sort(periodes)))
+				]));
 	});
 var $author$project$Main$view = function (model) {
-	var _v0 = model.permission;
-	if (_v0.$ === 'PermissionNone') {
-		return $author$project$Main$viewLogin(model.inputPassword);
-	} else {
+	var _v0 = model.fetchErrMsg;
+	if (_v0.$ === 'Just') {
+		var err = _v0.a;
 		return A2(
 			$elm$html$Html$div,
 			_List_Nil,
 			_List_fromArray(
 				[
-					A2(
-					$author$project$Main$canWrite,
-					model.permission,
-					A2($author$project$Main$viewCurrent, model.current, model.comment)),
-					A2(
-					$author$project$Main$canWrite,
-					model.permission,
-					$author$project$Main$viewInsert(model.insert)),
-					A3($author$project$Main$viewPeriodes, model.permission, model.periodes, model.fetchErrMsg)
+					$elm$html$Html$text(err)
 				]));
+	} else {
+		var _v1 = model.permission;
+		if (_v1.$ === 'PermissionNone') {
+			return $author$project$Main$viewLogin(model.inputPassword);
+		} else {
+			return A2(
+				$elm$html$Html$div,
+				_List_Nil,
+				_List_fromArray(
+					[
+						A2(
+						$author$project$Main$canWrite,
+						model.permission,
+						A2($author$project$Main$viewCurrent, model.current, model.comment)),
+						A2(
+						$author$project$Main$canWrite,
+						model.permission,
+						$author$project$Main$viewInsert(model.insert)),
+						A2($author$project$Main$viewPeriodes, model.permission, model.periodes),
+						$author$project$Main$viewFooter
+					]));
+		}
 	}
 };
 var $author$project$Main$main = $elm$browser$Browser$element(
