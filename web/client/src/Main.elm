@@ -389,11 +389,21 @@ view model =
 
         _ ->
             div []
-                [ viewCurrent model.current model.comment
-                , viewInsert model.insert
-                , viewPeriodes model.periodes model.fetchErrMsg
+                [ viewCurrent model.current model.comment |> canWrite model.permission
+                , viewInsert model.insert |> canWrite model.permission
+                , viewPeriodes model.permission model.periodes model.fetchErrMsg
                 ]
 
+canWrite : Permission -> Html Msg -> Html Msg
+canWrite permission html =
+    case permission of
+        PermissionWrite ->
+            html
+        _ ->
+            viewEmpty
+
+viewEmpty : Html Msg
+viewEmpty = text ""
 
 viewLogin : String -> Html Msg
 viewLogin pass =
@@ -453,38 +463,38 @@ viewStartStopButton startStop comment =
         ]
 
 
-viewPeriodes : List Periode.Periode -> Maybe String -> Html Msg
-viewPeriodes periodes error =
+viewPeriodes : Permission -> List Periode.Periode -> Maybe String -> Html Msg
+viewPeriodes permission periodes error =
     case error of
         Just err ->
             div [] [ text err ]
 
         Nothing ->
             table [ Html.Attributes.class "table" ]
-                [ viewPeriodeHeader
-                , tbody [] (List.map viewPeriodeLine (Periode.sort periodes))
+                [ viewPeriodeHeader permission
+                , tbody [] (List.map (viewPeriodeLine permission) (Periode.sort periodes))
                 ]
 
 
-viewPeriodeHeader : Html Msg
-viewPeriodeHeader =
+viewPeriodeHeader : Permission -> Html Msg
+viewPeriodeHeader permission =
     thead []
         [ tr []
             [ th [ scope "col", class "time" ] [ text "Start" ]
             , th [ scope "col", class "time" ] [ text "Stop" ]
             , th [ scope "col" ] [ text "Comment" ]
-            , th [ scope "col", class "actions" ] [ text "#" ]
+            , th [ scope "col", class "actions" ] [ text "#" ] |> canWrite permission
             ]
         ]
 
 
-viewPeriodeLine : Periode.Periode -> Html Msg
-viewPeriodeLine periode =
+viewPeriodeLine : Permission -> Periode.Periode -> Html Msg
+viewPeriodeLine permission periode =
     tr []
         [ td [] [ text (posixToString periode.start) ]
         , td [] [ text (posixToString periode.stop) ]
         , td [] [ text (Maybe.withDefault "" periode.comment) ]
-        , td [] [ button [ type_ "button", class "btn btn-danger", onClick (SendDelete periode.id) ] [ text "X" ] ]
+        , td [] [ button [ type_ "button", class "btn btn-danger", onClick (SendDelete periode.id) ] [ text "X" ] ] |> canWrite permission
         ]
 
 

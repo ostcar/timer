@@ -10192,6 +10192,17 @@ var $author$project$Main$update = F2(
 				}
 		}
 	});
+var $elm$virtual_dom$VirtualDom$text = _VirtualDom_text;
+var $elm$html$Html$text = $elm$virtual_dom$VirtualDom$text;
+var $author$project$Main$viewEmpty = $elm$html$Html$text('');
+var $author$project$Main$canWrite = F2(
+	function (permission, html) {
+		if (permission.$ === 'PermissionWrite') {
+			return html;
+		} else {
+			return $author$project$Main$viewEmpty;
+		}
+	});
 var $elm$html$Html$div = _VirtualDom_node('div');
 var $author$project$Main$Start = {$: 'Start'};
 var $author$project$Main$Stop = {$: 'Stop'};
@@ -10610,8 +10621,6 @@ var $CoderDennis$elm_time_format$Time$Format$format = F4(
 var $author$project$Main$posixToString = function (time) {
 	return A4($CoderDennis$elm_time_format$Time$Format$format, $CoderDennis$elm_time_format$Time$Format$Config$Config_de_de$config, '%Y-%m-%d %H:%M', $author$project$Main$timeZone, time);
 };
-var $elm$virtual_dom$VirtualDom$text = _VirtualDom_text;
-var $elm$html$Html$text = $elm$virtual_dom$VirtualDom$text;
 var $author$project$Main$SaveComment = function (a) {
 	return {$: 'SaveComment', a: a};
 };
@@ -12780,118 +12789,127 @@ var $elm$html$Html$Attributes$scope = $elm$html$Html$Attributes$stringProperty('
 var $elm$html$Html$th = _VirtualDom_node('th');
 var $elm$html$Html$thead = _VirtualDom_node('thead');
 var $elm$html$Html$tr = _VirtualDom_node('tr');
-var $author$project$Main$viewPeriodeHeader = A2(
-	$elm$html$Html$thead,
-	_List_Nil,
-	_List_fromArray(
-		[
-			A2(
+var $author$project$Main$viewPeriodeHeader = function (permission) {
+	return A2(
+		$elm$html$Html$thead,
+		_List_Nil,
+		_List_fromArray(
+			[
+				A2(
+				$elm$html$Html$tr,
+				_List_Nil,
+				_List_fromArray(
+					[
+						A2(
+						$elm$html$Html$th,
+						_List_fromArray(
+							[
+								$elm$html$Html$Attributes$scope('col'),
+								$elm$html$Html$Attributes$class('time')
+							]),
+						_List_fromArray(
+							[
+								$elm$html$Html$text('Start')
+							])),
+						A2(
+						$elm$html$Html$th,
+						_List_fromArray(
+							[
+								$elm$html$Html$Attributes$scope('col'),
+								$elm$html$Html$Attributes$class('time')
+							]),
+						_List_fromArray(
+							[
+								$elm$html$Html$text('Stop')
+							])),
+						A2(
+						$elm$html$Html$th,
+						_List_fromArray(
+							[
+								$elm$html$Html$Attributes$scope('col')
+							]),
+						_List_fromArray(
+							[
+								$elm$html$Html$text('Comment')
+							])),
+						A2(
+						$author$project$Main$canWrite,
+						permission,
+						A2(
+							$elm$html$Html$th,
+							_List_fromArray(
+								[
+									$elm$html$Html$Attributes$scope('col'),
+									$elm$html$Html$Attributes$class('actions')
+								]),
+							_List_fromArray(
+								[
+									$elm$html$Html$text('#')
+								])))
+					]))
+			]));
+};
+var $author$project$Main$SendDelete = function (a) {
+	return {$: 'SendDelete', a: a};
+};
+var $elm$html$Html$td = _VirtualDom_node('td');
+var $author$project$Main$viewPeriodeLine = F2(
+	function (permission, periode) {
+		return A2(
 			$elm$html$Html$tr,
 			_List_Nil,
 			_List_fromArray(
 				[
 					A2(
-					$elm$html$Html$th,
+					$elm$html$Html$td,
+					_List_Nil,
 					_List_fromArray(
 						[
-							$elm$html$Html$Attributes$scope('col'),
-							$elm$html$Html$Attributes$class('time')
-						]),
-					_List_fromArray(
-						[
-							$elm$html$Html$text('Start')
+							$elm$html$Html$text(
+							$author$project$Main$posixToString(periode.start))
 						])),
 					A2(
-					$elm$html$Html$th,
+					$elm$html$Html$td,
+					_List_Nil,
 					_List_fromArray(
 						[
-							$elm$html$Html$Attributes$scope('col'),
-							$elm$html$Html$Attributes$class('time')
-						]),
-					_List_fromArray(
-						[
-							$elm$html$Html$text('Stop')
+							$elm$html$Html$text(
+							$author$project$Main$posixToString(periode.stop))
 						])),
 					A2(
-					$elm$html$Html$th,
+					$elm$html$Html$td,
+					_List_Nil,
 					_List_fromArray(
 						[
-							$elm$html$Html$Attributes$scope('col')
-						]),
-					_List_fromArray(
-						[
-							$elm$html$Html$text('Comment')
+							$elm$html$Html$text(
+							A2($elm$core$Maybe$withDefault, '', periode.comment))
 						])),
 					A2(
-					$elm$html$Html$th,
-					_List_fromArray(
-						[
-							$elm$html$Html$Attributes$scope('col'),
-							$elm$html$Html$Attributes$class('actions')
-						]),
-					_List_fromArray(
-						[
-							$elm$html$Html$text('#')
-						]))
-				]))
-		]));
-var $author$project$Main$SendDelete = function (a) {
-	return {$: 'SendDelete', a: a};
-};
-var $elm$html$Html$td = _VirtualDom_node('td');
-var $author$project$Main$viewPeriodeLine = function (periode) {
-	return A2(
-		$elm$html$Html$tr,
-		_List_Nil,
-		_List_fromArray(
-			[
-				A2(
-				$elm$html$Html$td,
-				_List_Nil,
-				_List_fromArray(
-					[
-						$elm$html$Html$text(
-						$author$project$Main$posixToString(periode.start))
-					])),
-				A2(
-				$elm$html$Html$td,
-				_List_Nil,
-				_List_fromArray(
-					[
-						$elm$html$Html$text(
-						$author$project$Main$posixToString(periode.stop))
-					])),
-				A2(
-				$elm$html$Html$td,
-				_List_Nil,
-				_List_fromArray(
-					[
-						$elm$html$Html$text(
-						A2($elm$core$Maybe$withDefault, '', periode.comment))
-					])),
-				A2(
-				$elm$html$Html$td,
-				_List_Nil,
-				_List_fromArray(
-					[
-						A2(
-						$elm$html$Html$button,
+					$author$project$Main$canWrite,
+					permission,
+					A2(
+						$elm$html$Html$td,
+						_List_Nil,
 						_List_fromArray(
 							[
-								$elm$html$Html$Attributes$type_('button'),
-								$elm$html$Html$Attributes$class('btn btn-danger'),
-								$elm$html$Html$Events$onClick(
-								$author$project$Main$SendDelete(periode.id))
-							]),
-						_List_fromArray(
-							[
-								$elm$html$Html$text('X')
-							]))
-					]))
-			]));
-};
-var $author$project$Main$viewPeriodes = F2(
-	function (periodes, error) {
+								A2(
+								$elm$html$Html$button,
+								_List_fromArray(
+									[
+										$elm$html$Html$Attributes$type_('button'),
+										$elm$html$Html$Attributes$class('btn btn-danger'),
+										$elm$html$Html$Events$onClick(
+										$author$project$Main$SendDelete(periode.id))
+									]),
+								_List_fromArray(
+									[
+										$elm$html$Html$text('X')
+									]))
+							])))
+				]));
+	});
+var $author$project$Main$viewPeriodes = F3(
+	function (permission, periodes, error) {
 		if (error.$ === 'Just') {
 			var err = error.a;
 			return A2(
@@ -12910,13 +12928,13 @@ var $author$project$Main$viewPeriodes = F2(
 					]),
 				_List_fromArray(
 					[
-						$author$project$Main$viewPeriodeHeader,
+						$author$project$Main$viewPeriodeHeader(permission),
 						A2(
 						$elm$html$Html$tbody,
 						_List_Nil,
 						A2(
 							$elm$core$List$map,
-							$author$project$Main$viewPeriodeLine,
+							$author$project$Main$viewPeriodeLine(permission),
 							$author$project$Periode$sort(periodes)))
 					]));
 		}
@@ -12931,9 +12949,15 @@ var $author$project$Main$view = function (model) {
 			_List_Nil,
 			_List_fromArray(
 				[
-					A2($author$project$Main$viewCurrent, model.current, model.comment),
-					$author$project$Main$viewInsert(model.insert),
-					A2($author$project$Main$viewPeriodes, model.periodes, model.fetchErrMsg)
+					A2(
+					$author$project$Main$canWrite,
+					model.permission,
+					A2($author$project$Main$viewCurrent, model.current, model.comment)),
+					A2(
+					$author$project$Main$canWrite,
+					model.permission,
+					$author$project$Main$viewInsert(model.insert)),
+					A3($author$project$Main$viewPeriodes, model.permission, model.periodes, model.fetchErrMsg)
 				]));
 	}
 };
