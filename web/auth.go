@@ -11,10 +11,10 @@ type authPayload struct {
 	Level string `json:"level"`
 }
 
-func createToken(level string, secred string) (string, error) {
+func createToken(level string, secred []byte) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, authPayload{Level: level})
 
-	tokenString, err := token.SignedString([]byte(secred))
+	tokenString, err := token.SignedString(secred)
 	if err != nil {
 		return "", fmt.Errorf("signing token: %w", err)
 	}
@@ -22,7 +22,7 @@ func createToken(level string, secred string) (string, error) {
 	return tokenString, nil
 }
 
-func checkClaim(tokenString string, secred string, levels []string) (bool, error) {
+func checkClaim(tokenString string, secred []byte, levels []string) (bool, error) {
 	var claim authPayload
 
 	_, err := jwt.ParseWithClaims(tokenString, &claim, func(token *jwt.Token) (interface{}, error) {

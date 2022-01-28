@@ -28,7 +28,7 @@ const (
 func registerHandlers(router *mux.Router, model *model.Model, cfg config.Config, defaultFiles DefaultFiles) {
 	fileSystem := MultiFS{
 		fs: []fs.FS{
-			os.DirFS("./static"),
+			os.DirFS("./web/static"),
 			defaultFiles.Static,
 		},
 	}
@@ -50,15 +50,15 @@ type responselogger struct {
 	code int
 }
 
-func (r *responselogger) WriteHeader(h int) {
-	r.code = h
-	r.ResponseWriter.WriteHeader(h)
+func (r *responselogger) WriteHeader(code int) {
+	r.code = code
+	r.ResponseWriter.WriteHeader(code)
 }
 
 func loggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		writer := responselogger{w, 200}
-		next.ServeHTTP(w, r)
+		writer := &responselogger{w, 200}
+		next.ServeHTTP(writer, r)
 		log.Printf("%s %d %s", r.Method, writer.code, r.RequestURI)
 	})
 }
@@ -70,7 +70,7 @@ func loggingMiddleware(next http.Handler) http.Handler {
 // default index.html, is used.
 func handleIndex(router *mux.Router, defaultContent []byte) {
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		bs, err := os.ReadFile("client/index.html")
+		bs, err := os.ReadFile("web/client/index.html")
 		if err != nil {
 			if !errors.Is(err, os.ErrNotExist) {
 				handleError(w, err)
@@ -93,7 +93,7 @@ func handleIndex(router *mux.Router, defaultContent []byte) {
 // file, bundeled with the executable is used.
 func handleElmJS(router *mux.Router, defaultContent []byte) {
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		bs, err := os.ReadFile("client/elm.js")
+		bs, err := os.ReadFile("web/client/elm.js")
 		if err != nil {
 			if !errors.Is(err, os.ErrNotExist) {
 				handleError(w, err)
@@ -124,32 +124,29 @@ func handleAuth(router *mux.Router, cfg config.Config) {
 			return
 		}
 
-		var tokenString string
+		var level string
 		if subtle.ConstantTimeCompare([]byte(content.Password), []byte(cfg.PasswordWrite)) == 1 {
-			s, err := createToken("write", cfg.Secred)
-			if err != nil {
-				handleError(w, err)
-				return
-			}
-			tokenString = s
+			level = "write"
 		}
 
 		if subtle.ConstantTimeCompare([]byte(content.Password), []byte(cfg.PasswordRead)) == 1 {
-			s, err := createToken("read", cfg.Secred)
-			if err != nil {
-				handleError(w, err)
-				return
-			}
-			tokenString = s
+			level = "read"
 		}
 
-		if tokenString == "" {
+		if level == "" {
 			w.WriteHeader(401)
 			fmt.Fprintf(w, "Invalid password")
 			return
 		}
 
-		http.SetCookie(w, &http.Cookie{Name: cookieName, Value: tokenString, Secure: true})
+		tokenString, err := createToken(level, []byte(cfg.Secred))
+		if err != nil {
+			handleError(w, err)
+			return
+		}
+
+		http.SetCookie(w, &http.Cookie{Name: cookieName, Value: tokenString, Path: "/", Secure: true})
+		fmt.Fprintln(w, level)
 	})
 }
 
@@ -383,7 +380,7 @@ func canRead(r *http.Request, cfg config.Config) bool {
 		return false
 	}
 
-	v, _ := checkClaim(c.Value, cfg.Secred, []string{"read", "write"})
+	v, _ := checkClaim(c.Value, []byte(cfg.Secred), []string{"read", "write"})
 	return v
 }
 
@@ -393,6 +390,6 @@ func canWrite(r *http.Request, cfg config.Config) bool {
 		return false
 	}
 
-	v, _ := checkClaim(c.Value, cfg.Secred, []string{"write"})
+	v, _ := checkClaim(c.Value, []byte(cfg.Secred), []string{"write"})
 	return v
 }

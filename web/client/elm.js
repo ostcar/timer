@@ -4532,6 +4532,221 @@ function _Http_track(router, xhr, tracker)
 	});
 }
 
+// BYTES
+
+function _Bytes_width(bytes)
+{
+	return bytes.byteLength;
+}
+
+var _Bytes_getHostEndianness = F2(function(le, be)
+{
+	return _Scheduler_binding(function(callback)
+	{
+		callback(_Scheduler_succeed(new Uint8Array(new Uint32Array([1]))[0] === 1 ? le : be));
+	});
+});
+
+
+// ENCODERS
+
+function _Bytes_encode(encoder)
+{
+	var mutableBytes = new DataView(new ArrayBuffer($elm$bytes$Bytes$Encode$getWidth(encoder)));
+	$elm$bytes$Bytes$Encode$write(encoder)(mutableBytes)(0);
+	return mutableBytes;
+}
+
+
+// SIGNED INTEGERS
+
+var _Bytes_write_i8  = F3(function(mb, i, n) { mb.setInt8(i, n); return i + 1; });
+var _Bytes_write_i16 = F4(function(mb, i, n, isLE) { mb.setInt16(i, n, isLE); return i + 2; });
+var _Bytes_write_i32 = F4(function(mb, i, n, isLE) { mb.setInt32(i, n, isLE); return i + 4; });
+
+
+// UNSIGNED INTEGERS
+
+var _Bytes_write_u8  = F3(function(mb, i, n) { mb.setUint8(i, n); return i + 1 ;});
+var _Bytes_write_u16 = F4(function(mb, i, n, isLE) { mb.setUint16(i, n, isLE); return i + 2; });
+var _Bytes_write_u32 = F4(function(mb, i, n, isLE) { mb.setUint32(i, n, isLE); return i + 4; });
+
+
+// FLOATS
+
+var _Bytes_write_f32 = F4(function(mb, i, n, isLE) { mb.setFloat32(i, n, isLE); return i + 4; });
+var _Bytes_write_f64 = F4(function(mb, i, n, isLE) { mb.setFloat64(i, n, isLE); return i + 8; });
+
+
+// BYTES
+
+var _Bytes_write_bytes = F3(function(mb, offset, bytes)
+{
+	for (var i = 0, len = bytes.byteLength, limit = len - 4; i <= limit; i += 4)
+	{
+		mb.setUint32(offset + i, bytes.getUint32(i));
+	}
+	for (; i < len; i++)
+	{
+		mb.setUint8(offset + i, bytes.getUint8(i));
+	}
+	return offset + len;
+});
+
+
+// STRINGS
+
+function _Bytes_getStringWidth(string)
+{
+	for (var width = 0, i = 0; i < string.length; i++)
+	{
+		var code = string.charCodeAt(i);
+		width +=
+			(code < 0x80) ? 1 :
+			(code < 0x800) ? 2 :
+			(code < 0xD800 || 0xDBFF < code) ? 3 : (i++, 4);
+	}
+	return width;
+}
+
+var _Bytes_write_string = F3(function(mb, offset, string)
+{
+	for (var i = 0; i < string.length; i++)
+	{
+		var code = string.charCodeAt(i);
+		offset +=
+			(code < 0x80)
+				? (mb.setUint8(offset, code)
+				, 1
+				)
+				:
+			(code < 0x800)
+				? (mb.setUint16(offset, 0xC080 /* 0b1100000010000000 */
+					| (code >>> 6 & 0x1F /* 0b00011111 */) << 8
+					| code & 0x3F /* 0b00111111 */)
+				, 2
+				)
+				:
+			(code < 0xD800 || 0xDBFF < code)
+				? (mb.setUint16(offset, 0xE080 /* 0b1110000010000000 */
+					| (code >>> 12 & 0xF /* 0b00001111 */) << 8
+					| code >>> 6 & 0x3F /* 0b00111111 */)
+				, mb.setUint8(offset + 2, 0x80 /* 0b10000000 */
+					| code & 0x3F /* 0b00111111 */)
+				, 3
+				)
+				:
+			(code = (code - 0xD800) * 0x400 + string.charCodeAt(++i) - 0xDC00 + 0x10000
+			, mb.setUint32(offset, 0xF0808080 /* 0b11110000100000001000000010000000 */
+				| (code >>> 18 & 0x7 /* 0b00000111 */) << 24
+				| (code >>> 12 & 0x3F /* 0b00111111 */) << 16
+				| (code >>> 6 & 0x3F /* 0b00111111 */) << 8
+				| code & 0x3F /* 0b00111111 */)
+			, 4
+			);
+	}
+	return offset;
+});
+
+
+// DECODER
+
+var _Bytes_decode = F2(function(decoder, bytes)
+{
+	try {
+		return $elm$core$Maybe$Just(A2(decoder, bytes, 0).b);
+	} catch(e) {
+		return $elm$core$Maybe$Nothing;
+	}
+});
+
+var _Bytes_read_i8  = F2(function(      bytes, offset) { return _Utils_Tuple2(offset + 1, bytes.getInt8(offset)); });
+var _Bytes_read_i16 = F3(function(isLE, bytes, offset) { return _Utils_Tuple2(offset + 2, bytes.getInt16(offset, isLE)); });
+var _Bytes_read_i32 = F3(function(isLE, bytes, offset) { return _Utils_Tuple2(offset + 4, bytes.getInt32(offset, isLE)); });
+var _Bytes_read_u8  = F2(function(      bytes, offset) { return _Utils_Tuple2(offset + 1, bytes.getUint8(offset)); });
+var _Bytes_read_u16 = F3(function(isLE, bytes, offset) { return _Utils_Tuple2(offset + 2, bytes.getUint16(offset, isLE)); });
+var _Bytes_read_u32 = F3(function(isLE, bytes, offset) { return _Utils_Tuple2(offset + 4, bytes.getUint32(offset, isLE)); });
+var _Bytes_read_f32 = F3(function(isLE, bytes, offset) { return _Utils_Tuple2(offset + 4, bytes.getFloat32(offset, isLE)); });
+var _Bytes_read_f64 = F3(function(isLE, bytes, offset) { return _Utils_Tuple2(offset + 8, bytes.getFloat64(offset, isLE)); });
+
+var _Bytes_read_bytes = F3(function(len, bytes, offset)
+{
+	return _Utils_Tuple2(offset + len, new DataView(bytes.buffer, bytes.byteOffset + offset, len));
+});
+
+var _Bytes_read_string = F3(function(len, bytes, offset)
+{
+	var string = '';
+	var end = offset + len;
+	for (; offset < end;)
+	{
+		var byte = bytes.getUint8(offset++);
+		string +=
+			(byte < 128)
+				? String.fromCharCode(byte)
+				:
+			((byte & 0xE0 /* 0b11100000 */) === 0xC0 /* 0b11000000 */)
+				? String.fromCharCode((byte & 0x1F /* 0b00011111 */) << 6 | bytes.getUint8(offset++) & 0x3F /* 0b00111111 */)
+				:
+			((byte & 0xF0 /* 0b11110000 */) === 0xE0 /* 0b11100000 */)
+				? String.fromCharCode(
+					(byte & 0xF /* 0b00001111 */) << 12
+					| (bytes.getUint8(offset++) & 0x3F /* 0b00111111 */) << 6
+					| bytes.getUint8(offset++) & 0x3F /* 0b00111111 */
+				)
+				:
+				(byte =
+					((byte & 0x7 /* 0b00000111 */) << 18
+						| (bytes.getUint8(offset++) & 0x3F /* 0b00111111 */) << 12
+						| (bytes.getUint8(offset++) & 0x3F /* 0b00111111 */) << 6
+						| bytes.getUint8(offset++) & 0x3F /* 0b00111111 */
+					) - 0x10000
+				, String.fromCharCode(Math.floor(byte / 0x400) + 0xD800, byte % 0x400 + 0xDC00)
+				);
+	}
+	return _Utils_Tuple2(offset, string);
+});
+
+var _Bytes_decodeFailure = F2(function() { throw 0; });
+
+
+
+var _Bitwise_and = F2(function(a, b)
+{
+	return a & b;
+});
+
+var _Bitwise_or = F2(function(a, b)
+{
+	return a | b;
+});
+
+var _Bitwise_xor = F2(function(a, b)
+{
+	return a ^ b;
+});
+
+function _Bitwise_complement(a)
+{
+	return ~a;
+};
+
+var _Bitwise_shiftLeftBy = F2(function(offset, a)
+{
+	return a << offset;
+});
+
+var _Bitwise_shiftRightBy = F2(function(offset, a)
+{
+	return a >> offset;
+});
+
+var _Bitwise_shiftRightZfBy = F2(function(offset, a)
+{
+	return a >>> offset;
+});
+
+
 
 function _Time_now(millisToPosix)
 {
@@ -4677,43 +4892,6 @@ var _Regex_splitAtMost = F3(function(n, re, str)
 });
 
 var _Regex_infinity = Infinity;
-
-
-
-var _Bitwise_and = F2(function(a, b)
-{
-	return a & b;
-});
-
-var _Bitwise_or = F2(function(a, b)
-{
-	return a | b;
-});
-
-var _Bitwise_xor = F2(function(a, b)
-{
-	return a ^ b;
-});
-
-function _Bitwise_complement(a)
-{
-	return ~a;
-};
-
-var _Bitwise_shiftLeftBy = F2(function(offset, a)
-{
-	return a << offset;
-});
-
-var _Bitwise_shiftRightBy = F2(function(offset, a)
-{
-	return a >> offset;
-});
-
-var _Bitwise_shiftRightZfBy = F2(function(offset, a)
-{
-	return a >>> offset;
-});
 var $elm$core$Basics$EQ = {$: 'EQ'};
 var $elm$core$Basics$GT = {$: 'GT'};
 var $elm$core$Basics$LT = {$: 'LT'};
@@ -6441,17 +6619,624 @@ var $author$project$Periode$fetch = function (result) {
 			url: '/api/periode'
 		});
 };
-var $author$project$Main$init = function (_v0) {
+var $elm$core$Platform$Cmd$batch = _Platform_batch;
+var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
+var $author$project$Main$PermissionNone = {$: 'PermissionNone'};
+var $simonh1000$elm_jwt$Jwt$TokenDecodeError = function (a) {
+	return {$: 'TokenDecodeError', a: a};
+};
+var $elm$core$Result$andThen = F2(
+	function (callback, result) {
+		if (result.$ === 'Ok') {
+			var value = result.a;
+			return callback(value);
+		} else {
+			var msg = result.a;
+			return $elm$core$Result$Err(msg);
+		}
+	});
+var $simonh1000$elm_jwt$Jwt$TokenHeaderError = {$: 'TokenHeaderError'};
+var $simonh1000$elm_jwt$Jwt$TokenProcessingError = function (a) {
+	return {$: 'TokenProcessingError', a: a};
+};
+var $elm$core$String$concat = function (strings) {
+	return A2($elm$core$String$join, '', strings);
+};
+var $elm$core$Basics$modBy = _Basics_modBy;
+var $simonh1000$elm_jwt$Jwt$fixlength = function (s) {
+	var _v0 = A2(
+		$elm$core$Basics$modBy,
+		4,
+		$elm$core$String$length(s));
+	switch (_v0) {
+		case 0:
+			return $elm$core$Result$Ok(s);
+		case 2:
+			return $elm$core$Result$Ok(
+				$elm$core$String$concat(
+					_List_fromArray(
+						[s, '=='])));
+		case 3:
+			return $elm$core$Result$Ok(
+				$elm$core$String$concat(
+					_List_fromArray(
+						[s, '='])));
+		default:
+			return $elm$core$Result$Err(
+				$simonh1000$elm_jwt$Jwt$TokenProcessingError('Wrong length'));
+	}
+};
+var $elm$core$Result$fromMaybe = F2(
+	function (err, maybe) {
+		if (maybe.$ === 'Just') {
+			var v = maybe.a;
+			return $elm$core$Result$Ok(v);
+		} else {
+			return $elm$core$Result$Err(err);
+		}
+	});
+var $elm$core$Result$map = F2(
+	function (func, ra) {
+		if (ra.$ === 'Ok') {
+			var a = ra.a;
+			return $elm$core$Result$Ok(
+				func(a));
+		} else {
+			var e = ra.a;
+			return $elm$core$Result$Err(e);
+		}
+	});
+var $elm$core$Result$map2 = F3(
+	function (func, ra, rb) {
+		if (ra.$ === 'Err') {
+			var x = ra.a;
+			return $elm$core$Result$Err(x);
+		} else {
+			var a = ra.a;
+			if (rb.$ === 'Err') {
+				var x = rb.a;
+				return $elm$core$Result$Err(x);
+			} else {
+				var b = rb.a;
+				return $elm$core$Result$Ok(
+					A2(func, a, b));
+			}
+		}
+	});
+var $elm$bytes$Bytes$Encode$getWidth = function (builder) {
+	switch (builder.$) {
+		case 'I8':
+			return 1;
+		case 'I16':
+			return 2;
+		case 'I32':
+			return 4;
+		case 'U8':
+			return 1;
+		case 'U16':
+			return 2;
+		case 'U32':
+			return 4;
+		case 'F32':
+			return 4;
+		case 'F64':
+			return 8;
+		case 'Seq':
+			var w = builder.a;
+			return w;
+		case 'Utf8':
+			var w = builder.a;
+			return w;
+		default:
+			var bs = builder.a;
+			return _Bytes_width(bs);
+	}
+};
+var $elm$bytes$Bytes$LE = {$: 'LE'};
+var $elm$bytes$Bytes$Encode$write = F3(
+	function (builder, mb, offset) {
+		switch (builder.$) {
+			case 'I8':
+				var n = builder.a;
+				return A3(_Bytes_write_i8, mb, offset, n);
+			case 'I16':
+				var e = builder.a;
+				var n = builder.b;
+				return A4(
+					_Bytes_write_i16,
+					mb,
+					offset,
+					n,
+					_Utils_eq(e, $elm$bytes$Bytes$LE));
+			case 'I32':
+				var e = builder.a;
+				var n = builder.b;
+				return A4(
+					_Bytes_write_i32,
+					mb,
+					offset,
+					n,
+					_Utils_eq(e, $elm$bytes$Bytes$LE));
+			case 'U8':
+				var n = builder.a;
+				return A3(_Bytes_write_u8, mb, offset, n);
+			case 'U16':
+				var e = builder.a;
+				var n = builder.b;
+				return A4(
+					_Bytes_write_u16,
+					mb,
+					offset,
+					n,
+					_Utils_eq(e, $elm$bytes$Bytes$LE));
+			case 'U32':
+				var e = builder.a;
+				var n = builder.b;
+				return A4(
+					_Bytes_write_u32,
+					mb,
+					offset,
+					n,
+					_Utils_eq(e, $elm$bytes$Bytes$LE));
+			case 'F32':
+				var e = builder.a;
+				var n = builder.b;
+				return A4(
+					_Bytes_write_f32,
+					mb,
+					offset,
+					n,
+					_Utils_eq(e, $elm$bytes$Bytes$LE));
+			case 'F64':
+				var e = builder.a;
+				var n = builder.b;
+				return A4(
+					_Bytes_write_f64,
+					mb,
+					offset,
+					n,
+					_Utils_eq(e, $elm$bytes$Bytes$LE));
+			case 'Seq':
+				var bs = builder.b;
+				return A3($elm$bytes$Bytes$Encode$writeSequence, bs, mb, offset);
+			case 'Utf8':
+				var s = builder.b;
+				return A3(_Bytes_write_string, mb, offset, s);
+			default:
+				var bs = builder.a;
+				return A3(_Bytes_write_bytes, mb, offset, bs);
+		}
+	});
+var $elm$bytes$Bytes$Encode$writeSequence = F3(
+	function (builders, mb, offset) {
+		writeSequence:
+		while (true) {
+			if (!builders.b) {
+				return offset;
+			} else {
+				var b = builders.a;
+				var bs = builders.b;
+				var $temp$builders = bs,
+					$temp$mb = mb,
+					$temp$offset = A3($elm$bytes$Bytes$Encode$write, b, mb, offset);
+				builders = $temp$builders;
+				mb = $temp$mb;
+				offset = $temp$offset;
+				continue writeSequence;
+			}
+		}
+	});
+var $elm$bytes$Bytes$Decode$decode = F2(
+	function (_v0, bs) {
+		var decoder = _v0.a;
+		return A2(_Bytes_decode, decoder, bs);
+	});
+var $elm$bytes$Bytes$Decode$Decoder = function (a) {
+	return {$: 'Decoder', a: a};
+};
+var $elm$bytes$Bytes$Decode$string = function (n) {
+	return $elm$bytes$Bytes$Decode$Decoder(
+		_Bytes_read_string(n));
+};
+var $elm$bytes$Bytes$Encode$encode = _Bytes_encode;
+var $elm$bytes$Bytes$BE = {$: 'BE'};
+var $danfishgold$base64_bytes$Encode$isValidChar = function (c) {
+	if ($elm$core$Char$isAlphaNum(c)) {
+		return true;
+	} else {
+		switch (c.valueOf()) {
+			case '+':
+				return true;
+			case '/':
+				return true;
+			default:
+				return false;
+		}
+	}
+};
+var $elm$core$Bitwise$or = _Bitwise_or;
+var $elm$bytes$Bytes$Encode$Seq = F2(
+	function (a, b) {
+		return {$: 'Seq', a: a, b: b};
+	});
+var $elm$bytes$Bytes$Encode$getWidths = F2(
+	function (width, builders) {
+		getWidths:
+		while (true) {
+			if (!builders.b) {
+				return width;
+			} else {
+				var b = builders.a;
+				var bs = builders.b;
+				var $temp$width = width + $elm$bytes$Bytes$Encode$getWidth(b),
+					$temp$builders = bs;
+				width = $temp$width;
+				builders = $temp$builders;
+				continue getWidths;
+			}
+		}
+	});
+var $elm$bytes$Bytes$Encode$sequence = function (builders) {
+	return A2(
+		$elm$bytes$Bytes$Encode$Seq,
+		A2($elm$bytes$Bytes$Encode$getWidths, 0, builders),
+		builders);
+};
+var $elm$core$Bitwise$shiftLeftBy = _Bitwise_shiftLeftBy;
+var $elm$core$Bitwise$shiftRightBy = _Bitwise_shiftRightBy;
+var $elm$core$Basics$ge = _Utils_ge;
+var $elm$core$Basics$negate = function (n) {
+	return -n;
+};
+var $danfishgold$base64_bytes$Encode$unsafeConvertChar = function (_char) {
+	var key = $elm$core$Char$toCode(_char);
+	if ((key >= 65) && (key <= 90)) {
+		return key - 65;
+	} else {
+		if ((key >= 97) && (key <= 122)) {
+			return (key - 97) + 26;
+		} else {
+			if ((key >= 48) && (key <= 57)) {
+				return ((key - 48) + 26) + 26;
+			} else {
+				switch (_char.valueOf()) {
+					case '+':
+						return 62;
+					case '/':
+						return 63;
+					default:
+						return -1;
+				}
+			}
+		}
+	}
+};
+var $elm$bytes$Bytes$Encode$U16 = F2(
+	function (a, b) {
+		return {$: 'U16', a: a, b: b};
+	});
+var $elm$bytes$Bytes$Encode$unsignedInt16 = $elm$bytes$Bytes$Encode$U16;
+var $elm$bytes$Bytes$Encode$U8 = function (a) {
+	return {$: 'U8', a: a};
+};
+var $elm$bytes$Bytes$Encode$unsignedInt8 = $elm$bytes$Bytes$Encode$U8;
+var $danfishgold$base64_bytes$Encode$encodeCharacters = F4(
+	function (a, b, c, d) {
+		if ($danfishgold$base64_bytes$Encode$isValidChar(a) && $danfishgold$base64_bytes$Encode$isValidChar(b)) {
+			var n2 = $danfishgold$base64_bytes$Encode$unsafeConvertChar(b);
+			var n1 = $danfishgold$base64_bytes$Encode$unsafeConvertChar(a);
+			if ('=' === d.valueOf()) {
+				if ('=' === c.valueOf()) {
+					var n = (n1 << 18) | (n2 << 12);
+					var b1 = n >> 16;
+					return $elm$core$Maybe$Just(
+						$elm$bytes$Bytes$Encode$unsignedInt8(b1));
+				} else {
+					if ($danfishgold$base64_bytes$Encode$isValidChar(c)) {
+						var n3 = $danfishgold$base64_bytes$Encode$unsafeConvertChar(c);
+						var n = ((n1 << 18) | (n2 << 12)) | (n3 << 6);
+						var combined = n >> 8;
+						return $elm$core$Maybe$Just(
+							A2($elm$bytes$Bytes$Encode$unsignedInt16, $elm$bytes$Bytes$BE, combined));
+					} else {
+						return $elm$core$Maybe$Nothing;
+					}
+				}
+			} else {
+				if ($danfishgold$base64_bytes$Encode$isValidChar(c) && $danfishgold$base64_bytes$Encode$isValidChar(d)) {
+					var n4 = $danfishgold$base64_bytes$Encode$unsafeConvertChar(d);
+					var n3 = $danfishgold$base64_bytes$Encode$unsafeConvertChar(c);
+					var n = ((n1 << 18) | (n2 << 12)) | ((n3 << 6) | n4);
+					var combined = n >> 8;
+					var b3 = n;
+					return $elm$core$Maybe$Just(
+						$elm$bytes$Bytes$Encode$sequence(
+							_List_fromArray(
+								[
+									A2($elm$bytes$Bytes$Encode$unsignedInt16, $elm$bytes$Bytes$BE, combined),
+									$elm$bytes$Bytes$Encode$unsignedInt8(b3)
+								])));
+				} else {
+					return $elm$core$Maybe$Nothing;
+				}
+			}
+		} else {
+			return $elm$core$Maybe$Nothing;
+		}
+	});
+var $elm$core$String$foldr = _String_foldr;
+var $elm$core$String$toList = function (string) {
+	return A3($elm$core$String$foldr, $elm$core$List$cons, _List_Nil, string);
+};
+var $danfishgold$base64_bytes$Encode$encodeChunks = F2(
+	function (input, accum) {
+		encodeChunks:
+		while (true) {
+			var _v0 = $elm$core$String$toList(
+				A2($elm$core$String$left, 4, input));
+			_v0$4:
+			while (true) {
+				if (!_v0.b) {
+					return $elm$core$Maybe$Just(accum);
+				} else {
+					if (_v0.b.b) {
+						if (_v0.b.b.b) {
+							if (_v0.b.b.b.b) {
+								if (!_v0.b.b.b.b.b) {
+									var a = _v0.a;
+									var _v1 = _v0.b;
+									var b = _v1.a;
+									var _v2 = _v1.b;
+									var c = _v2.a;
+									var _v3 = _v2.b;
+									var d = _v3.a;
+									var _v4 = A4($danfishgold$base64_bytes$Encode$encodeCharacters, a, b, c, d);
+									if (_v4.$ === 'Just') {
+										var enc = _v4.a;
+										var $temp$input = A2($elm$core$String$dropLeft, 4, input),
+											$temp$accum = A2($elm$core$List$cons, enc, accum);
+										input = $temp$input;
+										accum = $temp$accum;
+										continue encodeChunks;
+									} else {
+										return $elm$core$Maybe$Nothing;
+									}
+								} else {
+									break _v0$4;
+								}
+							} else {
+								var a = _v0.a;
+								var _v5 = _v0.b;
+								var b = _v5.a;
+								var _v6 = _v5.b;
+								var c = _v6.a;
+								var _v7 = A4(
+									$danfishgold$base64_bytes$Encode$encodeCharacters,
+									a,
+									b,
+									c,
+									_Utils_chr('='));
+								if (_v7.$ === 'Nothing') {
+									return $elm$core$Maybe$Nothing;
+								} else {
+									var enc = _v7.a;
+									return $elm$core$Maybe$Just(
+										A2($elm$core$List$cons, enc, accum));
+								}
+							}
+						} else {
+							var a = _v0.a;
+							var _v8 = _v0.b;
+							var b = _v8.a;
+							var _v9 = A4(
+								$danfishgold$base64_bytes$Encode$encodeCharacters,
+								a,
+								b,
+								_Utils_chr('='),
+								_Utils_chr('='));
+							if (_v9.$ === 'Nothing') {
+								return $elm$core$Maybe$Nothing;
+							} else {
+								var enc = _v9.a;
+								return $elm$core$Maybe$Just(
+									A2($elm$core$List$cons, enc, accum));
+							}
+						}
+					} else {
+						break _v0$4;
+					}
+				}
+			}
+			return $elm$core$Maybe$Nothing;
+		}
+	});
+var $elm$core$Maybe$map = F2(
+	function (f, maybe) {
+		if (maybe.$ === 'Just') {
+			var value = maybe.a;
+			return $elm$core$Maybe$Just(
+				f(value));
+		} else {
+			return $elm$core$Maybe$Nothing;
+		}
+	});
+var $danfishgold$base64_bytes$Encode$encoder = function (string) {
+	return A2(
+		$elm$core$Maybe$map,
+		A2($elm$core$Basics$composeR, $elm$core$List$reverse, $elm$bytes$Bytes$Encode$sequence),
+		A2($danfishgold$base64_bytes$Encode$encodeChunks, string, _List_Nil));
+};
+var $danfishgold$base64_bytes$Encode$toBytes = function (string) {
+	return A2(
+		$elm$core$Maybe$map,
+		$elm$bytes$Bytes$Encode$encode,
+		$danfishgold$base64_bytes$Encode$encoder(string));
+};
+var $danfishgold$base64_bytes$Base64$toBytes = $danfishgold$base64_bytes$Encode$toBytes;
+var $elm$bytes$Bytes$width = _Bytes_width;
+var $danfishgold$base64_bytes$Base64$toString = function (b64String) {
+	var _v0 = $danfishgold$base64_bytes$Base64$toBytes(b64String);
+	if (_v0.$ === 'Nothing') {
+		return $elm$core$Maybe$Nothing;
+	} else {
+		var b64Bytes = _v0.a;
+		return A2(
+			$elm$bytes$Bytes$Decode$decode,
+			$elm$bytes$Bytes$Decode$string(
+				$elm$bytes$Bytes$width(b64Bytes)),
+			b64Bytes);
+	}
+};
+var $elm$core$String$map = _String_map;
+var $simonh1000$elm_jwt$Jwt$unurl = function () {
+	var fix = function (c) {
+		switch (c.valueOf()) {
+			case '-':
+				return _Utils_chr('+');
+			case '_':
+				return _Utils_chr('/');
+			default:
+				return c;
+		}
+	};
+	return $elm$core$String$map(fix);
+}();
+var $simonh1000$elm_jwt$Jwt$getTokenParts = function (token) {
+	var verifyJson = F2(
+		function (errorHandler, str) {
+			return A2(
+				$elm$core$Result$mapError,
+				errorHandler,
+				A2(
+					$elm$core$Result$map,
+					function (_v8) {
+						return str;
+					},
+					A2($elm$json$Json$Decode$decodeString, $elm$json$Json$Decode$value, str)));
+		});
+	var processor = A2(
+		$elm$core$Basics$composeR,
+		$simonh1000$elm_jwt$Jwt$unurl,
+		A2(
+			$elm$core$Basics$composeR,
+			$elm$core$String$split('.'),
+			$elm$core$List$map($simonh1000$elm_jwt$Jwt$fixlength)));
+	var _v0 = processor(token);
+	_v0$1:
+	while (true) {
+		if (((_v0.b && _v0.b.b) && _v0.b.b.b) && (!_v0.b.b.b.b)) {
+			if (_v0.a.$ === 'Ok') {
+				if (_v0.b.a.$ === 'Ok') {
+					var header = _v0.a.a;
+					var _v1 = _v0.b;
+					var body = _v1.a.a;
+					var _v2 = _v1.b;
+					var header_ = A2(
+						$elm$core$Result$andThen,
+						verifyJson(
+							function (_v3) {
+								return $simonh1000$elm_jwt$Jwt$TokenHeaderError;
+							}),
+						A2(
+							$elm$core$Result$fromMaybe,
+							$simonh1000$elm_jwt$Jwt$TokenHeaderError,
+							$danfishgold$base64_bytes$Base64$toString(header)));
+					var body_ = A2(
+						$elm$core$Result$andThen,
+						verifyJson($simonh1000$elm_jwt$Jwt$TokenDecodeError),
+						A2(
+							$elm$core$Result$fromMaybe,
+							$simonh1000$elm_jwt$Jwt$TokenProcessingError('Invalid UTF-16'),
+							$danfishgold$base64_bytes$Base64$toString(body)));
+					return A3(
+						$elm$core$Result$map2,
+						F2(
+							function (a, b) {
+								return _Utils_Tuple2(a, b);
+							}),
+						header_,
+						body_);
+				} else {
+					break _v0$1;
+				}
+			} else {
+				if (_v0.b.a.$ === 'Err') {
+					break _v0$1;
+				} else {
+					var err = _v0.a.a;
+					var _v6 = _v0.b;
+					var _v7 = _v6.b;
+					return $elm$core$Result$Err(err);
+				}
+			}
+		} else {
+			return $elm$core$Result$Err(
+				$simonh1000$elm_jwt$Jwt$TokenProcessingError('Token has invalid shape'));
+		}
+	}
+	var _v4 = _v0.b;
+	var err = _v4.a.a;
+	var _v5 = _v4.b;
+	return $elm$core$Result$Err(err);
+};
+var $elm$core$Tuple$second = function (_v0) {
+	var y = _v0.b;
+	return y;
+};
+var $simonh1000$elm_jwt$Jwt$decodeToken = F2(
+	function (dec, token) {
+		return A2(
+			$elm$core$Result$andThen,
+			A2(
+				$elm$core$Basics$composeR,
+				$elm$json$Json$Decode$decodeString(dec),
+				$elm$core$Result$mapError($simonh1000$elm_jwt$Jwt$TokenDecodeError)),
+			A2(
+				$elm$core$Result$map,
+				$elm$core$Tuple$second,
+				$simonh1000$elm_jwt$Jwt$getTokenParts(token)));
+	});
+var $author$project$Main$PermissionRead = {$: 'PermissionRead'};
+var $author$project$Main$PermissionWrite = {$: 'PermissionWrite'};
+var $elm$core$String$trim = _String_trim;
+var $author$project$Main$permissionFromString = function (permRaw) {
+	var perm = $elm$core$String$trim(permRaw);
+	return (perm === 'write') ? $author$project$Main$PermissionWrite : ((perm === 'read') ? $author$project$Main$PermissionRead : $author$project$Main$PermissionNone);
+};
+var $author$project$Main$permissionFromJWT = function (token) {
+	var decoder = A2($elm$json$Json$Decode$field, 'level', $elm$json$Json$Decode$string);
+	var _v0 = A2($simonh1000$elm_jwt$Jwt$decodeToken, decoder, token);
+	if (_v0.$ === 'Ok') {
+		var pass = _v0.a;
+		return $author$project$Main$permissionFromString(pass);
+	} else {
+		return $author$project$Main$PermissionNone;
+	}
+};
+var $author$project$Main$init = function (token) {
+	var permission = $author$project$Main$permissionFromJWT(token);
+	var cmd = function () {
+		switch (permission.$) {
+			case 'PermissionRead':
+				return $author$project$Periode$fetch($author$project$Main$ReceiveState);
+			case 'PermissionWrite':
+				return $author$project$Periode$fetch($author$project$Main$ReceiveState);
+			default:
+				return $elm$core$Platform$Cmd$none;
+		}
+	}();
 	return _Utils_Tuple2(
 		{
 			comment: '',
 			current: $author$project$Periode$Stopped,
 			currentTime: $elm$time$Time$millisToPosix(0),
 			fetchErrMsg: $elm$core$Maybe$Nothing,
+			inputPassword: '',
 			insert: $elm$core$Maybe$Nothing,
-			periodes: _List_Nil
+			periodes: _List_Nil,
+			permission: permission
 		},
-		$author$project$Periode$fetch($author$project$Main$ReceiveState));
+		cmd);
 };
 var $author$project$Main$Tick = function (a) {
 	return {$: 'Tick', a: a};
@@ -6890,7 +7675,6 @@ var $elm$time$Time$flooredDiv = F2(
 	function (numerator, denominator) {
 		return $elm$core$Basics$floor(numerator / denominator);
 	});
-var $elm$core$Basics$modBy = _Basics_modBy;
 var $elm$time$Time$toAdjustedMinutesHelp = F3(
 	function (defaultOffset, posixMinutes, eras) {
 		toAdjustedMinutesHelp:
@@ -7058,10 +7842,6 @@ var $justinmimbs$date$Date$toRataDie = function (_v0) {
 var $justinmimbs$time_extra$Time$Extra$dateToMillis = function (date) {
 	var daysSinceEpoch = $justinmimbs$date$Date$toRataDie(date) - 719163;
 	return daysSinceEpoch * 86400000;
-};
-var $elm$core$Basics$ge = _Utils_ge;
-var $elm$core$Basics$negate = function (n) {
-	return -n;
 };
 var $elm$time$Time$toCivil = function (minutes) {
 	var rawDay = A2($elm$time$Time$flooredDiv, minutes, 60 * 24) + 719468;
@@ -7982,10 +8762,6 @@ var $justinmimbs$timezone_data$TimeZone$Specification$dropChangesBeforeEpoch = f
 		}
 	}
 };
-var $elm$core$Tuple$second = function (_v0) {
-	var y = _v0.b;
-	return y;
-};
 var $justinmimbs$timezone_data$RataDie$weekdayNumber = function (rd) {
 	var _v0 = A2($elm$core$Basics$modBy, 7, rd);
 	if (!_v0) {
@@ -8508,6 +9284,9 @@ var $author$project$Main$subscriptions = function (model) {
 				A2($elm$time$Time$every, 1000, $author$project$Main$Tick)
 			]));
 };
+var $author$project$Main$ReceiveAuth = function (a) {
+	return {$: 'ReceiveAuth', a: a};
+};
 var $author$project$Main$ReceiveEvent = function (a) {
 	return {$: 'ReceiveEvent', a: a};
 };
@@ -8528,18 +9307,6 @@ var $author$project$Main$buildErrorMessage = function (httpError) {
 			return message;
 	}
 };
-var $elm$core$Maybe$map = F2(
-	function (f, maybe) {
-		if (maybe.$ === 'Just') {
-			var value = maybe.a;
-			return $elm$core$Maybe$Just(
-				f(value));
-		} else {
-			return $elm$core$Maybe$Nothing;
-		}
-	});
-var $elm$core$Platform$Cmd$batch = _Platform_batch;
-var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
 var $justinmimbs$time_extra$Time$Extra$Month = {$: 'Month'};
 var $justinmimbs$time_extra$Time$Extra$Day = {$: 'Day'};
 var $justinmimbs$time_extra$Time$Extra$Millisecond = {$: 'Millisecond'};
@@ -9123,6 +9890,31 @@ var $author$project$Main$sendInsert = F4(
 				url: '/api/periode'
 			});
 	});
+var $elm$http$Http$expectString = function (toMsg) {
+	return A2(
+		$elm$http$Http$expectStringResponse,
+		toMsg,
+		$elm$http$Http$resolve($elm$core$Result$Ok));
+};
+var $author$project$Main$passwordEncoder = function (pass) {
+	return $elm$json$Json$Encode$object(
+		_List_fromArray(
+			[
+				_Utils_Tuple2(
+				'password',
+				$elm$json$Json$Encode$string(pass))
+			]));
+};
+var $author$project$Main$sendPassword = F2(
+	function (result, pass) {
+		return $elm$http$Http$post(
+			{
+				body: $elm$http$Http$jsonBody(
+					$author$project$Main$passwordEncoder(pass)),
+				expect: $elm$http$Http$expectString(result),
+				url: '/api/auth'
+			});
+	});
 var $author$project$Main$commentEncoder = function (comment) {
 	return $elm$json$Json$Encode$object(
 		_List_fromArray(
@@ -9332,7 +10124,7 @@ var $author$project$Main$update = F2(
 									{comment: comment}))
 						}),
 					$elm$core$Platform$Cmd$none);
-			default:
+			case 'SendInsert':
 				var insert = function () {
 					var _v13 = model.insert;
 					if (_v13.$ === 'Nothing') {
@@ -9363,6 +10155,41 @@ var $author$project$Main$update = F2(
 						model,
 						{insert: $elm$core$Maybe$Nothing}),
 					cmd);
+			case 'SavePassword':
+				var pass = msg.a;
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{inputPassword: pass}),
+					$elm$core$Platform$Cmd$none);
+			case 'SendPassword':
+				return _Utils_Tuple2(
+					model,
+					A2($author$project$Main$sendPassword, $author$project$Main$ReceiveAuth, model.inputPassword));
+			default:
+				var response = msg.a;
+				if (response.$ === 'Ok') {
+					var level = response.a;
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{
+								permission: $author$project$Main$permissionFromString(level)
+							}),
+						$author$project$Periode$fetch($author$project$Main$ReceiveState));
+				} else {
+					var e = response.a;
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{
+								current: $author$project$Periode$Stopped,
+								fetchErrMsg: $elm$core$Maybe$Just(
+									$author$project$Main$buildErrorMessage(e)),
+								periodes: _List_Nil
+							}),
+						$elm$core$Platform$Cmd$none);
+				}
 		}
 	});
 var $elm$html$Html$div = _VirtualDom_node('div');
@@ -9548,7 +10375,6 @@ var $elm$core$String$fromChar = function (_char) {
 	return A2($elm$core$String$cons, _char, '');
 };
 var $elm$core$Bitwise$and = _Bitwise_and;
-var $elm$core$Bitwise$shiftRightBy = _Bitwise_shiftRightBy;
 var $elm$core$String$repeatHelp = F3(
 	function (n, chunk, result) {
 		return (n <= 0) ? result : A3(
@@ -11280,15 +12106,6 @@ var $elm_community$html_extra$Html$Events$Extra$customDecoder = F2(
 			resultDecoder,
 			A2($elm$json$Json$Decode$map, f, d));
 	});
-var $elm$core$Result$fromMaybe = F2(
-	function (err, maybe) {
-		if (maybe.$ === 'Just') {
-			var v = maybe.a;
-			return $elm$core$Result$Ok(v);
-		} else {
-			return $elm$core$Result$Err(err);
-		}
-	});
 var $elm_community$html_extra$Html$Events$Extra$maybeStringToResult = $elm$core$Result$fromMaybe('could not convert string');
 var $elm_community$html_extra$Html$Events$Extra$targetValueIntParse = A2(
 	$elm_community$html_extra$Html$Events$Extra$customDecoder,
@@ -11917,6 +12734,38 @@ var $author$project$Main$viewInsert = function (maybeInsert) {
 				]));
 	}
 };
+var $author$project$Main$SavePassword = function (a) {
+	return {$: 'SavePassword', a: a};
+};
+var $author$project$Main$SendPassword = {$: 'SendPassword'};
+var $author$project$Main$viewLogin = function (pass) {
+	return A2(
+		$elm$html$Html$div,
+		_List_Nil,
+		_List_fromArray(
+			[
+				A2(
+				$elm$html$Html$input,
+				_List_fromArray(
+					[
+						$elm$html$Html$Attributes$type_('password'),
+						$elm$html$Html$Attributes$value(pass),
+						$elm$html$Html$Events$onInput($author$project$Main$SavePassword)
+					]),
+				_List_Nil),
+				A2(
+				$elm$html$Html$button,
+				_List_fromArray(
+					[
+						$elm$html$Html$Attributes$class('btn btn-primary'),
+						$elm$html$Html$Events$onClick($author$project$Main$SendPassword)
+					]),
+				_List_fromArray(
+					[
+						$elm$html$Html$text('Anmelden')
+					]))
+			]));
+};
 var $author$project$Periode$sort = function (periodes) {
 	return A2(
 		$elm$core$List$sortBy,
@@ -12073,17 +12922,21 @@ var $author$project$Main$viewPeriodes = F2(
 		}
 	});
 var $author$project$Main$view = function (model) {
-	return A2(
-		$elm$html$Html$div,
-		_List_Nil,
-		_List_fromArray(
-			[
-				A2($author$project$Main$viewCurrent, model.current, model.comment),
-				$author$project$Main$viewInsert(model.insert),
-				A2($author$project$Main$viewPeriodes, model.periodes, model.fetchErrMsg)
-			]));
+	var _v0 = model.permission;
+	if (_v0.$ === 'PermissionNone') {
+		return $author$project$Main$viewLogin(model.inputPassword);
+	} else {
+		return A2(
+			$elm$html$Html$div,
+			_List_Nil,
+			_List_fromArray(
+				[
+					A2($author$project$Main$viewCurrent, model.current, model.comment),
+					$author$project$Main$viewInsert(model.insert),
+					A2($author$project$Main$viewPeriodes, model.periodes, model.fetchErrMsg)
+				]));
+	}
 };
 var $author$project$Main$main = $elm$browser$Browser$element(
 	{init: $author$project$Main$init, subscriptions: $author$project$Main$subscriptions, update: $author$project$Main$update, view: $author$project$Main$view});
-_Platform_export({'Main':{'init':$author$project$Main$main(
-	$elm$json$Json$Decode$succeed(_Utils_Tuple0))(0)}});}(this));
+_Platform_export({'Main':{'init':$author$project$Main$main($elm$json$Json$Decode$string)(0)}});}(this));

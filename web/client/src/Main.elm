@@ -6,7 +6,9 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import Http
+import Json.Decode as Decode
 import Json.Encode as Encode
+import Jwt
 import Periode
 import Time
 import Time.Format
@@ -19,7 +21,7 @@ timeZone =
     TimeZone.europe__berlin ()
 
 
-main : Program () Model Msg
+main : Program String Model Msg
 main =
     Browser.element
         { init = init
@@ -36,6 +38,8 @@ type alias Model =
     , comment : String
     , insert : Maybe Insert
     , currentTime : Time.Posix
+    , permission : Permission
+    , inputPassword : String
     }
 
 
@@ -44,6 +48,12 @@ type alias Insert =
     , comment : String
     , picker : DurationDatePicker.DatePicker
     }
+
+
+type Permission
+    = PermissionWrite
+    | PermissionRead
+    | PermissionNone
 
 
 type Msg
@@ -60,19 +70,69 @@ type Msg
     | UpdatePicker ( DurationDatePicker.DatePicker, Maybe ( Time.Posix, Time.Posix ) )
     | SaveInsertComment String
     | SendInsert
+    | SavePassword String
+    | SendPassword
+    | ReceiveAuth (Result Http.Error String)
 
 
-init : flags -> ( Model, Cmd Msg )
-init _ =
+init : String -> ( Model, Cmd Msg )
+init token =
+    let
+        permission =
+            permissionFromJWT token
+
+        cmd =
+            case permission of
+                PermissionRead ->
+                    Periode.fetch ReceiveState
+
+                PermissionWrite ->
+                    Periode.fetch ReceiveState
+
+                PermissionNone ->
+                    Cmd.none
+    in
     ( { periodes = []
       , current = Periode.Stopped
       , fetchErrMsg = Nothing
       , comment = ""
       , insert = Nothing
       , currentTime = Time.millisToPosix 0
+      , permission = permission
+      , inputPassword = ""
       }
-    , Periode.fetch ReceiveState
+    , cmd
     )
+
+
+permissionFromString : String -> Permission
+permissionFromString permRaw =
+    let
+        perm =
+            String.trim permRaw
+    in
+    if perm == "write" then
+        PermissionWrite
+
+    else if perm == "read" then
+        PermissionRead
+
+    else
+        PermissionNone
+
+
+permissionFromJWT : String -> Permission
+permissionFromJWT token =
+    let
+        decoder =
+            Decode.field "level" Decode.string
+    in
+    case Jwt.decodeToken decoder token of
+        Ok pass ->
+            permissionFromString pass
+
+        Err _ ->
+            PermissionNone
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -219,6 +279,28 @@ update msg model =
             , cmd
             )
 
+        SavePassword pass ->
+            ( { model | inputPassword = pass }
+            , Cmd.none
+            )
+
+        SendPassword ->
+            ( model
+            , sendPassword ReceiveAuth model.inputPassword
+            )
+
+        ReceiveAuth response ->
+            case response of
+                Ok level ->
+                    ( { model | permission = permissionFromString level }
+                    , Periode.fetch ReceiveState
+                    )
+
+                Err e ->
+                    ( { model | periodes = [], current = Periode.Stopped, fetchErrMsg = Just (buildErrorMessage e) }
+                    , Cmd.none
+                    )
+
 
 emptyInsert : Insert
 emptyInsert =
@@ -284,12 +366,45 @@ insertEncoder start stop maybeComment =
         )
 
 
+sendPassword : (Result Http.Error String -> Msg) -> String -> Cmd Msg
+sendPassword result pass =
+    Http.post
+        { url = "/api/auth"
+        , body = Http.jsonBody (passwordEncoder pass)
+        , expect = Http.expectString result
+        }
+
+
+passwordEncoder : String -> Encode.Value
+passwordEncoder pass =
+    Encode.object
+        [ ( "password", Encode.string pass ) ]
+
+
 view : Model -> Html Msg
 view model =
+    case model.permission of
+        PermissionNone ->
+            viewLogin model.inputPassword
+
+        _ ->
+            div []
+                [ viewCurrent model.current model.comment
+                , viewInsert model.insert
+                , viewPeriodes model.periodes model.fetchErrMsg
+                ]
+
+
+viewLogin : String -> Html Msg
+viewLogin pass =
     div []
-        [ viewCurrent model.current model.comment
-        , viewInsert model.insert
-        , viewPeriodes model.periodes model.fetchErrMsg
+        [ input
+            [ type_ "password"
+            , value pass
+            , onInput SavePassword
+            ]
+            []
+        , button [ class "btn btn-primary", onClick SendPassword ] [ text "Anmelden" ]
         ]
 
 
