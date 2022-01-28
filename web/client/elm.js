@@ -10017,7 +10017,8 @@ var $author$project$Main$update = F2(
 								current: $author$project$Periode$Stopped,
 								fetchErrMsg: $elm$core$Maybe$Just(
 									$author$project$Main$buildErrorMessage(e)),
-								periodes: _List_Nil
+								periodes: _List_Nil,
+								permission: $author$project$Main$PermissionNone
 							}),
 						$elm$core$Platform$Cmd$none);
 				}
