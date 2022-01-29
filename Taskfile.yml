@@ -32,7 +32,7 @@ tasks:
       - grpc/*
       - model/*
       - web/*
-      - main.go
+      - web/client/elm.js
     generates:
       - timer
     

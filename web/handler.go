@@ -23,6 +23,7 @@ const (
 	pathPrefixAPI    = "/api"
 	pathPrefixStatic = "/static"
 	cookieName       = "timer"
+	cookieAge        = 265 * 24 * time.Hour
 )
 
 func registerHandlers(router *mux.Router, model *model.Model, cfg config.Config, defaultFiles DefaultFiles) {
@@ -150,7 +151,7 @@ func handleAuth(router *mux.Router, cfg config.Config) {
 	})
 
 	router.Path(pathPrefixAPI + "/auth/logout").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		http.SetCookie(w, &http.Cookie{Name: cookieName, Value: "", Path: "/", Secure: true})
+		http.SetCookie(w, &http.Cookie{Name: cookieName, Value: "", Path: "/", MaxAge: int(cookieAge.Seconds()), Secure: true})
 	})
 }
 
