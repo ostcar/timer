@@ -8,7 +8,6 @@ import (
 	"io/fs"
 	"log"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -26,19 +25,19 @@ const (
 	cookieAge        = 265 * 24 * time.Hour
 )
 
-func registerHandlers(router *mux.Router, model *model.Model, cfg config.Config, defaultFiles DefaultFiles) {
-	fileSystem := MultiFS{
-		fs: []fs.FS{
-			os.DirFS("./web/static"),
-			defaultFiles.Static,
-		},
-	}
+// Files to use in the handlers.
+type Files struct {
+	Index  []byte
+	Elm    []byte
+	Static fs.FS
+}
 
+func registerHandlers(router *mux.Router, model *model.Model, cfg config.Config, files Files) {
 	router.Use(loggingMiddleware)
 
-	handleElmJS(router, defaultFiles.Elm)
-	handleIndex(router, defaultFiles.Index)
-	handleStatic(router, fileSystem)
+	handleElmJS(router, files.Elm)
+	handleIndex(router, files.Index)
+	handleStatic(router, files.Static)
 	handleAuth(router, cfg)
 
 	handleStart(router, model, cfg)
@@ -66,20 +65,9 @@ func loggingMiddleware(next http.Handler) http.Handler {
 
 // handleIndex returns the index.html. It is returned from all urls exept /api
 // and /static.
-//
-// If the file exists in client/index.html, it is used. In other case the
-// default index.html, is used.
-func handleIndex(router *mux.Router, defaultContent []byte) {
+func handleIndex(router *mux.Router, content []byte) {
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		bs, err := os.ReadFile("web/client/index.html")
-		if err != nil {
-			if !errors.Is(err, os.ErrNotExist) {
-				handleError(w, err)
-				return
-			}
-			bs = defaultContent
-		}
-		w.Write(bs)
+		w.Write(content)
 	}
 
 	router.MatcherFunc(func(r *http.Request, m *mux.RouteMatch) bool {
@@ -89,30 +77,19 @@ func handleIndex(router *mux.Router, defaultContent []byte) {
 }
 
 // handleElmJS returns the elm-js file.
-//
-// If the file exists in client/elm.js, it is used. In other case the default
-// file, bundeled with the executable is used.
-func handleElmJS(router *mux.Router, defaultContent []byte) {
+func handleElmJS(router *mux.Router, content []byte) {
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		bs, err := os.ReadFile("web/client/elm.js")
-		if err != nil {
-			if !errors.Is(err, os.ErrNotExist) {
-				handleError(w, err)
-				return
-			}
-			bs = defaultContent
-		}
-		w.Write(bs)
+		w.Write(content)
 	}
+
 	router.Path("/elm.js").HandlerFunc(handler)
 }
 
 // handleStatic returns static files.
-//
-// It looks for each file in a directory "static/". It the file does not exist
-// there, it looks in the default static files, the binary was creaded with.
 func handleStatic(router *mux.Router, fileSystem fs.FS) {
-	router.PathPrefix(pathPrefixStatic).Handler(http.StripPrefix(pathPrefixStatic, http.FileServer(http.FS(fileSystem))))
+	router.PathPrefix(pathPrefixStatic).Handler(
+		http.StripPrefix(pathPrefixStatic, http.FileServer(http.FS(fileSystem))),
+	)
 }
 
 func handleAuth(router *mux.Router, cfg config.Config) {

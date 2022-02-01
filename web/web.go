@@ -29,7 +29,7 @@ func Run(ctx context.Context, model *model.Model, cfg config.Config) error {
 		return fmt.Errorf("open static folder: %w", err)
 	}
 
-	defaultFiles := DefaultFiles{
+	defaultFiles := Files{
 		Index:  defaultIndex,
 		Elm:    defaultElm,
 		Static: static,
