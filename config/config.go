@@ -3,7 +3,6 @@ package config
 import (
 	"errors"
 	"fmt"
-	"log"
 	"math/rand"
 	"os"
 	"strings"
@@ -28,6 +27,9 @@ func DefaultConfig() Config {
 		WebListenAddr:  ":8080",
 		GRPCListenAddr: ":4040",
 
+		PasswordRead:  "read",
+		PasswordWrite: "write",
+
 		Secred: createPassword(),
 	}
 }
@@ -39,8 +41,11 @@ func LoadConfig(file string) (Config, error) {
 	f, err := os.Open(file)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			log.Println("Warning: No config file. Use default settings.")
-			return c, nil
+			// If an error happens, return the error and the default config. The
+			// caller can deside, if he wants to use the config even when the
+			// default could not be saved.
+			err := saveConfig(file, c)
+			return c, err
 		}
 		return Config{}, fmt.Errorf("open config file: %w", err)
 	}
@@ -49,6 +54,24 @@ func LoadConfig(file string) (Config, error) {
 		return Config{}, fmt.Errorf("reading config: %w", err)
 	}
 	return c, nil
+}
+
+func saveConfig(file string, config Config) (err error) {
+	f, err := os.Create(file)
+	if err != nil {
+		return fmt.Errorf("creating config file: %w", err)
+	}
+	defer func() {
+		closeErr := f.Close()
+		if closeErr != nil && err == nil {
+			err = closeErr
+		}
+	}()
+
+	if err := toml.NewEncoder(f).Encode(config); err != nil {
+		return fmt.Errorf("writing config: %w", err)
+	}
+	return nil
 }
 
 func createPassword() string {

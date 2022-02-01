@@ -33,6 +33,7 @@ tasks:
       - model/*
       - web/*
       - web/client/elm.js
+      - config/*
     generates:
       - timer
     
