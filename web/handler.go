@@ -146,12 +146,12 @@ func handleAuth(router *mux.Router, cfg config.Config) {
 			return
 		}
 
-		http.SetCookie(w, &http.Cookie{Name: cookieName, Value: tokenString, Path: "/", Secure: true})
+		http.SetCookie(w, &http.Cookie{Name: cookieName, Value: tokenString, Path: "/", MaxAge: int(cookieAge.Seconds()), Secure: true})
 		fmt.Fprintln(w, level)
 	})
 
 	router.Path(pathPrefixAPI + "/auth/logout").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		http.SetCookie(w, &http.Cookie{Name: cookieName, Value: "", Path: "/", MaxAge: int(cookieAge.Seconds()), Secure: true})
+		http.SetCookie(w, &http.Cookie{Name: cookieName, Value: "", Path: "/", MaxAge: -1, Secure: true})
 	})
 }
 
