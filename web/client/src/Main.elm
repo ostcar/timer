@@ -63,6 +63,7 @@ type Msg
     | SaveComment String
     | SendStart
     | SendStop
+    | SendContinue
     | SendDelete Periode.ID
     | ReceiveEvent (Result Http.Error ())
     | OpenInsert
@@ -177,6 +178,11 @@ update msg model =
         SendStop ->
             ( model
             , sendStartStop "stop" ReceiveEvent model.comment
+            )
+
+        SendContinue ->
+            ( model
+            , sendStartStop "start" ReceiveEvent (lastComment model.periodes)
             )
 
         SendDelete id ->
@@ -317,6 +323,21 @@ update msg model =
             )
 
 
+lastComment : List Periode.Periode -> String
+lastComment periodes =
+    case Periode.sort periodes |> List.reverse |> List.head of
+        Nothing ->
+            ""
+
+        Just periode ->
+            case periode.comment of
+                Nothing ->
+                    ""
+
+                Just s ->
+                    s
+
+
 emptyInsert : Insert
 emptyInsert =
     { startStop = Nothing
@@ -426,7 +447,7 @@ canWrite permission html =
             viewEmpty
 
 
-viewEmpty : Html Msg
+viewEmpty : Html msg
 viewEmpty =
     text ""
 
@@ -470,16 +491,23 @@ type StartStop
 viewStartStopButton : StartStop -> String -> Html Msg
 viewStartStopButton startStop comment =
     let
-        ( event, buttonText ) =
+        ( event, buttonText, continue ) =
             case startStop of
                 Start ->
-                    ( SendStart, "Start" )
+                    ( SendStart
+                    , "Start"
+                    , button [ class "btn btn-primary", onClick SendContinue ] [ text "Fortsetzen" ]
+                    )
 
                 Stop ->
-                    ( SendStop, "Stop" )
+                    ( SendStop
+                    , "Stop"
+                    , viewEmpty
+                    )
     in
     div []
-        [ button [ class "btn btn-primary", onClick event ] [ text buttonText ]
+        [ continue
+        , button [ class "btn btn-primary", onClick event ] [ text buttonText ]
         , input
             [ id "comment"
             , type_ "text"

@@ -9324,6 +9324,40 @@ var $elm$http$Http$expectWhatever = function (toMsg) {
 				return $elm$core$Result$Ok(_Utils_Tuple0);
 			}));
 };
+var $elm$core$List$head = function (list) {
+	if (list.b) {
+		var x = list.a;
+		var xs = list.b;
+		return $elm$core$Maybe$Just(x);
+	} else {
+		return $elm$core$Maybe$Nothing;
+	}
+};
+var $author$project$Periode$sort = function (periodes) {
+	return A2(
+		$elm$core$List$sortBy,
+		function (p) {
+			return $elm$time$Time$posixToMillis(p.start);
+		},
+		periodes);
+};
+var $author$project$Main$lastComment = function (periodes) {
+	var _v0 = $elm$core$List$head(
+		$elm$core$List$reverse(
+			$author$project$Periode$sort(periodes)));
+	if (_v0.$ === 'Nothing') {
+		return '';
+	} else {
+		var periode = _v0.a;
+		var _v1 = periode.comment;
+		if (_v1.$ === 'Nothing') {
+			return '';
+		} else {
+			var s = _v1.a;
+			return s;
+		}
+	}
+};
 var $justinmimbs$time_extra$Time$Extra$Month = {$: 'Month'};
 var $justinmimbs$time_extra$Time$Extra$Day = {$: 'Day'};
 var $justinmimbs$time_extra$Time$Extra$Millisecond = {$: 'Millisecond'};
@@ -9990,6 +10024,14 @@ var $author$project$Main$update = F2(
 				return _Utils_Tuple2(
 					model,
 					A3($author$project$Main$sendStartStop, 'stop', $author$project$Main$ReceiveEvent, model.comment));
+			case 'SendContinue':
+				return _Utils_Tuple2(
+					model,
+					A3(
+						$author$project$Main$sendStartStop,
+						'start',
+						$author$project$Main$ReceiveEvent,
+						$author$project$Main$lastComment(model.periodes)));
 			case 'SendDelete':
 				var id = msg.a;
 				return _Utils_Tuple2(
@@ -10361,15 +10403,6 @@ var $elm$core$Maybe$andThen = F2(
 var $CoderDennis$elm_time_format$Time$Format$collapse = function (m) {
 	return A2($elm$core$Maybe$andThen, $elm$core$Basics$identity, m);
 };
-var $elm$core$List$head = function (list) {
-	if (list.b) {
-		var x = list.a;
-		var xs = list.b;
-		return $elm$core$Maybe$Just(x);
-	} else {
-		return $elm$core$Maybe$Nothing;
-	}
-};
 var $CoderDennis$elm_time_format$Time$Format$hourMod12 = function (h) {
 	return (!A2($elm$core$Basics$modBy, 12, h)) ? 12 : A2($elm$core$Basics$modBy, 12, h);
 };
@@ -10644,6 +10677,7 @@ var $author$project$Main$posixToString = function (time) {
 var $author$project$Main$SaveComment = function (a) {
 	return {$: 'SaveComment', a: a};
 };
+var $author$project$Main$SendContinue = {$: 'SendContinue'};
 var $author$project$Main$SendStart = {$: 'SendStart'};
 var $author$project$Main$SendStop = {$: 'SendStop'};
 var $elm$html$Html$button = _VirtualDom_node('button');
@@ -10707,18 +10741,33 @@ var $author$project$Main$viewStartStopButton = F2(
 	function (startStop, comment) {
 		var _v0 = function () {
 			if (startStop.$ === 'Start') {
-				return _Utils_Tuple2($author$project$Main$SendStart, 'Start');
+				return _Utils_Tuple3(
+					$author$project$Main$SendStart,
+					'Start',
+					A2(
+						$elm$html$Html$button,
+						_List_fromArray(
+							[
+								$elm$html$Html$Attributes$class('btn btn-primary'),
+								$elm$html$Html$Events$onClick($author$project$Main$SendContinue)
+							]),
+						_List_fromArray(
+							[
+								$elm$html$Html$text('Fortsetzen')
+							])));
 			} else {
-				return _Utils_Tuple2($author$project$Main$SendStop, 'Stop');
+				return _Utils_Tuple3($author$project$Main$SendStop, 'Stop', $author$project$Main$viewEmpty);
 			}
 		}();
 		var event = _v0.a;
 		var buttonText = _v0.b;
+		var _continue = _v0.c;
 		return A2(
 			$elm$html$Html$div,
 			_List_Nil,
 			_List_fromArray(
 				[
+					_continue,
 					A2(
 					$elm$html$Html$button,
 					_List_fromArray(
@@ -12843,14 +12892,6 @@ var $author$project$Main$viewLogin = function (pass) {
 						$elm$html$Html$text('Anmelden')
 					]))
 			]));
-};
-var $author$project$Periode$sort = function (periodes) {
-	return A2(
-		$elm$core$List$sortBy,
-		function (p) {
-			return $elm$time$Time$posixToMillis(p.start);
-		},
-		periodes);
 };
 var $elm$html$Html$table = _VirtualDom_node('table');
 var $elm$html$Html$tbody = _VirtualDom_node('tbody');
