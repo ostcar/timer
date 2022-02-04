@@ -1,9 +1,10 @@
-module Periode exposing (Current(..), ID, Periode, State, fetch, idToString, sort)
+module Periode exposing (Current(..), ID, Periode, State, fetch, filterYearMonth, idToString, sort)
 
 import Http
 import Json.Decode as Decode exposing (Decoder, bool, int, map, string)
 import Json.Decode.Pipeline exposing (optional, required)
 import Time
+import YearMonth exposing (YearMonthSelect(..))
 
 
 type Current
@@ -105,3 +106,13 @@ fetch result =
 sort : List Periode -> List Periode
 sort periodes =
     List.sortBy (\p -> Time.posixToMillis p.start) periodes
+
+
+filterYearMonth : Time.Zone -> YearMonth.YearMonthSelect -> List Periode -> List Periode
+filterYearMonth zone ym periodes =
+    case ym of
+        YearMonth.All ->
+            periodes
+
+        _ ->
+            periodes |> List.filter (\p -> YearMonth.fromPosix zone p.start == ym)

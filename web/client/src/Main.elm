@@ -15,6 +15,7 @@ import Time
 import Time.Format
 import Time.Format.Config.Config_de_de
 import TimeZone
+import YearMonth exposing (YearMonthSelect(..))
 
 
 timeZone : Time.Zone
@@ -41,6 +42,7 @@ type alias Model =
     , currentTime : Time.Posix
     , permission : Permission
     , inputPassword : String
+    , selectedYearMonth : YearMonth.YearMonthSelect
     }
 
 
@@ -76,6 +78,7 @@ type Msg
     | SendPassword
     | ReceiveAuth (Result Http.Error String)
     | Logout
+    | SelectYearMonth String
 
 
 init : String -> ( Model, Cmd Msg )
@@ -103,6 +106,7 @@ init token =
       , currentTime = Time.millisToPosix 0
       , permission = permission
       , inputPassword = ""
+      , selectedYearMonth = YearMonth.All
       }
     , cmd
     )
@@ -322,6 +326,11 @@ update msg model =
                 }
             )
 
+        SelectYearMonth value ->
+            ( { model | selectedYearMonth = YearMonth.fromAttr value }
+            , Cmd.none
+            )
+
 
 lastComment : List Periode.Periode -> String
 lastComment periodes =
@@ -432,7 +441,7 @@ view model =
                     div []
                         [ viewCurrent model.current model.comment |> canWrite model.permission
                         , viewInsert model.insert |> canWrite model.permission
-                        , viewPeriodes model.permission model.periodes
+                        , viewPeriodes timeZone model.selectedYearMonth model.permission model.periodes
                         , viewFooter
                         ]
 
@@ -518,12 +527,22 @@ viewStartStopButton startStop comment =
         ]
 
 
-viewPeriodes : Permission -> List Periode.Periode -> Html Msg
-viewPeriodes permission periodes =
-    table [ Html.Attributes.class "table" ]
-        [ viewPeriodeHeader permission
-        , tbody [] (List.map (viewPeriodeLine permission) (Periode.sort periodes))
-        , viewPeriodeFoot permission periodes
+viewPeriodes : Time.Zone -> YearMonthSelect -> Permission -> List Periode.Periode -> Html Msg
+viewPeriodes zone selected permission periodes =
+    let
+        sorted =
+            Periode.sort periodes
+
+        filtered =
+            Periode.filterYearMonth timeZone selected sorted
+    in
+    div []
+        [ sorted |> List.map (\p -> p.start) |> YearMonth.viewYearMonthSelect zone selected SelectYearMonth
+        , table [ Html.Attributes.class "table" ]
+            [ viewPeriodeHeader permission
+            , tbody [] (List.map (viewPeriodeLine permission) filtered)
+            , viewPeriodeFoot permission filtered
+            ]
         ]
 
 

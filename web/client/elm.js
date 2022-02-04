@@ -5681,6 +5681,7 @@ var $elm$core$Task$perform = F2(
 				A2($elm$core$Task$map, toMessage, task)));
 	});
 var $elm$browser$Browser$element = _Browser_element;
+var $author$project$YearMonth$All = {$: 'All'};
 var $author$project$Main$ReceiveState = function (a) {
 	return {$: 'ReceiveState', a: a};
 };
@@ -7234,7 +7235,8 @@ var $author$project$Main$init = function (token) {
 			inputPassword: '',
 			insert: $elm$core$Maybe$Nothing,
 			periodes: _List_Nil,
-			permission: permission
+			permission: permission,
+			selectedYearMonth: $author$project$YearMonth$All
 		},
 		cmd);
 };
@@ -9324,6 +9326,59 @@ var $elm$http$Http$expectWhatever = function (toMsg) {
 				return $elm$core$Result$Ok(_Utils_Tuple0);
 			}));
 };
+var $author$project$YearMonth$YearMonth = F2(
+	function (a, b) {
+		return {$: 'YearMonth', a: a, b: b};
+	});
+var $author$project$YearMonth$stringToMonth = function (month) {
+	switch (month) {
+		case 'januar':
+			return $elm$core$Maybe$Just($elm$time$Time$Jan);
+		case 'februar':
+			return $elm$core$Maybe$Just($elm$time$Time$Feb);
+		case 'märz':
+			return $elm$core$Maybe$Just($elm$time$Time$Mar);
+		case 'april':
+			return $elm$core$Maybe$Just($elm$time$Time$Apr);
+		case 'may':
+			return $elm$core$Maybe$Just($elm$time$Time$May);
+		case 'juni':
+			return $elm$core$Maybe$Just($elm$time$Time$Jun);
+		case 'juli':
+			return $elm$core$Maybe$Just($elm$time$Time$Jul);
+		case 'august':
+			return $elm$core$Maybe$Just($elm$time$Time$Aug);
+		case 'september':
+			return $elm$core$Maybe$Just($elm$time$Time$Sep);
+		case 'oktober':
+			return $elm$core$Maybe$Just($elm$time$Time$Oct);
+		case 'november':
+			return $elm$core$Maybe$Just($elm$time$Time$Nov);
+		case 'dezember':
+			return $elm$core$Maybe$Just($elm$time$Time$Dec);
+		default:
+			return $elm$core$Maybe$Nothing;
+	}
+};
+var $author$project$YearMonth$fromAttr = function (value) {
+	var _v0 = A2($elm$core$String$split, '_', value);
+	if ((_v0.b && _v0.b.b) && (!_v0.b.b.b)) {
+		var strYear = _v0.a;
+		var _v1 = _v0.b;
+		var strMonth = _v1.a;
+		var year = $elm$core$String$toInt(strYear);
+		var month = $author$project$YearMonth$stringToMonth(strMonth);
+		var _v2 = A3($elm$core$Maybe$map2, $author$project$YearMonth$YearMonth, year, month);
+		if (_v2.$ === 'Just') {
+			var ym = _v2.a;
+			return ym;
+		} else {
+			return $author$project$YearMonth$All;
+		}
+	} else {
+		return $author$project$YearMonth$All;
+	}
+};
 var $elm$core$List$head = function (list) {
 	if (list.b) {
 		var x = list.a;
@@ -10242,7 +10297,7 @@ var $author$project$Main$update = F2(
 							}),
 						$elm$core$Platform$Cmd$none);
 				}
-			default:
+			case 'Logout':
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
@@ -10252,6 +10307,15 @@ var $author$project$Main$update = F2(
 							expect: $elm$http$Http$expectWhatever($author$project$Main$ReceiveEvent),
 							url: '/api/auth/logout'
 						}));
+			default:
+				var value = msg.a;
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{
+							selectedYearMonth: $author$project$YearMonth$fromAttr(value)
+						}),
+					$elm$core$Platform$Cmd$none);
 		}
 	});
 var $elm$virtual_dom$VirtualDom$text = _VirtualDom_text;
@@ -12893,6 +12957,31 @@ var $author$project$Main$viewLogin = function (pass) {
 					]))
 			]));
 };
+var $author$project$Main$SelectYearMonth = function (a) {
+	return {$: 'SelectYearMonth', a: a};
+};
+var $author$project$YearMonth$fromPosix = F2(
+	function (zone, time) {
+		return A2(
+			$author$project$YearMonth$YearMonth,
+			A2($elm$time$Time$toYear, zone, time),
+			A2($elm$time$Time$toMonth, zone, time));
+	});
+var $author$project$Periode$filterYearMonth = F3(
+	function (zone, ym, periodes) {
+		if (ym.$ === 'All') {
+			return periodes;
+		} else {
+			return A2(
+				$elm$core$List$filter,
+				function (p) {
+					return _Utils_eq(
+						A2($author$project$YearMonth$fromPosix, zone, p.start),
+						ym);
+				},
+				periodes);
+		}
+	});
 var $elm$html$Html$table = _VirtualDom_node('table');
 var $elm$html$Html$tbody = _VirtualDom_node('tbody');
 var $ianmackenzie$elm_units$Quantity$Quantity = function (a) {
@@ -13130,25 +13219,170 @@ var $author$project$Main$viewPeriodeLine = F2(
 							])))
 				]));
 	});
-var $author$project$Main$viewPeriodes = F2(
-	function (permission, periodes) {
+var $author$project$YearMonth$unique = function (list) {
+	unique:
+	while (true) {
+		if (list.b) {
+			if (list.b.b) {
+				var first = list.a;
+				var _v1 = list.b;
+				var second = _v1.a;
+				var tail = _v1.b;
+				if (_Utils_eq(first, second)) {
+					var $temp$list = A2($elm$core$List$cons, first, tail);
+					list = $temp$list;
+					continue unique;
+				} else {
+					return A2(
+						$elm$core$List$cons,
+						first,
+						$author$project$YearMonth$unique(
+							A2($elm$core$List$cons, second, tail)));
+				}
+			} else {
+				var first = list.a;
+				return _List_fromArray(
+					[first]);
+			}
+		} else {
+			return _List_Nil;
+		}
+	}
+};
+var $author$project$YearMonth$monthToString = function (month) {
+	switch (month.$) {
+		case 'Jan':
+			return 'Januar';
+		case 'Feb':
+			return 'Februar';
+		case 'Mar':
+			return 'März';
+		case 'Apr':
+			return 'April';
+		case 'May':
+			return 'May';
+		case 'Jun':
+			return 'Juni';
+		case 'Jul':
+			return 'Juli';
+		case 'Aug':
+			return 'August';
+		case 'Sep':
+			return 'September';
+		case 'Oct':
+			return 'Oktober';
+		case 'Nov':
+			return 'November';
+		default:
+			return 'Dezember';
+	}
+};
+var $elm$core$String$toLower = _String_toLower;
+var $author$project$YearMonth$toAttr = function (yearMonth) {
+	if (yearMonth.$ === 'All') {
+		return 'alle';
+	} else {
+		var year = yearMonth.a;
+		var month = yearMonth.b;
+		return $elm$core$String$fromInt(year) + ('_' + $elm$core$String$toLower(
+			$author$project$YearMonth$monthToString(month)));
+	}
+};
+var $author$project$YearMonth$toString = function (yearMonth) {
+	if (yearMonth.$ === 'All') {
+		return 'Alle';
+	} else {
+		var year = yearMonth.a;
+		var month = yearMonth.b;
+		return $elm$core$String$fromInt(year) + (' ' + $author$project$YearMonth$monthToString(month));
+	}
+};
+var $author$project$YearMonth$viewYearMonthOption = F2(
+	function (selectedYM, ym) {
 		return A2(
-			$elm$html$Html$table,
+			$elm$html$Html$option,
 			_List_fromArray(
 				[
-					$elm$html$Html$Attributes$class('table')
+					$elm$html$Html$Attributes$value(
+					$author$project$YearMonth$toAttr(ym)),
+					$elm$html$Html$Attributes$selected(
+					_Utils_eq(selectedYM, ym))
 				]),
 			_List_fromArray(
 				[
-					$author$project$Main$viewPeriodeHeader(permission),
-					A2(
-					$elm$html$Html$tbody,
-					_List_Nil,
+					$elm$html$Html$text(
+					$author$project$YearMonth$toString(ym))
+				]));
+	});
+var $author$project$YearMonth$yearMonthList = F2(
+	function (zone, periodes) {
+		return A3(
+			$elm$core$List$foldl,
+			F2(
+				function (p, l) {
+					return A2(
+						$elm$core$List$cons,
+						A2($author$project$YearMonth$fromPosix, zone, p),
+						l);
+				}),
+			_List_Nil,
+			periodes);
+	});
+var $author$project$YearMonth$viewYearMonthSelect = F4(
+	function (zone, selected, event, times) {
+		return A2(
+			$elm$html$Html$select,
+			_List_fromArray(
+				[
+					$elm$html$Html$Events$onInput(event)
+				]),
+			A2(
+				$elm$core$List$map,
+				$author$project$YearMonth$viewYearMonthOption(selected),
+				A2(
+					$elm$core$List$cons,
+					$author$project$YearMonth$All,
+					$author$project$YearMonth$unique(
+						A2($author$project$YearMonth$yearMonthList, zone, times)))));
+	});
+var $author$project$Main$viewPeriodes = F4(
+	function (zone, selected, permission, periodes) {
+		var sorted = $author$project$Periode$sort(periodes);
+		var filtered = A3($author$project$Periode$filterYearMonth, $author$project$Main$timeZone, selected, sorted);
+		return A2(
+			$elm$html$Html$div,
+			_List_Nil,
+			_List_fromArray(
+				[
+					A4(
+					$author$project$YearMonth$viewYearMonthSelect,
+					zone,
+					selected,
+					$author$project$Main$SelectYearMonth,
 					A2(
 						$elm$core$List$map,
-						$author$project$Main$viewPeriodeLine(permission),
-						$author$project$Periode$sort(periodes))),
-					A2($author$project$Main$viewPeriodeFoot, permission, periodes)
+						function (p) {
+							return p.start;
+						},
+						sorted)),
+					A2(
+					$elm$html$Html$table,
+					_List_fromArray(
+						[
+							$elm$html$Html$Attributes$class('table')
+						]),
+					_List_fromArray(
+						[
+							$author$project$Main$viewPeriodeHeader(permission),
+							A2(
+							$elm$html$Html$tbody,
+							_List_Nil,
+							A2(
+								$elm$core$List$map,
+								$author$project$Main$viewPeriodeLine(permission),
+								filtered)),
+							A2($author$project$Main$viewPeriodeFoot, permission, filtered)
+						]))
 				]));
 	});
 var $author$project$Main$view = function (model) {
@@ -13180,7 +13414,7 @@ var $author$project$Main$view = function (model) {
 						$author$project$Main$canWrite,
 						model.permission,
 						$author$project$Main$viewInsert(model.insert)),
-						A2($author$project$Main$viewPeriodes, model.permission, model.periodes),
+						A4($author$project$Main$viewPeriodes, $author$project$Main$timeZone, model.selectedYearMonth, model.permission, model.periodes),
 						$author$project$Main$viewFooter
 					]));
 		}
