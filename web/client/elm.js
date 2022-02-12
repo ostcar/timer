@@ -9389,12 +9389,13 @@ var $elm$core$List$head = function (list) {
 	}
 };
 var $author$project$Periode$sort = function (periodes) {
-	return A2(
-		$elm$core$List$sortBy,
-		function (p) {
-			return $elm$time$Time$posixToMillis(p.start);
-		},
-		periodes);
+	return $elm$core$List$reverse(
+		A2(
+			$elm$core$List$sortBy,
+			function (p) {
+				return $elm$time$Time$posixToMillis(p.start);
+			},
+			periodes));
 };
 var $author$project$Main$lastComment = function (periodes) {
 	var _v0 = $elm$core$List$head(

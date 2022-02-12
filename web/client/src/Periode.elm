@@ -105,7 +105,9 @@ fetch result =
 
 sort : List Periode -> List Periode
 sort periodes =
-    List.sortBy (\p -> Time.posixToMillis p.start) periodes
+    periodes
+        |> List.sortBy (\p -> Time.posixToMillis p.start)
+        |> List.reverse
 
 
 filterYearMonth : Time.Zone -> YearMonth.YearMonthSelect -> List Periode -> List Periode
