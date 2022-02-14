@@ -9399,8 +9399,7 @@ var $author$project$Periode$sort = function (periodes) {
 };
 var $author$project$Main$lastComment = function (periodes) {
 	var _v0 = $elm$core$List$head(
-		$elm$core$List$reverse(
-			$author$project$Periode$sort(periodes)));
+		$author$project$Periode$sort(periodes));
 	if (_v0.$ === 'Nothing') {
 		return '';
 	} else {

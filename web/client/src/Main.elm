@@ -334,7 +334,7 @@ update msg model =
 
 lastComment : List Periode.Periode -> String
 lastComment periodes =
-    case Periode.sort periodes |> List.reverse |> List.head of
+    case Periode.sort periodes |> List.head of
         Nothing ->
             ""
 
