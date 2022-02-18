@@ -21,8 +21,8 @@ func main() {
 	}
 }
 
-func connect() (proto.TimerClient, func() error, error) {
-	conn, err := grpc.Dial("localhost:4040", grpc.WithInsecure())
+func connect(domain string) (proto.TimerClient, func() error, error) {
+	conn, err := grpc.Dial(domain, grpc.WithInsecure())
 	if err != nil {
 		return nil, nil, fmt.Errorf("creating connection: %w", err)
 	}
@@ -40,19 +40,21 @@ func rootCmd() *cobra.Command {
 		SilenceUsage:  true,
 	}
 
+	domain := cmd.PersistentFlags().StringP("domain", "d", "localhost:4040", "domain of the timer server")
+
 	cmd.AddCommand(
-		startCmd(),
-		stopCmd(),
-		listCmd(),
-		editCmd(),
-		insertCmd(),
-		deleteCmd(),
+		startCmd(domain),
+		stopCmd(domain),
+		listCmd(domain),
+		editCmd(domain),
+		insertCmd(domain),
+		deleteCmd(domain),
 	)
 
 	return &cmd
 }
 
-func startCmd() *cobra.Command {
+func startCmd(domain *string) *cobra.Command {
 	cmd := cobra.Command{
 		Use:   "start [comment]",
 		Short: "start working",
@@ -60,7 +62,7 @@ func startCmd() *cobra.Command {
 	}
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		client, close, err := connect()
+		client, close, err := connect(*domain)
 		if err != nil {
 			return fmt.Errorf("creating client: %w", err)
 		}
@@ -80,7 +82,7 @@ func startCmd() *cobra.Command {
 	return &cmd
 }
 
-func stopCmd() *cobra.Command {
+func stopCmd(domain *string) *cobra.Command {
 	cmd := cobra.Command{
 		Use:   "stop [comment]",
 		Short: "stop working",
@@ -88,7 +90,7 @@ func stopCmd() *cobra.Command {
 	}
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		client, close, err := connect()
+		client, close, err := connect(*domain)
 		if err != nil {
 			return fmt.Errorf("creating client: %w", err)
 		}
@@ -110,7 +112,7 @@ func stopCmd() *cobra.Command {
 	return &cmd
 }
 
-func listCmd() *cobra.Command {
+func listCmd(domain *string) *cobra.Command {
 	cmd := cobra.Command{
 		Use:   "list",
 		Short: "list the work",
@@ -121,7 +123,8 @@ func listCmd() *cobra.Command {
 	reverse := cmd.Flags().Bool("reverse", false, "show results in reverse order")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		client, close, err := connect()
+		log.Println(domain)
+		client, close, err := connect(*domain)
 		if err != nil {
 			return fmt.Errorf("creating client: %w", err)
 		}
@@ -154,7 +157,7 @@ func listCmd() *cobra.Command {
 	return &cmd
 }
 
-func editCmd() *cobra.Command {
+func editCmd(domain *string) *cobra.Command {
 	cmd := cobra.Command{
 		Use:   "edit id",
 		Short: "edit an periode",
@@ -167,7 +170,7 @@ func editCmd() *cobra.Command {
 	timeFormat := cmd.Flags().String("time_format", "2006-01-02 15:04:05", "format string to parse the timestamps. See golang time.")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		client, close, err := connect()
+		client, close, err := connect(*domain)
 		if err != nil {
 			return fmt.Errorf("creating client: %w", err)
 		}
@@ -222,7 +225,7 @@ func editCmd() *cobra.Command {
 	return &cmd
 }
 
-func insertCmd() *cobra.Command {
+func insertCmd(domain *string) *cobra.Command {
 	cmd := cobra.Command{
 		Use:   "insert start stop [comment]",
 		Short: "insert an periode",
@@ -232,7 +235,7 @@ func insertCmd() *cobra.Command {
 	timeFormat := cmd.Flags().String("time_format", "2006-01-02 15:04:05", "format string to parse the timestamps. See golang time.")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		client, close, err := connect()
+		client, close, err := connect(*domain)
 		if err != nil {
 			return fmt.Errorf("creating client: %w", err)
 		}
@@ -273,7 +276,7 @@ func insertCmd() *cobra.Command {
 	return &cmd
 }
 
-func deleteCmd() *cobra.Command {
+func deleteCmd(domain *string) *cobra.Command {
 	cmd := cobra.Command{
 		Use:   "delete id",
 		Short: "delete an periode",
@@ -281,7 +284,7 @@ func deleteCmd() *cobra.Command {
 	}
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		client, close, err := connect()
+		client, close, err := connect(*domain)
 		if err != nil {
 			return fmt.Errorf("creating client: %w", err)
 		}
