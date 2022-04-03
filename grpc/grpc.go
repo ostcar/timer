@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/ostcar/timer/grpc/proto"
-	"github.com/ostcar/timer/maybe"
 	"github.com/ostcar/timer/model"
 	"google.golang.org/grpc"
 )
@@ -47,16 +46,16 @@ type grpcServer struct {
 }
 
 func (s grpcServer) Start(ctx context.Context, req *proto.StartRequest) (*proto.StartResponse, error) {
-	if err := s.model.Start(maybe.NewString(req.Comment)); err != nil {
+	if err := s.model.Start(model.Just(req.Comment)); err != nil {
 		return nil, fmt.Errorf("starting timer: %w", err)
 	}
 	return new(proto.StartResponse), nil
 }
 
 func (s grpcServer) Stop(ctx context.Context, req *proto.StopRequest) (*proto.StopResponse, error) {
-	comment := maybe.String{}
+	var comment model.Maybe[string]
 	if req.HasComment {
-		comment = maybe.NewString(req.Comment)
+		comment = model.Just(req.Comment)
 	}
 
 	id, err := s.model.Stop(comment)
@@ -84,19 +83,19 @@ func (s grpcServer) List(ctx context.Context, req *proto.ListRequest) (*proto.Li
 }
 
 func (s grpcServer) Edit(ctx context.Context, req *proto.EditRequest) (*proto.EditResponse, error) {
-	start := maybe.Time{}
+	var start model.Maybe[model.JSONTime]
 	if req.HasStart {
-		start = maybe.NewTime(maybe.JSONTime(time.Unix(req.Start, 0)))
+		start = model.Just(model.JSONTime(time.Unix(req.Start, 0)))
 	}
 
-	stop := maybe.Time{}
+	var stop model.Maybe[model.JSONTime]
 	if req.HasStop {
-		stop = maybe.NewTime(maybe.JSONTime(time.Unix(req.Stop, 0)))
+		stop = model.Just(model.JSONTime(time.Unix(req.Stop, 0)))
 	}
 
-	comment := maybe.String{}
+	var comment model.Maybe[string]
 	if req.HasComment {
-		comment = maybe.NewString(req.Comment)
+		comment = model.Just(req.Comment)
 	}
 
 	if err := s.model.Edit(int(req.Id), start, stop, comment); err != nil {
@@ -109,9 +108,9 @@ func (s grpcServer) Insert(ctx context.Context, req *proto.InsertRequest) (*prot
 	start := time.Unix(req.Start, 0)
 	stop := time.Unix(req.Stop, 0)
 
-	comment := maybe.String{}
+	var comment model.Maybe[string]
 	if req.HasComment {
-		comment = maybe.NewString(req.Comment)
+		comment = model.Just(req.Comment)
 	}
 
 	id, err := s.model.Insert(start, stop, comment)
