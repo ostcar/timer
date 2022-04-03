@@ -3,8 +3,6 @@ package model
 import (
 	"fmt"
 	"time"
-
-	"github.com/ostcar/timer/maybe"
 )
 
 func getEvent(eventType string) Event {
@@ -37,11 +35,16 @@ type Event interface {
 }
 
 type eventStart struct {
-	Comment maybe.String `json:"comment"`
+	Comment Maybe[string] `json:"comment"`
 }
 
 func (e eventStart) String() string {
-	return fmt.Sprintf("Start with comment `%s`", e.Comment)
+	comment, exist := e.Comment.Value()
+	if exist {
+		return fmt.Sprintf("Start with comment `%s`", comment)
+	}
+
+	return fmt.Sprintf("Start with no comment")
 }
 
 func (e eventStart) Name() string {
@@ -62,8 +65,8 @@ func (e eventStart) execute(model *Model, time time.Time) error {
 }
 
 type eventStop struct {
-	ID      int          `json:"id"`
-	Comment maybe.String `json:"comment"`
+	ID      int           `json:"id"`
+	Comment Maybe[string] `json:"comment"`
 }
 
 func (e eventStop) String() string {
@@ -109,15 +112,15 @@ func (e eventStop) execute(model *Model, eventTime time.Time) error {
 
 	model.periodes[e.ID] = p
 	model.current.start = time.Time{}
-	model.current.comment = maybe.String{}
+	model.current.comment = Maybe[string]{}
 	return nil
 }
 
 type eventInsert struct {
-	ID      int            `json:"id"`
-	Start   maybe.JSONTime `json:"start"`
-	Stop    maybe.JSONTime `json:"stop"`
-	Comment maybe.String   `json:"comment"`
+	ID      int           `json:"id"`
+	Start   JSONTime      `json:"start"`
+	Stop    JSONTime      `json:"stop"`
+	Comment Maybe[string] `json:"comment"`
 }
 
 func (e eventInsert) String() string {
@@ -185,10 +188,10 @@ func (e eventDelete) execute(model *Model, eventTime time.Time) error {
 }
 
 type eventEdit struct {
-	ID      int          `json:"id"`
-	Start   maybe.Time   `json:"start"`
-	Stop    maybe.Time   `json:"stop"`
-	Comment maybe.String `json:"comment"`
+	ID      int             `json:"id"`
+	Start   Maybe[JSONTime] `json:"start"`
+	Stop    Maybe[JSONTime] `json:"stop"`
+	Comment Maybe[string]   `json:"comment"`
 }
 
 func (e eventEdit) String() string {

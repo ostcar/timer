@@ -11,8 +11,6 @@ import (
 	"os"
 	"sync"
 	"time"
-
-	"github.com/ostcar/timer/maybe"
 )
 
 const timeFormat = "2006-01-02 15:04:05"
@@ -24,7 +22,7 @@ type Model struct {
 
 	current struct {
 		start   time.Time
-		comment maybe.String
+		comment Maybe[string]
 	}
 
 	periodes map[int]Periode
@@ -35,7 +33,7 @@ type Periode struct {
 	ID      int
 	Start   time.Time
 	Stop    time.Time
-	Comment maybe.String
+	Comment Maybe[string]
 }
 
 // NewModel load the db from file.
@@ -163,7 +161,7 @@ func (m *Model) writeEvent(e Event) (err error) {
 }
 
 // Start starts the timer.
-func (m *Model) Start(comment maybe.String) error {
+func (m *Model) Start(comment Maybe[string]) error {
 	log.Printf("start event")
 	if err := m.writeEvent(eventStart{Comment: comment}); err != nil {
 		return fmt.Errorf("writing event: %w", err)
@@ -172,7 +170,7 @@ func (m *Model) Start(comment maybe.String) error {
 }
 
 // Stop stops the timer.
-func (m *Model) Stop(comment maybe.String) (int, error) {
+func (m *Model) Stop(comment Maybe[string]) (int, error) {
 	log.Printf("stop event")
 	nextID := m.nextID()
 
@@ -206,17 +204,17 @@ func (m *Model) Delete(id int) error {
 }
 
 // Insert creates a new periode.
-func (m *Model) Insert(start, stop time.Time, comment maybe.String) (int, error) {
+func (m *Model) Insert(start, stop time.Time, comment Maybe[string]) (int, error) {
 	log.Printf("insert event")
 	nextID := m.nextID()
-	if err := m.writeEvent(eventInsert{ID: nextID, Start: maybe.JSONTime(start), Stop: maybe.JSONTime(stop), Comment: comment}); err != nil {
+	if err := m.writeEvent(eventInsert{ID: nextID, Start: JSONTime(start), Stop: JSONTime(stop), Comment: comment}); err != nil {
 		return 0, fmt.Errorf("writing event: %w", err)
 	}
 	return nextID, nil
 }
 
 // Edit changes an existing periode.
-func (m *Model) Edit(id int, start, stop maybe.Time, comment maybe.String) error {
+func (m *Model) Edit(id int, start, stop Maybe[JSONTime], comment Maybe[string]) error {
 	log.Printf("Log event for id %d", id)
 	if err := m.writeEvent(eventEdit{ID: id, Start: start, Stop: stop, Comment: comment}); err != nil {
 		return fmt.Errorf("writing event: %w", err)
@@ -239,12 +237,12 @@ func (m *Model) List() []Periode {
 // Running tells if the timer is currently running.
 //
 // If its running, it returns the start time and the comment.
-func (m *Model) Running() (start time.Time, comment maybe.String, ok bool) {
+func (m *Model) Running() (start time.Time, comment Maybe[string], ok bool) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
 	if m.current.start.IsZero() {
-		return time.Time{}, maybe.String{}, false
+		return time.Time{}, Maybe[string]{}, false
 	}
 
 	return m.current.start, m.current.comment, true
