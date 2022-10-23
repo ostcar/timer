@@ -12984,102 +12984,10 @@ var $author$project$Periode$filterYearMonth = F3(
 	});
 var $elm$html$Html$table = _VirtualDom_node('table');
 var $elm$html$Html$tbody = _VirtualDom_node('tbody');
-var $ianmackenzie$elm_units$Quantity$Quantity = function (a) {
-	return {$: 'Quantity', a: a};
-};
-var $ianmackenzie$elm_units$Duration$seconds = function (numSeconds) {
-	return $ianmackenzie$elm_units$Quantity$Quantity(numSeconds);
-};
-var $ianmackenzie$elm_units$Duration$milliseconds = function (numMilliseconds) {
-	return $ianmackenzie$elm_units$Duration$seconds(0.001 * numMilliseconds);
-};
-var $ianmackenzie$elm_units$Duration$from = F2(
-	function (startTime, endTime) {
-		var numMilliseconds = $elm$time$Time$posixToMillis(endTime) - $elm$time$Time$posixToMillis(startTime);
-		return $ianmackenzie$elm_units$Duration$milliseconds(numMilliseconds);
-	});
-var $ianmackenzie$elm_units$Duration$inSeconds = function (_v0) {
-	var numSeconds = _v0.a;
-	return numSeconds;
-};
-var $ianmackenzie$elm_units$Duration$inMilliseconds = function (duration) {
-	return $ianmackenzie$elm_units$Duration$inSeconds(duration) * 1000;
-};
-var $author$project$Main$periodeAddMillis = F2(
-	function (periode, millis) {
-		var duration = A2($ianmackenzie$elm_units$Duration$from, periode.start, periode.stop);
-		return millis + $ianmackenzie$elm_units$Duration$inMilliseconds(duration);
-	});
-var $elm$html$Html$td = _VirtualDom_node('td');
-var $elm$html$Html$tr = _VirtualDom_node('tr');
-var $ianmackenzie$elm_units$Constants$second = 1;
-var $ianmackenzie$elm_units$Constants$minute = 60 * $ianmackenzie$elm_units$Constants$second;
-var $ianmackenzie$elm_units$Constants$hour = 60 * $ianmackenzie$elm_units$Constants$minute;
-var $ianmackenzie$elm_units$Duration$inHours = function (duration) {
-	return $ianmackenzie$elm_units$Duration$inSeconds(duration) / $ianmackenzie$elm_units$Constants$hour;
-};
-var $ianmackenzie$elm_units$Duration$inMinutes = function (duration) {
-	return $ianmackenzie$elm_units$Duration$inSeconds(duration) / 60;
-};
-var $author$project$Main$viewDuration = function (duration) {
-	var minutesRaw = $elm$core$String$fromInt(
-		A2(
-			$elm$core$Basics$modBy,
-			60,
-			$elm$core$Basics$floor(
-				$ianmackenzie$elm_units$Duration$inMinutes(duration))));
-	var minutes = ($elm$core$String$length(minutesRaw) === 1) ? ('0' + minutesRaw) : minutesRaw;
-	var hours = $elm$core$String$fromInt(
-		$elm$core$Basics$floor(
-			$ianmackenzie$elm_units$Duration$inHours(duration)));
-	return hours + (':' + minutes);
-};
-var $author$project$Main$viewPeriodeFoot = F2(
-	function (permission, periodes) {
-		var millis = $ianmackenzie$elm_units$Duration$milliseconds(
-			A3($elm$core$List$foldl, $author$project$Main$periodeAddMillis, 0, periodes));
-		return A2(
-			$elm$html$Html$tr,
-			_List_Nil,
-			_List_fromArray(
-				[
-					A2(
-					$elm$html$Html$td,
-					_List_Nil,
-					_List_fromArray(
-						[
-							$elm$html$Html$text('')
-						])),
-					A2(
-					$elm$html$Html$td,
-					_List_Nil,
-					_List_fromArray(
-						[
-							$elm$html$Html$text(
-							$author$project$Main$viewDuration(millis))
-						])),
-					A2(
-					$elm$html$Html$td,
-					_List_Nil,
-					_List_fromArray(
-						[
-							$elm$html$Html$text('')
-						])),
-					A2(
-					$author$project$Main$canWrite,
-					permission,
-					A2(
-						$elm$html$Html$td,
-						_List_Nil,
-						_List_fromArray(
-							[
-								$elm$html$Html$text('')
-							])))
-				]));
-	});
 var $elm$html$Html$Attributes$scope = $elm$html$Html$Attributes$stringProperty('scope');
 var $elm$html$Html$th = _VirtualDom_node('th');
 var $elm$html$Html$thead = _VirtualDom_node('thead');
+var $elm$html$Html$tr = _VirtualDom_node('tr');
 var $author$project$Main$viewPeriodeHeader = function (permission) {
 	return A2(
 		$elm$html$Html$thead,
@@ -13121,6 +13029,16 @@ var $author$project$Main$viewPeriodeHeader = function (permission) {
 							]),
 						_List_fromArray(
 							[
+								$elm$html$Html$text('Euros')
+							])),
+						A2(
+						$elm$html$Html$th,
+						_List_fromArray(
+							[
+								$elm$html$Html$Attributes$scope('col')
+							]),
+						_List_fromArray(
+							[
 								$elm$html$Html$text('Comment')
 							])),
 						A2(
@@ -13142,6 +13060,72 @@ var $author$project$Main$viewPeriodeHeader = function (permission) {
 };
 var $author$project$Main$SendDelete = function (a) {
 	return {$: 'SendDelete', a: a};
+};
+var $author$project$Main$intToString2 = function (n) {
+	var str = $elm$core$String$fromInt(n);
+	var formatted = ($elm$core$String$length(str) < 2) ? ('0' + str) : str;
+	return formatted;
+};
+var $author$project$Main$euroCentToString = function (euroCent) {
+	var euro = (euroCent / 100) | 0;
+	var cent = euroCent % 100;
+	return $elm$core$String$fromInt(euro) + (',' + ($author$project$Main$intToString2(cent) + ' €'));
+};
+var $ianmackenzie$elm_units$Quantity$Quantity = function (a) {
+	return {$: 'Quantity', a: a};
+};
+var $ianmackenzie$elm_units$Duration$seconds = function (numSeconds) {
+	return $ianmackenzie$elm_units$Quantity$Quantity(numSeconds);
+};
+var $ianmackenzie$elm_units$Duration$milliseconds = function (numMilliseconds) {
+	return $ianmackenzie$elm_units$Duration$seconds(0.001 * numMilliseconds);
+};
+var $ianmackenzie$elm_units$Duration$from = F2(
+	function (startTime, endTime) {
+		var numMilliseconds = $elm$time$Time$posixToMillis(endTime) - $elm$time$Time$posixToMillis(startTime);
+		return $ianmackenzie$elm_units$Duration$milliseconds(numMilliseconds);
+	});
+var $ianmackenzie$elm_units$Constants$second = 1;
+var $ianmackenzie$elm_units$Constants$minute = 60 * $ianmackenzie$elm_units$Constants$second;
+var $ianmackenzie$elm_units$Constants$hour = 60 * $ianmackenzie$elm_units$Constants$minute;
+var $ianmackenzie$elm_units$Duration$inSeconds = function (_v0) {
+	var numSeconds = _v0.a;
+	return numSeconds;
+};
+var $ianmackenzie$elm_units$Duration$inHours = function (duration) {
+	return $ianmackenzie$elm_units$Duration$inSeconds(duration) / $ianmackenzie$elm_units$Constants$hour;
+};
+var $ianmackenzie$elm_units$Duration$inMinutes = function (duration) {
+	return $ianmackenzie$elm_units$Duration$inSeconds(duration) / 60;
+};
+var $elm$core$Basics$round = _Basics_round;
+var $author$project$Main$durationToEuroCent = F2(
+	function (amount, duration) {
+		var minutes = A2(
+			$elm$core$Basics$modBy,
+			60,
+			$elm$core$Basics$round(
+				$ianmackenzie$elm_units$Duration$inMinutes(duration)));
+		var minuteAmount = $elm$core$Basics$ceiling(amount / 60);
+		var hours = $elm$core$Basics$floor(
+			$ianmackenzie$elm_units$Duration$inHours(duration));
+		return (hours * amount) + (minutes * minuteAmount);
+	});
+var $author$project$Main$myHours = 8000;
+var $author$project$Main$mydurationToEuroCent = $author$project$Main$durationToEuroCent($author$project$Main$myHours);
+var $elm$html$Html$td = _VirtualDom_node('td');
+var $author$project$Main$viewDuration = function (duration) {
+	var minutesRaw = $elm$core$String$fromInt(
+		A2(
+			$elm$core$Basics$modBy,
+			60,
+			$elm$core$Basics$round(
+				$ianmackenzie$elm_units$Duration$inMinutes(duration))));
+	var minutes = ($elm$core$String$length(minutesRaw) === 1) ? ('0' + minutesRaw) : minutesRaw;
+	var hours = $elm$core$String$fromInt(
+		$elm$core$Basics$floor(
+			$ianmackenzie$elm_units$Duration$inHours(duration)));
+	return hours + (':' + minutes);
 };
 var $author$project$Main$viewPeriodeLine = F2(
 	function (permission, periode) {
@@ -13193,6 +13177,15 @@ var $author$project$Main$viewPeriodeLine = F2(
 					_List_fromArray(
 						[
 							$elm$html$Html$text(
+							$author$project$Main$euroCentToString(
+								$author$project$Main$mydurationToEuroCent(duration)))
+						])),
+					A2(
+					$elm$html$Html$td,
+					_List_Nil,
+					_List_fromArray(
+						[
+							$elm$html$Html$text(
 							A2($elm$core$Maybe$withDefault, '', periode.comment))
 						])),
 					A2(
@@ -13216,6 +13209,66 @@ var $author$project$Main$viewPeriodeLine = F2(
 									[
 										$elm$html$Html$text('X')
 									]))
+							])))
+				]));
+	});
+var $ianmackenzie$elm_units$Duration$inMilliseconds = function (duration) {
+	return $ianmackenzie$elm_units$Duration$inSeconds(duration) * 1000;
+};
+var $author$project$Main$periodeAddMillis = F2(
+	function (periode, millis) {
+		var duration = A2($ianmackenzie$elm_units$Duration$from, periode.start, periode.stop);
+		return millis + $ianmackenzie$elm_units$Duration$inMilliseconds(duration);
+	});
+var $author$project$Main$viewPeriodeSummary = F2(
+	function (permission, periodes) {
+		var millis = $ianmackenzie$elm_units$Duration$milliseconds(
+			A3($elm$core$List$foldl, $author$project$Main$periodeAddMillis, 0, periodes));
+		return A2(
+			$elm$html$Html$tr,
+			_List_Nil,
+			_List_fromArray(
+				[
+					A2(
+					$elm$html$Html$td,
+					_List_Nil,
+					_List_fromArray(
+						[
+							$elm$html$Html$text('Gesamt')
+						])),
+					A2(
+					$elm$html$Html$td,
+					_List_Nil,
+					_List_fromArray(
+						[
+							$elm$html$Html$text(
+							$author$project$Main$viewDuration(millis))
+						])),
+					A2(
+					$elm$html$Html$td,
+					_List_Nil,
+					_List_fromArray(
+						[
+							$elm$html$Html$text(
+							$author$project$Main$euroCentToString(
+								$author$project$Main$mydurationToEuroCent(millis)))
+						])),
+					A2(
+					$elm$html$Html$td,
+					_List_Nil,
+					_List_fromArray(
+						[
+							$elm$html$Html$text('')
+						])),
+					A2(
+					$author$project$Main$canWrite,
+					permission,
+					A2(
+						$elm$html$Html$td,
+						_List_Nil,
+						_List_fromArray(
+							[
+								$elm$html$Html$text('')
 							])))
 				]));
 	});
@@ -13349,6 +13402,13 @@ var $author$project$Main$viewPeriodes = F4(
 	function (zone, selected, permission, periodes) {
 		var sorted = $author$project$Periode$sort(periodes);
 		var filtered = A3($author$project$Periode$filterYearMonth, $author$project$Main$timeZone, selected, sorted);
+		var tableBody = A2(
+			$elm$core$List$cons,
+			A2($author$project$Main$viewPeriodeSummary, permission, filtered),
+			A2(
+				$elm$core$List$map,
+				$author$project$Main$viewPeriodeLine(permission),
+				filtered));
 		return A2(
 			$elm$html$Html$div,
 			_List_Nil,
@@ -13374,14 +13434,7 @@ var $author$project$Main$viewPeriodes = F4(
 					_List_fromArray(
 						[
 							$author$project$Main$viewPeriodeHeader(permission),
-							A2(
-							$elm$html$Html$tbody,
-							_List_Nil,
-							A2(
-								$elm$core$List$map,
-								$author$project$Main$viewPeriodeLine(permission),
-								filtered)),
-							A2($author$project$Main$viewPeriodeFoot, permission, filtered)
+							A2($elm$html$Html$tbody, _List_Nil, tableBody)
 						]))
 				]));
 	});

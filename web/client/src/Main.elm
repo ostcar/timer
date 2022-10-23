@@ -18,6 +18,11 @@ import TimeZone
 import YearMonth exposing (YearMonthSelect(..))
 
 
+myHours : Int
+myHours =
+    8000
+
+
 timeZone : Time.Zone
 timeZone =
     TimeZone.europe__berlin ()
@@ -535,13 +540,15 @@ viewPeriodes zone selected permission periodes =
 
         filtered =
             Periode.filterYearMonth timeZone selected sorted
+
+        tableBody =
+            viewPeriodeSummary permission filtered :: List.map (viewPeriodeLine permission) filtered
     in
     div []
         [ sorted |> List.map (\p -> p.start) |> YearMonth.viewYearMonthSelect zone selected SelectYearMonth
         , table [ Html.Attributes.class "table" ]
             [ viewPeriodeHeader permission
-            , tbody [] (List.map (viewPeriodeLine permission) filtered)
-            , viewPeriodeFoot permission filtered
+            , tbody [] tableBody
             ]
         ]
 
@@ -552,10 +559,59 @@ viewPeriodeHeader permission =
         [ tr []
             [ th [ scope "col", class "time" ] [ text "Start" ]
             , th [ scope "col", class "time" ] [ text "Dauer" ]
+            , th [ scope "col" ] [ text "Euros" ]
             , th [ scope "col" ] [ text "Comment" ]
             , th [ scope "col", class "actions" ] [ text "#" ] |> canWrite permission
             ]
         ]
+
+
+durationToEuroCent : Int -> Duration.Duration -> Int
+durationToEuroCent amount duration =
+    let
+        hours =
+            Duration.inHours duration |> floor
+
+        minutes =
+            Duration.inMinutes duration |> round |> modBy 60
+
+        minuteAmount =
+            ceiling (toFloat amount / 60)
+    in
+    hours * amount + minutes * minuteAmount
+
+
+mydurationToEuroCent : Duration.Duration -> Int
+mydurationToEuroCent =
+    durationToEuroCent myHours
+
+
+intToString2 : Int -> String
+intToString2 n =
+    let
+        str =
+            String.fromInt n
+
+        formatted =
+            if String.length str < 2 then
+                "0" ++ str
+
+            else
+                str
+    in
+    formatted
+
+
+euroCentToString : Int -> String
+euroCentToString euroCent =
+    let
+        euro =
+            euroCent // 100
+
+        cent =
+            remainderBy 100 euroCent
+    in
+    String.fromInt euro ++ "," ++ intToString2 cent ++ " €"
 
 
 viewPeriodeLine : Permission -> Periode.Periode -> Html Msg
@@ -567,6 +623,7 @@ viewPeriodeLine permission periode =
     tr []
         [ td [] [ text (posixToString periode.start) ]
         , td [] [ div [ class "my-tooltip" ] [ text (viewDuration duration), div [ class "tooltiptext" ] [ text (posixToString periode.stop) ] ] ]
+        , td [] [ text (mydurationToEuroCent duration |> euroCentToString) ]
         , td [] [ text (Maybe.withDefault "" periode.comment) ]
         , td [] [ button [ type_ "button", class "btn btn-danger", onClick (SendDelete periode.id) ] [ text "X" ] ] |> canWrite permission
         ]
@@ -579,7 +636,7 @@ viewDuration duration =
             Duration.inHours duration |> floor |> String.fromInt
 
         minutesRaw =
-            Duration.inMinutes duration |> floor |> modBy 60 |> String.fromInt
+            Duration.inMinutes duration |> round |> modBy 60 |> String.fromInt
 
         minutes =
             if String.length minutesRaw == 1 then
@@ -591,15 +648,16 @@ viewDuration duration =
     hours ++ ":" ++ minutes
 
 
-viewPeriodeFoot : Permission -> List Periode.Periode -> Html Msg
-viewPeriodeFoot permission periodes =
+viewPeriodeSummary : Permission -> List Periode.Periode -> Html Msg
+viewPeriodeSummary permission periodes =
     let
         millis =
             List.foldl periodeAddMillis 0 periodes |> Duration.milliseconds
     in
     tr []
-        [ td [] [ text "" ]
+        [ td [] [ text "Gesamt" ]
         , td [] [ text (viewDuration millis) ]
+        , td [] [ text (mydurationToEuroCent millis |> euroCentToString) ]
         , td [] [ text "" ]
         , td [] [ text "" ] |> canWrite permission
         ]
