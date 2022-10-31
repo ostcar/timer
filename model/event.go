@@ -28,6 +28,8 @@ func getEvent(eventType string) Event {
 }
 
 // Event is one change of the model.
+//
+// An implementation of an Event has to be able to be encoded to json.
 type Event interface {
 	validate(db *Model) error
 	execute(db *Model, time time.Time) error

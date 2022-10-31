@@ -4,11 +4,9 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"log"
-	"os"
 	"sync"
 	"time"
 )
@@ -17,8 +15,10 @@ const timeFormat = "2006-01-02 15:04:05"
 
 // Model holds the data in memory and saves them to disk.
 type Model struct {
-	mu   sync.RWMutex
-	file string
+	mu sync.RWMutex
+	db database
+
+	now func() time.Time
 
 	current struct {
 		start   time.Time
@@ -36,40 +36,32 @@ type Periode struct {
 	Comment Maybe[string]
 }
 
-// NewModel load the db from file.
-func NewModel(file string) (*Model, error) {
-	db, err := openDB(file)
+type database interface {
+	Reader() (io.ReadCloser, error)
+	Append([]byte) error
+}
+
+// New load the db from file.
+func New(db database) (*Model, error) {
+	dbReader, err := db.Reader()
 	if err != nil {
 		return nil, fmt.Errorf("open database: %w", err)
 	}
+	defer dbReader.Close()
 
-	db.file = file
-	return db, nil
-}
-
-func openDB(file string) (*Model, error) {
-	f, err := os.Open(file)
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return emptyDatabase(), nil
-		}
-		return nil, fmt.Errorf("open database file: %w", err)
-	}
-	defer f.Close()
-
-	db, err := loadDatabase(f)
+	model, err := loadDatabase(dbReader)
 	if err != nil {
 		return nil, fmt.Errorf("loading database: %w", err)
 	}
-	return db, nil
-}
 
-func emptyDatabase() *Model {
-	return &Model{periodes: make(map[int]Periode)}
+	model.db = db
+	model.now = time.Now
+
+	return model, nil
 }
 
 func loadDatabase(r io.Reader) (*Model, error) {
-	db := emptyDatabase()
+	db := &Model{periodes: make(map[int]Periode)}
 
 	scanner := bufio.NewScanner(r)
 	for scanner.Scan() {
@@ -89,20 +81,20 @@ func loadDatabase(r io.Reader) (*Model, error) {
 
 		event := getEvent(typer.Type)
 		if event == nil {
-			return nil, fmt.Errorf("unknown event %q, payload %q", typer.Type, typer.Payload)
+			return nil, fmt.Errorf("unknown event `%s`, payload `%s`", typer.Type, typer.Payload)
 		}
 
 		if err := json.Unmarshal(typer.Payload, &event); err != nil {
-			return nil, fmt.Errorf("loading event %q: %w", typer.Type, err)
+			return nil, fmt.Errorf("loading event `%s`: %w", typer.Type, err)
 		}
 
 		eventTime, err := time.Parse(timeFormat, typer.Time)
 		if err != nil {
-			return nil, fmt.Errorf("event %q has invalid time %s: %w", typer.Type, typer.Time, err)
+			return nil, fmt.Errorf("event `%s` has invalid time %s: %w", typer.Type, typer.Time, err)
 		}
 
 		if err := event.execute(db, eventTime); err != nil {
-			return nil, fmt.Errorf("executing event %q: %w", typer.Type, err)
+			return nil, fmt.Errorf("executing event `%s`: %w", typer.Type, err)
 		}
 	}
 	if err := scanner.Err(); err != nil {
@@ -112,7 +104,7 @@ func loadDatabase(r io.Reader) (*Model, error) {
 	return db, nil
 }
 
-func (m *Model) writeEvent(e Event) (err error) {
+func (m *Model) writeEvent(e Event) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -120,18 +112,7 @@ func (m *Model) writeEvent(e Event) (err error) {
 		return fmt.Errorf("validating event: %w", err)
 	}
 
-	f, err := os.OpenFile(m.file, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
-	if err != nil {
-		return fmt.Errorf("open db file: %w", err)
-	}
-	defer func() {
-		wErr := f.Close()
-		if err != nil {
-			err = wErr
-		}
-	}()
-
-	now := time.Now().UTC()
+	now := m.now().UTC()
 	event := struct {
 		Time    string `json:"time"`
 		Type    string `json:"type"`
@@ -147,10 +128,8 @@ func (m *Model) writeEvent(e Event) (err error) {
 		return fmt.Errorf("encoding event: %w", err)
 	}
 
-	bs = append(bs, '\n')
-
-	if _, err := f.Write(bs); err != nil {
-		return fmt.Errorf("writing event to file: %q: %w", bs, err)
+	if err := m.db.Append(bs); err != nil {
+		return fmt.Errorf("writing event to db: `%s`: %w", bs, err)
 	}
 
 	if err := e.execute(m, now); err != nil {
