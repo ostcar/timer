@@ -148,8 +148,8 @@ func listCmd(domain *string) *cobra.Command {
 				comment = ": " + p.Comment
 			}
 			start := time.Unix(p.Start, 0)
-			stop := time.Unix(p.Stop, 0)
-			fmt.Printf("%d: %s - %s%s\n", p.Id, start.Format(*timeFormat), stop.Format(*timeFormat), comment)
+			duration := time.Duration(p.Duration) * time.Second
+			fmt.Printf("%d: %s -> %s%s\n", p.Id, start.Format(*timeFormat), duration.String(), comment)
 		}
 		return nil
 	}
@@ -165,7 +165,7 @@ func editCmd(domain *string) *cobra.Command {
 	}
 
 	start := cmd.Flags().String("start", "", "change the start time")
-	stop := cmd.Flags().String("stop", "", "change the stop time")
+	duration := cmd.Flags().String("duration", "", "change the duration")
 	comment := cmd.Flags().String("comment", "", "change the comment")
 	timeFormat := cmd.Flags().String("time_format", "2006-01-02 15:04:05", "format string to parse the timestamps. See golang time.")
 
@@ -188,7 +188,7 @@ func editCmd(domain *string) *cobra.Command {
 		// TODO: Handle case where --comment was set to an empty string
 		hasComment := len(*comment) > 0
 		hasStart := len(*start) > 0
-		hasStop := len(*stop) > 0
+		hasDuration := len(*duration) > 0
 
 		var unixStart int64
 		if hasStart {
@@ -199,23 +199,23 @@ func editCmd(domain *string) *cobra.Command {
 			unixStart = t.UTC().Unix()
 		}
 
-		var unixStop int64
-		if hasStop {
-			t, err := time.ParseInLocation(*timeFormat, *stop, time.Local)
+		var timeDuratoin int64
+		if hasDuration {
+			d, err := time.ParseDuration(*duration)
 			if err != nil {
-				return fmt.Errorf("parsing stop time: %w", err)
+				return fmt.Errorf("parsing duration: %w", err)
 			}
-			unixStop = t.UTC().Unix()
+			timeDuratoin = int64(d.Seconds())
 		}
 
 		if _, err := client.Edit(context.Background(), &proto.EditRequest{
-			Id:         int32(id),
-			HasStart:   hasStart,
-			Start:      unixStart,
-			HasStop:    hasStop,
-			Stop:       unixStop,
-			HasComment: hasComment,
-			Comment:    *comment,
+			Id:          int32(id),
+			HasStart:    hasStart,
+			Start:       unixStart,
+			HasDuration: hasDuration,
+			Duration:    timeDuratoin,
+			HasComment:  hasComment,
+			Comment:     *comment,
 		}); err != nil {
 			return fmt.Errorf("sending stop request: %w", err)
 		}
@@ -227,7 +227,7 @@ func editCmd(domain *string) *cobra.Command {
 
 func insertCmd(domain *string) *cobra.Command {
 	cmd := cobra.Command{
-		Use:   "insert start stop [comment]",
+		Use:   "insert start duration [comment]",
 		Short: "insert an periode",
 		Long:  "insert a new peridode",
 	}
@@ -250,9 +250,9 @@ func insertCmd(domain *string) *cobra.Command {
 			return fmt.Errorf("parsing start time: %w", err)
 		}
 
-		stop, err := time.ParseInLocation(*timeFormat, args[1], time.Local)
+		duration, err := time.ParseDuration(args[1])
 		if err != nil {
-			return fmt.Errorf("parsing stop time: %w", err)
+			return fmt.Errorf("parsing duration: %w", err)
 		}
 
 		comment := ""
@@ -264,7 +264,7 @@ func insertCmd(domain *string) *cobra.Command {
 
 		if _, err := client.Insert(context.Background(), &proto.InsertRequest{
 			Start:      start.UTC().Unix(),
-			Stop:       stop.UTC().Unix(),
+			Duration:   int64(duration.Seconds()),
 			HasComment: hasComment,
 			Comment:    comment,
 		}); err != nil {

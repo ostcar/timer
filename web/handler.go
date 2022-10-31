@@ -136,10 +136,10 @@ func handlePeriode(router *mux.Router, mdl *model.Model, cfg config.Config) {
 	pathSingle := pathList + "/{id}"
 
 	type periode struct {
-		ID      int                 `json:"id"`
-		Start   int64               `json:"start"`
-		Stop    int64               `json:"stop"`
-		Comment model.Maybe[string] `json:"comment"`
+		ID       int                 `json:"id"`
+		Start    int64               `json:"start"`
+		Duration int64               `json:"duration"`
+		Comment  model.Maybe[string] `json:"comment"`
 	}
 
 	// List Handler
@@ -153,10 +153,10 @@ func handlePeriode(router *mux.Router, mdl *model.Model, cfg config.Config) {
 		outPeriodes := make([]periode, len(modelPeriodes))
 		for i, p := range modelPeriodes {
 			outPeriodes[i] = periode{
-				ID:      p.ID,
-				Start:   p.Start.Unix(),
-				Stop:    p.Stop.Unix(),
-				Comment: p.Comment,
+				ID:       p.ID,
+				Start:    p.Start.Unix(),
+				Duration: int64(p.Duration.Seconds()),
+				Comment:  p.Comment,
 			}
 		}
 
@@ -188,9 +188,9 @@ func handlePeriode(router *mux.Router, mdl *model.Model, cfg config.Config) {
 		}
 
 		var content struct {
-			Start   int64               `json:"start"`
-			Stop    int64               `json:"stop"`
-			Content model.Maybe[string] `json:"comment"`
+			Start    int64               `json:"start"`
+			Duration int64               `json:"duration"`
+			Content  model.Maybe[string] `json:"comment"`
 		}
 
 		if err := json.NewDecoder(r.Body).Decode(&content); err != nil {
@@ -198,7 +198,7 @@ func handlePeriode(router *mux.Router, mdl *model.Model, cfg config.Config) {
 			return
 		}
 
-		id, err := mdl.Insert(time.Unix(content.Start, 0), time.Unix(content.Stop, 0), content.Content)
+		id, err := mdl.Insert(time.Unix(content.Start, 0), time.Duration(content.Duration)*time.Second, content.Content)
 		if err != nil {
 			handleError(w, err)
 			return
@@ -225,9 +225,9 @@ func handlePeriode(router *mux.Router, mdl *model.Model, cfg config.Config) {
 		id, _ := strconv.Atoi(mux.Vars(r)["id"])
 
 		var content struct {
-			Start   model.Maybe[int64]  `json:"start"`
-			Stop    model.Maybe[int64]  `json:"stop"`
-			Content model.Maybe[string] `json:"content"`
+			Start    model.Maybe[int64]  `json:"start"`
+			Duration model.Maybe[int64]  `json:"duration"`
+			Content  model.Maybe[string] `json:"content"`
 		}
 
 		if err := json.NewDecoder(r.Body).Decode(&content); err != nil {
@@ -240,12 +240,12 @@ func handlePeriode(router *mux.Router, mdl *model.Model, cfg config.Config) {
 			start = model.Just(model.JSONTime(time.Unix(v, 0)))
 		}
 
-		var stop model.Maybe[model.JSONTime]
-		if v, ok := content.Stop.Value(); ok {
-			stop = model.Just(model.JSONTime(time.Unix(v, 0)))
+		var duration model.Maybe[model.JSONDuration]
+		if v, ok := content.Duration.Value(); ok {
+			duration = model.Just(model.JSONDuration(time.Duration(v) * time.Second))
 		}
 
-		if err := mdl.Edit(id, start, stop, content.Content); err != nil {
+		if err := mdl.Edit(id, start, duration, content.Content); err != nil {
 			handleError(w, err)
 			return
 		}

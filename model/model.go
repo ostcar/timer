@@ -11,8 +11,6 @@ import (
 	"time"
 )
 
-const timeFormat = "2006-01-02 15:04:05"
-
 // Model holds the data in memory and saves them to disk.
 type Model struct {
 	mu sync.RWMutex
@@ -30,10 +28,10 @@ type Model struct {
 
 // Periode is a duration of time.
 type Periode struct {
-	ID      int
-	Start   time.Time
-	Stop    time.Time
-	Comment Maybe[string]
+	ID       int
+	Start    time.Time
+	Duration time.Duration
+	Comment  Maybe[string]
 }
 
 type database interface {
@@ -183,19 +181,19 @@ func (m *Model) Delete(id int) error {
 }
 
 // Insert creates a new periode.
-func (m *Model) Insert(start, stop time.Time, comment Maybe[string]) (int, error) {
+func (m *Model) Insert(start time.Time, duration time.Duration, comment Maybe[string]) (int, error) {
 	log.Printf("insert event")
 	nextID := m.nextID()
-	if err := m.writeEvent(eventInsert{ID: nextID, Start: JSONTime(start), Stop: JSONTime(stop), Comment: comment}); err != nil {
+	if err := m.writeEvent(eventInsertV2{ID: nextID, Start: JSONTime(start), Duration: JSONDuration(duration), Comment: comment}); err != nil {
 		return 0, fmt.Errorf("writing event: %w", err)
 	}
 	return nextID, nil
 }
 
 // Edit changes an existing periode.
-func (m *Model) Edit(id int, start, stop Maybe[JSONTime], comment Maybe[string]) error {
+func (m *Model) Edit(id int, start Maybe[JSONTime], duration Maybe[JSONDuration], comment Maybe[string]) error {
 	log.Printf("Log event for id %d", id)
-	if err := m.writeEvent(eventEdit{ID: id, Start: start, Stop: stop, Comment: comment}); err != nil {
+	if err := m.writeEvent(eventEditV2{ID: id, Start: start, Duration: duration, Comment: comment}); err != nil {
 		return fmt.Errorf("writing event: %w", err)
 	}
 	return nil
