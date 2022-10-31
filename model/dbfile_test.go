@@ -10,7 +10,7 @@ import (
 func TestDBFile_read_empty_does_nothing(t *testing.T) {
 	tmpdir := t.TempDir()
 
-	db := fileDB{path.Join(tmpdir, "file.db")}
+	db := FileDB{path.Join(tmpdir, "file.db")}
 
 	dbReader, err := db.Reader()
 	if err != nil {
@@ -44,7 +44,7 @@ func TestDBFile_read_existing_file_returns_its_content(t *testing.T) {
 		t.Fatalf("writing file: %v", err)
 	}
 
-	db := fileDB{path.Join(tmpdir, "file.db")}
+	db := FileDB{path.Join(tmpdir, "file.db")}
 
 	dbReader, err := db.Reader()
 	if err != nil {
@@ -65,7 +65,7 @@ func TestDBFile_read_existing_file_returns_its_content(t *testing.T) {
 func TestDBFile_append_on_empty_db_creates_file_with_newline_at_end(t *testing.T) {
 	tmpdir := t.TempDir()
 
-	db := fileDB{path.Join(tmpdir, "file.db")}
+	db := FileDB{path.Join(tmpdir, "file.db")}
 
 	if err := db.Append([]byte("some string without newline")); err != nil {
 		t.Fatalf("append to db: %v", err)
@@ -85,7 +85,7 @@ func TestDBFile_append_on_empty_db_creates_file_with_newline_at_end(t *testing.T
 func TestDBFile_append_new_line_creates_an_error(t *testing.T) {
 	tmpdir := t.TempDir()
 
-	db := fileDB{path.Join(tmpdir, "file.db")}
+	db := FileDB{path.Join(tmpdir, "file.db")}
 
 	if err := db.Append([]byte("some string\nwith newline")); err == nil {
 		t.Errorf("append an newline did not return an error")
@@ -99,7 +99,7 @@ func TestDBFile_append_on_existing_file_appends(t *testing.T) {
 		t.Fatalf("writing file: %v", err)
 	}
 
-	db := fileDB{path.Join(tmpdir, "file.db")}
+	db := FileDB{path.Join(tmpdir, "file.db")}
 
 	if err := db.Append([]byte("some string")); err != nil {
 		t.Fatalf("append to db: %v", err)
