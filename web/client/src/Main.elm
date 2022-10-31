@@ -616,14 +616,10 @@ euroCentToString euroCent =
 
 viewPeriodeLine : Permission -> Periode.Periode -> Html Msg
 viewPeriodeLine permission periode =
-    let
-        duration =
-            Duration.from periode.start periode.stop
-    in
     tr []
         [ td [] [ text (posixToString periode.start) ]
-        , td [] [ div [ class "my-tooltip" ] [ text (viewDuration duration), div [ class "tooltiptext" ] [ text (posixToString periode.stop) ] ] ]
-        , td [] [ text (mydurationToEuroCent duration |> euroCentToString) ]
+        , td [] [ div [ ] [ text (viewDuration periode.duration) ] ]
+        , td [] [ text (mydurationToEuroCent periode.duration |> euroCentToString) ]
         , td [] [ text (Maybe.withDefault "" periode.comment) ]
         , td [] [ button [ type_ "button", class "btn btn-danger", onClick (SendDelete periode.id) ] [ text "X" ] ] |> canWrite permission
         ]
@@ -665,11 +661,7 @@ viewPeriodeSummary permission periodes =
 
 periodeAddMillis : Periode.Periode -> Float -> Float
 periodeAddMillis periode millis =
-    let
-        duration =
-            Duration.from periode.start periode.stop
-    in
-    millis + Duration.inMilliseconds duration
+    millis + Duration.inMilliseconds periode.duration
 
 
 viewInsert : Maybe Insert -> Html Msg

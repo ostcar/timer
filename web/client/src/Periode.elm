@@ -5,6 +5,7 @@ import Json.Decode as Decode exposing (Decoder, bool, int, map, string)
 import Json.Decode.Pipeline exposing (optional, required)
 import Time
 import YearMonth exposing (YearMonthSelect(..))
+import Duration
 
 
 type Current
@@ -15,7 +16,7 @@ type Current
 type alias Periode =
     { id : ID
     , start : Time.Posix
-    , stop : Time.Posix
+    , duration : Duration.Duration
     , comment : Maybe String
     }
 
@@ -25,7 +26,7 @@ periodeDecoder =
     Decode.succeed Periode
         |> required "id" idDecoder
         |> required "start" timeDecoder
-        |> required "stop" timeDecoder
+        |> required "duration" durationDecoder
         |> optional "comment" (map Just string) Nothing
 
 
@@ -91,6 +92,10 @@ idDecoder =
 timeDecoder : Decoder Time.Posix
 timeDecoder =
     Decode.map (\n -> Time.millisToPosix (n * 1000)) int
+
+durationDecoder : Decoder Duration.Duration
+durationDecoder=
+    Decode.map (\n -> Duration.seconds (toFloat n)) int
 
 
 fetch : (Result Http.Error State -> msg) -> Cmd msg

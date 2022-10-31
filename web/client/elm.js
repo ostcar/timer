@@ -6539,13 +6539,25 @@ var $NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$optional = F4(
 	});
 var $elm$json$Json$Decode$list = _Json_decodeList;
 var $author$project$Periode$Periode = F4(
-	function (id, start, stop, comment) {
-		return {comment: comment, id: id, start: start, stop: stop};
+	function (id, start, duration, comment) {
+		return {comment: comment, duration: duration, id: id, start: start};
 	});
+var $elm$json$Json$Decode$int = _Json_decodeInt;
+var $ianmackenzie$elm_units$Quantity$Quantity = function (a) {
+	return {$: 'Quantity', a: a};
+};
+var $ianmackenzie$elm_units$Duration$seconds = function (numSeconds) {
+	return $ianmackenzie$elm_units$Quantity$Quantity(numSeconds);
+};
+var $author$project$Periode$durationDecoder = A2(
+	$elm$json$Json$Decode$map,
+	function (n) {
+		return $ianmackenzie$elm_units$Duration$seconds(n);
+	},
+	$elm$json$Json$Decode$int);
 var $author$project$Periode$ID = function (a) {
 	return {$: 'ID', a: a};
 };
-var $elm$json$Json$Decode$int = _Json_decodeInt;
 var $author$project$Periode$idDecoder = A2($elm$json$Json$Decode$map, $author$project$Periode$ID, $elm$json$Json$Decode$int);
 var $NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required = F3(
 	function (key, valDecoder, decoder) {
@@ -6572,8 +6584,8 @@ var $author$project$Periode$periodeDecoder = A4(
 	$elm$core$Maybe$Nothing,
 	A3(
 		$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
-		'stop',
-		$author$project$Periode$timeDecoder,
+		'duration',
+		$author$project$Periode$durationDecoder,
 		A3(
 			$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
 			'start',
@@ -13071,20 +13083,6 @@ var $author$project$Main$euroCentToString = function (euroCent) {
 	var cent = euroCent % 100;
 	return $elm$core$String$fromInt(euro) + (',' + ($author$project$Main$intToString2(cent) + ' €'));
 };
-var $ianmackenzie$elm_units$Quantity$Quantity = function (a) {
-	return {$: 'Quantity', a: a};
-};
-var $ianmackenzie$elm_units$Duration$seconds = function (numSeconds) {
-	return $ianmackenzie$elm_units$Quantity$Quantity(numSeconds);
-};
-var $ianmackenzie$elm_units$Duration$milliseconds = function (numMilliseconds) {
-	return $ianmackenzie$elm_units$Duration$seconds(0.001 * numMilliseconds);
-};
-var $ianmackenzie$elm_units$Duration$from = F2(
-	function (startTime, endTime) {
-		var numMilliseconds = $elm$time$Time$posixToMillis(endTime) - $elm$time$Time$posixToMillis(startTime);
-		return $ianmackenzie$elm_units$Duration$milliseconds(numMilliseconds);
-	});
 var $ianmackenzie$elm_units$Constants$second = 1;
 var $ianmackenzie$elm_units$Constants$minute = 60 * $ianmackenzie$elm_units$Constants$second;
 var $ianmackenzie$elm_units$Constants$hour = 60 * $ianmackenzie$elm_units$Constants$minute;
@@ -13129,7 +13127,6 @@ var $author$project$Main$viewDuration = function (duration) {
 };
 var $author$project$Main$viewPeriodeLine = F2(
 	function (permission, periode) {
-		var duration = A2($ianmackenzie$elm_units$Duration$from, periode.start, periode.stop);
 		return A2(
 			$elm$html$Html$tr,
 			_List_Nil,
@@ -13150,25 +13147,11 @@ var $author$project$Main$viewPeriodeLine = F2(
 						[
 							A2(
 							$elm$html$Html$div,
-							_List_fromArray(
-								[
-									$elm$html$Html$Attributes$class('my-tooltip')
-								]),
+							_List_Nil,
 							_List_fromArray(
 								[
 									$elm$html$Html$text(
-									$author$project$Main$viewDuration(duration)),
-									A2(
-									$elm$html$Html$div,
-									_List_fromArray(
-										[
-											$elm$html$Html$Attributes$class('tooltiptext')
-										]),
-									_List_fromArray(
-										[
-											$elm$html$Html$text(
-											$author$project$Main$posixToString(periode.stop))
-										]))
+									$author$project$Main$viewDuration(periode.duration))
 								]))
 						])),
 					A2(
@@ -13178,7 +13161,7 @@ var $author$project$Main$viewPeriodeLine = F2(
 						[
 							$elm$html$Html$text(
 							$author$project$Main$euroCentToString(
-								$author$project$Main$mydurationToEuroCent(duration)))
+								$author$project$Main$mydurationToEuroCent(periode.duration)))
 						])),
 					A2(
 					$elm$html$Html$td,
@@ -13212,13 +13195,15 @@ var $author$project$Main$viewPeriodeLine = F2(
 							])))
 				]));
 	});
+var $ianmackenzie$elm_units$Duration$milliseconds = function (numMilliseconds) {
+	return $ianmackenzie$elm_units$Duration$seconds(0.001 * numMilliseconds);
+};
 var $ianmackenzie$elm_units$Duration$inMilliseconds = function (duration) {
 	return $ianmackenzie$elm_units$Duration$inSeconds(duration) * 1000;
 };
 var $author$project$Main$periodeAddMillis = F2(
 	function (periode, millis) {
-		var duration = A2($ianmackenzie$elm_units$Duration$from, periode.start, periode.stop);
-		return millis + $ianmackenzie$elm_units$Duration$inMilliseconds(duration);
+		return millis + $ianmackenzie$elm_units$Duration$inMilliseconds(periode.duration);
 	});
 var $author$project$Main$viewPeriodeSummary = F2(
 	function (permission, periodes) {
