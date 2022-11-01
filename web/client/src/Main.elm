@@ -657,8 +657,8 @@ viewMonthly zone periodes =
         [ table [ class "table" ]
             (tr []
                 [ th [] [ text "Monat" ]
-                , th [] [ text "Zeiten" ]
-                , th [] [ text "Euro" ]
+                , th [ class "time" ] [ text "Zeiten" ]
+                , th [ class "mony" ] [ text "Euro" ]
                 ]
                 :: (Periode.sort periodes
                         |> Periode.byYearMonth zone
@@ -684,8 +684,8 @@ viewMonthlyLine ( yearMonthText, periodes ) =
     in
     tr []
         [ td [] [ text yearMonthText ]
-        , td [] [ durationToTimeString duration |> text ]
-        , td [] [ durationToMonyString duration |> text ]
+        , td [ class "time" ] [ durationToTimeString duration |> text ]
+        , td [ class "mony" ] [ durationToMonyString duration |> text ]
         ]
 
 

@@ -10,6 +10,6 @@ th.action {
     margin: 5px;
 }
 
-td.buttons, th.buttons {
+td.buttons, th.buttons, th.mony, td.mony, th.time, td.time  {
     text-align: right;
 }

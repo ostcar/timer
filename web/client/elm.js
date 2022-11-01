@@ -10473,7 +10473,10 @@ var $author$project$Main$viewMonthlyLine = function (_v0) {
 					])),
 				A2(
 				$elm$html$Html$td,
-				_List_Nil,
+				_List_fromArray(
+					[
+						$elm$html$Html$Attributes$class('time')
+					]),
 				_List_fromArray(
 					[
 						$elm$html$Html$text(
@@ -10481,7 +10484,10 @@ var $author$project$Main$viewMonthlyLine = function (_v0) {
 					])),
 				A2(
 				$elm$html$Html$td,
-				_List_Nil,
+				_List_fromArray(
+					[
+						$elm$html$Html$Attributes$class('mony')
+					]),
 				_List_fromArray(
 					[
 						$elm$html$Html$text(
@@ -10518,14 +10524,20 @@ var $author$project$Main$viewMonthly = F2(
 										])),
 									A2(
 									$elm$html$Html$th,
-									_List_Nil,
+									_List_fromArray(
+										[
+											$elm$html$Html$Attributes$class('time')
+										]),
 									_List_fromArray(
 										[
 											$elm$html$Html$text('Zeiten')
 										])),
 									A2(
 									$elm$html$Html$th,
-									_List_Nil,
+									_List_fromArray(
+										[
+											$elm$html$Html$Attributes$class('mony')
+										]),
 									_List_fromArray(
 										[
 											$elm$html$Html$text('Euro')
