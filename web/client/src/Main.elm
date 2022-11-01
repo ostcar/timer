@@ -11,17 +11,15 @@ import Json.Encode as Encode
 import Jwt
 import Periode
 import SingleDatePicker
-import String 
+import String
 import Time
 import Time.Format
 import Time.Format.Config.Config_de_de
 import TimeZone
 import YearMonth exposing (YearMonthSelect(..))
+import Mony
 
 
-myHours : Int
-myHours =
-    8000
 
 
 timeZone : Time.Zone
@@ -73,7 +71,7 @@ type Msg
     | SaveComment String
     | SendStart
     | SendStop
-    | SendContinue
+    | SendContinue Periode.ID
     | SendDelete Periode.ID
     | ReceiveEvent (Result Http.Error ())
     | OpenInsert
@@ -193,9 +191,14 @@ update msg model =
             , sendStartStop "stop" ReceiveEvent model.comment
             )
 
-        SendContinue ->
+        SendContinue id ->
             ( model
-            , sendStartStop "start" ReceiveEvent (lastComment model.periodes)
+            , List.filter (\p -> p.id == id) model.periodes
+                |> List.head
+                |> Maybe.andThen (\p -> p.comment |> Just)
+                |> Maybe.andThen (\c -> Maybe.withDefault "" c |> Just)
+                |> Maybe.andThen (\c -> sendStartStop "start" ReceiveEvent c |> Just)
+                |> Maybe.withDefault Cmd.none
             )
 
         SendDelete id ->
@@ -362,21 +365,6 @@ update msg model =
             )
 
 
-lastComment : List Periode.Periode -> String
-lastComment periodes =
-    case Periode.sort periodes |> List.head of
-        Nothing ->
-            ""
-
-        Just periode ->
-            case periode.comment of
-                Nothing ->
-                    ""
-
-                Just s ->
-                    s
-
-
 emptyInsert : Insert
 emptyInsert =
     { start = Nothing
@@ -471,7 +459,7 @@ view model =
 
                 _ ->
                     div []
-                        [ viewCurrent model.current model.comment |> canWrite model.permission
+                        [ viewCurrent model.current model.comment model.currentTime |> canWrite model.permission
                         , viewInsert model.insert |> canWrite model.permission
                         , viewPeriodes timeZone model.selectedYearMonth model.permission model.periodes
                         , viewFooter
@@ -507,8 +495,8 @@ viewLogin pass =
         ]
 
 
-viewCurrent : Periode.Current -> String -> Html Msg
-viewCurrent current comment =
+viewCurrent : Periode.Current -> String -> Time.Posix -> Html Msg
+viewCurrent current comment currentTime =
     case current of
         Periode.Stopped ->
             viewStartStopButton Start comment
@@ -517,10 +505,11 @@ viewCurrent current comment =
             let
                 currentComment =
                     Maybe.withDefault "" maybeComment
+                mony = Duration.from start currentTime|> Mony.mydurationToEuroCent |> Mony.euroCentToString
             in
             div []
                 [ viewStartStopButton Stop comment
-                , div [] [ text ("running since " ++ posixToString start ++ ": " ++ currentComment) ]
+                , div [] [ text ("running since " ++ posixToString start ++ ": " ++ currentComment ++ ": " ++ mony) ]
                 ]
 
 
@@ -532,23 +521,20 @@ type StartStop
 viewStartStopButton : StartStop -> String -> Html Msg
 viewStartStopButton startStop comment =
     let
-        ( event, buttonText, continue ) =
+        ( event, buttonText ) =
             case startStop of
                 Start ->
                     ( SendStart
                     , "Start"
-                    , button [ class "btn btn-primary", onClick SendContinue ] [ text "Fortsetzen" ]
                     )
 
                 Stop ->
                     ( SendStop
                     , "Stop"
-                    , viewEmpty
                     )
     in
     div []
-        [ continue
-        , button [ class "btn btn-primary", onClick event ] [ text buttonText ]
+        [ button [ class "btn btn-primary", onClick event ] [ text buttonText ]
         , input
             [ id "comment"
             , type_ "text"
@@ -588,57 +574,12 @@ viewPeriodeHeader permission =
             , th [ scope "col", class "time" ] [ text "Dauer" ]
             , th [ scope "col" ] [ text "Euros" ]
             , th [ scope "col" ] [ text "Comment" ]
-            , th [ scope "col", class "actions" ] [ text "#" ] |> canWrite permission
+            , th [ scope "col", class "actions buttons" ] [ text "#" ] |> canWrite permission
             ]
         ]
 
 
-durationToEuroCent : Int -> Duration.Duration -> Int
-durationToEuroCent amount duration =
-    let
-        hours =
-            Duration.inHours duration |> floor
 
-        minutes =
-            Duration.inMinutes duration |> round |> modBy 60
-
-        minuteAmount =
-            ceiling (toFloat amount / 60)
-    in
-    hours * amount + minutes * minuteAmount
-
-
-mydurationToEuroCent : Duration.Duration -> Int
-mydurationToEuroCent =
-    durationToEuroCent myHours
-
-
-intToString2 : Int -> String
-intToString2 n =
-    let
-        str =
-            String.fromInt n
-
-        formatted =
-            if String.length str < 2 then
-                "0" ++ str
-
-            else
-                str
-    in
-    formatted
-
-
-euroCentToString : Int -> String
-euroCentToString euroCent =
-    let
-        euro =
-            euroCent // 100
-
-        cent =
-            remainderBy 100 euroCent
-    in
-    String.fromInt euro ++ "," ++ intToString2 cent ++ " €"
 
 
 viewPeriodeLine : Permission -> Periode.Periode -> Html Msg
@@ -646,9 +587,13 @@ viewPeriodeLine permission periode =
     tr []
         [ td [] [ text (posixToString periode.start) ]
         , td [] [ div [] [ text (viewDuration periode.duration) ] ]
-        , td [] [ text (mydurationToEuroCent periode.duration |> euroCentToString) ]
+        , td [] [ text (Mony.mydurationToEuroCent periode.duration |> Mony.euroCentToString) ]
         , td [] [ text (Maybe.withDefault "" periode.comment) ]
-        , td [] [ button [ type_ "button", class "btn btn-danger", onClick (SendDelete periode.id) ] [ text "X" ] ] |> canWrite permission
+        , td [class "buttons"]
+            [ button [ type_ "button", class "btn btn-danger", onClick (SendDelete periode.id) ] [ text "✖" ]
+            , button [ type_ "button", class "btn btn-danger", onClick (SendContinue periode.id) ] [ text "→" ]
+            ]
+            |> canWrite permission
         ]
 
 
@@ -680,7 +625,7 @@ viewPeriodeSummary permission periodes =
     tr []
         [ td [] [ text "Gesamt" ]
         , td [] [ text (viewDuration millis) ]
-        , td [] [ text (mydurationToEuroCent millis |> euroCentToString) ]
+        , td [] [ text (Mony.mydurationToEuroCent millis |> Mony.euroCentToString) ]
         , td [] [ text "" ]
         , td [] [ text "" ] |> canWrite permission
         ]
@@ -713,6 +658,7 @@ viewInsert maybeInsert =
                 , input
                     [ id "duration"
                     , type_ "text"
+                    , placeholder "minutes"
                     , value insert.duration
                     , onInput SaveInsertDuration
                     ]
@@ -720,6 +666,7 @@ viewInsert maybeInsert =
                 , input
                     [ id "comment"
                     , type_ "text"
+                    , placeholder "comment"
                     , value insert.comment
                     , onInput SaveInsertComment
                     ]
@@ -775,5 +722,5 @@ subscriptions model =
     in
     Sub.batch
         [ SingleDatePicker.subscriptions (SingleDatePicker.defaultSettings timeZone UpdatePicker) UpdatePicker insert.picker
-        , Time.every 1000 Tick
+        , Time.every 100 Tick
         ]

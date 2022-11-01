@@ -9054,7 +9054,7 @@ var $author$project$Main$subscriptions = function (model) {
 				A2($mercurymedia$elm_datetime_picker$SingleDatePicker$defaultSettings, $author$project$Main$timeZone, $author$project$Main$UpdatePicker),
 				$author$project$Main$UpdatePicker,
 				insert.picker),
-				A2($elm$time$Time$every, 1000, $author$project$Main$Tick)
+				A2($elm$time$Time$every, 100, $author$project$Main$Tick)
 			]));
 };
 var $author$project$Main$ReceiveAuth = function (a) {
@@ -9063,6 +9063,15 @@ var $author$project$Main$ReceiveAuth = function (a) {
 var $author$project$Main$ReceiveEvent = function (a) {
 	return {$: 'ReceiveEvent', a: a};
 };
+var $elm$core$Maybe$andThen = F2(
+	function (callback, maybeValue) {
+		if (maybeValue.$ === 'Just') {
+			var value = maybeValue.a;
+			return callback(value);
+		} else {
+			return $elm$core$Maybe$Nothing;
+		}
+	});
 var $author$project$Main$buildErrorMessage = function (httpError) {
 	switch (httpError.$) {
 		case 'BadUrl':
@@ -9172,31 +9181,6 @@ var $elm$core$List$head = function (list) {
 		return $elm$core$Maybe$Just(x);
 	} else {
 		return $elm$core$Maybe$Nothing;
-	}
-};
-var $author$project$Periode$sort = function (periodes) {
-	return $elm$core$List$reverse(
-		A2(
-			$elm$core$List$sortBy,
-			function (p) {
-				return $elm$time$Time$posixToMillis(p.start);
-			},
-			periodes));
-};
-var $author$project$Main$lastComment = function (periodes) {
-	var _v0 = $elm$core$List$head(
-		$author$project$Periode$sort(periodes));
-	if (_v0.$ === 'Nothing') {
-		return '';
-	} else {
-		var periode = _v0.a;
-		var _v1 = periode.comment;
-		if (_v1.$ === 'Nothing') {
-			return '';
-		} else {
-			var s = _v1.a;
-			return s;
-		}
 	}
 };
 var $ianmackenzie$elm_units$Duration$minutes = function (numMinutes) {
@@ -9858,13 +9842,36 @@ var $author$project$Main$update = F2(
 					model,
 					A3($author$project$Main$sendStartStop, 'stop', $author$project$Main$ReceiveEvent, model.comment));
 			case 'SendContinue':
+				var id = msg.a;
 				return _Utils_Tuple2(
 					model,
-					A3(
-						$author$project$Main$sendStartStop,
-						'start',
-						$author$project$Main$ReceiveEvent,
-						$author$project$Main$lastComment(model.periodes)));
+					A2(
+						$elm$core$Maybe$withDefault,
+						$elm$core$Platform$Cmd$none,
+						A2(
+							$elm$core$Maybe$andThen,
+							function (c) {
+								return $elm$core$Maybe$Just(
+									A3($author$project$Main$sendStartStop, 'start', $author$project$Main$ReceiveEvent, c));
+							},
+							A2(
+								$elm$core$Maybe$andThen,
+								function (c) {
+									return $elm$core$Maybe$Just(
+										A2($elm$core$Maybe$withDefault, '', c));
+								},
+								A2(
+									$elm$core$Maybe$andThen,
+									function (p) {
+										return $elm$core$Maybe$Just(p.comment);
+									},
+									$elm$core$List$head(
+										A2(
+											$elm$core$List$filter,
+											function (p) {
+												return _Utils_eq(p.id, id);
+											},
+											model.periodes)))))));
 			case 'SendDelete':
 				var id = msg.a;
 				return _Utils_Tuple2(
@@ -10145,6 +10152,50 @@ var $author$project$Main$canWrite = F2(
 var $elm$html$Html$div = _VirtualDom_node('div');
 var $author$project$Main$Start = {$: 'Start'};
 var $author$project$Main$Stop = {$: 'Stop'};
+var $author$project$Mony$intToString2 = function (n) {
+	var str = $elm$core$String$fromInt(n);
+	var formatted = ($elm$core$String$length(str) < 2) ? ('0' + str) : str;
+	return formatted;
+};
+var $author$project$Mony$euroCentToString = function (euroCent) {
+	var euro = (euroCent / 100) | 0;
+	var cent = euroCent % 100;
+	return $elm$core$String$fromInt(euro) + (',' + ($author$project$Mony$intToString2(cent) + ' €'));
+};
+var $ianmackenzie$elm_units$Duration$milliseconds = function (numMilliseconds) {
+	return $ianmackenzie$elm_units$Duration$seconds(0.001 * numMilliseconds);
+};
+var $ianmackenzie$elm_units$Duration$from = F2(
+	function (startTime, endTime) {
+		var numMilliseconds = $elm$time$Time$posixToMillis(endTime) - $elm$time$Time$posixToMillis(startTime);
+		return $ianmackenzie$elm_units$Duration$milliseconds(numMilliseconds);
+	});
+var $ianmackenzie$elm_units$Constants$second = 1;
+var $ianmackenzie$elm_units$Constants$minute = 60 * $ianmackenzie$elm_units$Constants$second;
+var $ianmackenzie$elm_units$Constants$hour = 60 * $ianmackenzie$elm_units$Constants$minute;
+var $ianmackenzie$elm_units$Duration$inHours = function (duration) {
+	return $ianmackenzie$elm_units$Duration$inSeconds(duration) / $ianmackenzie$elm_units$Constants$hour;
+};
+var $ianmackenzie$elm_units$Duration$inMinutes = function (duration) {
+	return $ianmackenzie$elm_units$Duration$inSeconds(duration) / 60;
+};
+var $author$project$Mony$durationToEuroCent = F2(
+	function (amount, duration) {
+		var minutes = A2(
+			$elm$core$Basics$modBy,
+			60,
+			$elm$core$Basics$ceiling(
+				$ianmackenzie$elm_units$Duration$inMinutes(duration)));
+		var minuteAmount = $elm$core$Basics$ceiling(amount / 60);
+		var hours = A2(
+			$elm$core$Basics$max,
+			0,
+			$elm$core$Basics$floor(
+				$ianmackenzie$elm_units$Duration$inHours(duration)));
+		return (hours * amount) + (minutes * minuteAmount);
+	});
+var $author$project$Mony$myHours = 8000;
+var $author$project$Mony$mydurationToEuroCent = $author$project$Mony$durationToEuroCent($author$project$Mony$myHours);
 var $CoderDennis$elm_time_format$Time$Format$I18n$I_de_de$dayName = function (day) {
 	switch (day.$) {
 		case 'Mon':
@@ -10268,15 +10319,6 @@ var $CoderDennis$elm_time_format$Time$Format$formatRegex = A2(
 	$elm$core$Maybe$withDefault,
 	$elm$regex$Regex$never,
 	$elm$regex$Regex$fromString('%(y|Y|m|_m|-m|B|^B|b|^b|d|-d|-@d|e|@e|A|^A|a|^a|H|-H|k|I|-I|l|p|P|M|S|%|L)'));
-var $elm$core$Maybe$andThen = F2(
-	function (callback, maybeValue) {
-		if (maybeValue.$ === 'Just') {
-			var value = maybeValue.a;
-			return callback(value);
-		} else {
-			return $elm$core$Maybe$Nothing;
-		}
-	});
 var $CoderDennis$elm_time_format$Time$Format$collapse = function (m) {
 	return A2($elm$core$Maybe$andThen, $elm$core$Basics$identity, m);
 };
@@ -10554,7 +10596,6 @@ var $author$project$Main$posixToString = function (time) {
 var $author$project$Main$SaveComment = function (a) {
 	return {$: 'SaveComment', a: a};
 };
-var $author$project$Main$SendContinue = {$: 'SendContinue'};
 var $author$project$Main$SendStart = {$: 'SendStart'};
 var $author$project$Main$SendStop = {$: 'SendStop'};
 var $elm$html$Html$button = _VirtualDom_node('button');
@@ -10618,33 +10659,18 @@ var $author$project$Main$viewStartStopButton = F2(
 	function (startStop, comment) {
 		var _v0 = function () {
 			if (startStop.$ === 'Start') {
-				return _Utils_Tuple3(
-					$author$project$Main$SendStart,
-					'Start',
-					A2(
-						$elm$html$Html$button,
-						_List_fromArray(
-							[
-								$elm$html$Html$Attributes$class('btn btn-primary'),
-								$elm$html$Html$Events$onClick($author$project$Main$SendContinue)
-							]),
-						_List_fromArray(
-							[
-								$elm$html$Html$text('Fortsetzen')
-							])));
+				return _Utils_Tuple2($author$project$Main$SendStart, 'Start');
 			} else {
-				return _Utils_Tuple3($author$project$Main$SendStop, 'Stop', $author$project$Main$viewEmpty);
+				return _Utils_Tuple2($author$project$Main$SendStop, 'Stop');
 			}
 		}();
 		var event = _v0.a;
 		var buttonText = _v0.b;
-		var _continue = _v0.c;
 		return A2(
 			$elm$html$Html$div,
 			_List_Nil,
 			_List_fromArray(
 				[
-					_continue,
 					A2(
 					$elm$html$Html$button,
 					_List_fromArray(
@@ -10668,13 +10694,16 @@ var $author$project$Main$viewStartStopButton = F2(
 					_List_Nil)
 				]));
 	});
-var $author$project$Main$viewCurrent = F2(
-	function (current, comment) {
+var $author$project$Main$viewCurrent = F3(
+	function (current, comment, currentTime) {
 		if (current.$ === 'Stopped') {
 			return A2($author$project$Main$viewStartStopButton, $author$project$Main$Start, comment);
 		} else {
 			var start = current.a;
 			var maybeComment = current.b;
+			var mony = $author$project$Mony$euroCentToString(
+				$author$project$Mony$mydurationToEuroCent(
+					A2($ianmackenzie$elm_units$Duration$from, start, currentTime)));
 			var currentComment = A2($elm$core$Maybe$withDefault, '', maybeComment);
 			return A2(
 				$elm$html$Html$div,
@@ -10688,7 +10717,7 @@ var $author$project$Main$viewCurrent = F2(
 						_List_fromArray(
 							[
 								$elm$html$Html$text(
-								'running since ' + ($author$project$Main$posixToString(start) + (': ' + currentComment)))
+								'running since ' + ($author$project$Main$posixToString(start) + (': ' + (currentComment + (': ' + mony)))))
 							]))
 					]));
 		}
@@ -10743,6 +10772,7 @@ var $author$project$Main$SaveInsertDuration = function (a) {
 	return {$: 'SaveInsertDuration', a: a};
 };
 var $author$project$Main$SendInsert = {$: 'SendInsert'};
+var $elm$html$Html$Attributes$placeholder = $elm$html$Html$Attributes$stringProperty('placeholder');
 var $elm$html$Html$span = _VirtualDom_node('span');
 var $justinmimbs$date$Date$Days = {$: 'Days'};
 var $justinmimbs$date$Date$Months = {$: 'Months'};
@@ -12246,6 +12276,7 @@ var $author$project$Main$viewInsert = function (maybeInsert) {
 						[
 							$elm$html$Html$Attributes$id('duration'),
 							$elm$html$Html$Attributes$type_('text'),
+							$elm$html$Html$Attributes$placeholder('minutes'),
 							$elm$html$Html$Attributes$value(insert.duration),
 							$elm$html$Html$Events$onInput($author$project$Main$SaveInsertDuration)
 						]),
@@ -12256,6 +12287,7 @@ var $author$project$Main$viewInsert = function (maybeInsert) {
 						[
 							$elm$html$Html$Attributes$id('comment'),
 							$elm$html$Html$Attributes$type_('text'),
+							$elm$html$Html$Attributes$placeholder('comment'),
 							$elm$html$Html$Attributes$value(insert.comment),
 							$elm$html$Html$Events$onInput($author$project$Main$SaveInsertComment)
 						]),
@@ -12347,6 +12379,15 @@ var $author$project$Periode$filterYearMonth = F3(
 				periodes);
 		}
 	});
+var $author$project$Periode$sort = function (periodes) {
+	return $elm$core$List$reverse(
+		A2(
+			$elm$core$List$sortBy,
+			function (p) {
+				return $elm$time$Time$posixToMillis(p.start);
+			},
+			periodes));
+};
 var $elm$html$Html$table = _VirtualDom_node('table');
 var $elm$html$Html$tbody = _VirtualDom_node('tbody');
 var $elm$html$Html$Attributes$scope = $elm$html$Html$Attributes$stringProperty('scope');
@@ -12414,7 +12455,7 @@ var $author$project$Main$viewPeriodeHeader = function (permission) {
 							_List_fromArray(
 								[
 									$elm$html$Html$Attributes$scope('col'),
-									$elm$html$Html$Attributes$class('actions')
+									$elm$html$Html$Attributes$class('actions buttons')
 								]),
 							_List_fromArray(
 								[
@@ -12423,42 +12464,12 @@ var $author$project$Main$viewPeriodeHeader = function (permission) {
 					]))
 			]));
 };
+var $author$project$Main$SendContinue = function (a) {
+	return {$: 'SendContinue', a: a};
+};
 var $author$project$Main$SendDelete = function (a) {
 	return {$: 'SendDelete', a: a};
 };
-var $author$project$Main$intToString2 = function (n) {
-	var str = $elm$core$String$fromInt(n);
-	var formatted = ($elm$core$String$length(str) < 2) ? ('0' + str) : str;
-	return formatted;
-};
-var $author$project$Main$euroCentToString = function (euroCent) {
-	var euro = (euroCent / 100) | 0;
-	var cent = euroCent % 100;
-	return $elm$core$String$fromInt(euro) + (',' + ($author$project$Main$intToString2(cent) + ' €'));
-};
-var $ianmackenzie$elm_units$Constants$second = 1;
-var $ianmackenzie$elm_units$Constants$minute = 60 * $ianmackenzie$elm_units$Constants$second;
-var $ianmackenzie$elm_units$Constants$hour = 60 * $ianmackenzie$elm_units$Constants$minute;
-var $ianmackenzie$elm_units$Duration$inHours = function (duration) {
-	return $ianmackenzie$elm_units$Duration$inSeconds(duration) / $ianmackenzie$elm_units$Constants$hour;
-};
-var $ianmackenzie$elm_units$Duration$inMinutes = function (duration) {
-	return $ianmackenzie$elm_units$Duration$inSeconds(duration) / 60;
-};
-var $author$project$Main$durationToEuroCent = F2(
-	function (amount, duration) {
-		var minutes = A2(
-			$elm$core$Basics$modBy,
-			60,
-			$elm$core$Basics$round(
-				$ianmackenzie$elm_units$Duration$inMinutes(duration)));
-		var minuteAmount = $elm$core$Basics$ceiling(amount / 60);
-		var hours = $elm$core$Basics$floor(
-			$ianmackenzie$elm_units$Duration$inHours(duration));
-		return (hours * amount) + (minutes * minuteAmount);
-	});
-var $author$project$Main$myHours = 8000;
-var $author$project$Main$mydurationToEuroCent = $author$project$Main$durationToEuroCent($author$project$Main$myHours);
 var $elm$html$Html$td = _VirtualDom_node('td');
 var $author$project$Main$viewDuration = function (duration) {
 	var minutesRaw = $elm$core$String$fromInt(
@@ -12508,8 +12519,8 @@ var $author$project$Main$viewPeriodeLine = F2(
 					_List_fromArray(
 						[
 							$elm$html$Html$text(
-							$author$project$Main$euroCentToString(
-								$author$project$Main$mydurationToEuroCent(periode.duration)))
+							$author$project$Mony$euroCentToString(
+								$author$project$Mony$mydurationToEuroCent(periode.duration)))
 						])),
 					A2(
 					$elm$html$Html$td,
@@ -12524,7 +12535,10 @@ var $author$project$Main$viewPeriodeLine = F2(
 					permission,
 					A2(
 						$elm$html$Html$td,
-						_List_Nil,
+						_List_fromArray(
+							[
+								$elm$html$Html$Attributes$class('buttons')
+							]),
 						_List_fromArray(
 							[
 								A2(
@@ -12538,14 +12552,24 @@ var $author$project$Main$viewPeriodeLine = F2(
 									]),
 								_List_fromArray(
 									[
-										$elm$html$Html$text('X')
+										$elm$html$Html$text('✖')
+									])),
+								A2(
+								$elm$html$Html$button,
+								_List_fromArray(
+									[
+										$elm$html$Html$Attributes$type_('button'),
+										$elm$html$Html$Attributes$class('btn btn-danger'),
+										$elm$html$Html$Events$onClick(
+										$author$project$Main$SendContinue(periode.id))
+									]),
+								_List_fromArray(
+									[
+										$elm$html$Html$text('→')
 									]))
 							])))
 				]));
 	});
-var $ianmackenzie$elm_units$Duration$milliseconds = function (numMilliseconds) {
-	return $ianmackenzie$elm_units$Duration$seconds(0.001 * numMilliseconds);
-};
 var $ianmackenzie$elm_units$Duration$inMilliseconds = function (duration) {
 	return $ianmackenzie$elm_units$Duration$inSeconds(duration) * 1000;
 };
@@ -12583,8 +12607,8 @@ var $author$project$Main$viewPeriodeSummary = F2(
 					_List_fromArray(
 						[
 							$elm$html$Html$text(
-							$author$project$Main$euroCentToString(
-								$author$project$Main$mydurationToEuroCent(millis)))
+							$author$project$Mony$euroCentToString(
+								$author$project$Mony$mydurationToEuroCent(millis)))
 						])),
 					A2(
 					$elm$html$Html$td,
@@ -12795,7 +12819,7 @@ var $author$project$Main$view = function (model) {
 						A2(
 						$author$project$Main$canWrite,
 						model.permission,
-						A2($author$project$Main$viewCurrent, model.current, model.comment)),
+						A3($author$project$Main$viewCurrent, model.current, model.comment, model.currentTime)),
 						A2(
 						$author$project$Main$canWrite,
 						model.permission,
