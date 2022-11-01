@@ -29,7 +29,7 @@ func run() error {
 	ctx, cancel := interruptContext()
 	defer cancel()
 
-	model, err := model.NewModel("db.jsonl")
+	model, err := model.New(model.FileDB{File: "db.jsonl"})
 	if err != nil {
 		return fmt.Errorf("loading model: %w", err)
 	}

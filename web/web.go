@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/fs"
 	"log"
+	"net"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -38,7 +39,11 @@ func Run(ctx context.Context, model *model.Model, cfg config.Config) error {
 	router := mux.NewRouter()
 	registerHandlers(router, model, cfg, defaultFiles)
 
-	srv := &http.Server{Addr: cfg.WebListenAddr, Handler: router}
+	srv := &http.Server{
+		Addr:        cfg.WebListenAddr,
+		Handler:     router,
+		BaseContext: func(net.Listener) context.Context { return ctx },
+	}
 
 	// Shutdown logic in separate goroutine.
 	wait := make(chan error)

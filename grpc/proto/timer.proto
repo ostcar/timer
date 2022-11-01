@@ -36,7 +36,7 @@ message ListResponse {
 message Periode {
     int32 id = 1;
     int64 start = 2;
-    int64 stop = 3;
+    int64 duration = 3;
     string comment = 4;
     bool hasComment = 5;
 }
@@ -44,10 +44,10 @@ message Periode {
 message EditRequest {
     int32 id = 1;
     int64 start = 2;
-    int64 stop = 3;
+    int64 duration = 3;
     string comment = 4;
     bool hasStart = 5;
-    bool hasStop = 6;
+    bool hasDuration = 6;
     bool hasComment = 7;
 }
 
@@ -55,7 +55,7 @@ message EditResponse {}
 
 message InsertRequest {
     int64 start = 1;
-    int64 stop = 2;
+    int64 duration = 2;
     string comment = 3;
     bool hasComment = 4;
 }

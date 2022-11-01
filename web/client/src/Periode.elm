@@ -1,5 +1,6 @@
-module Periode exposing (Current(..), ID, Periode, State, fetch, filterYearMonth, idToString, sort)
+module Periode exposing (Current(..), ID, Periode, State, byYearMonth, fetch, filterYearMonth, idToString, sort)
 
+import Duration
 import Http
 import Json.Decode as Decode exposing (Decoder, bool, int, map, string)
 import Json.Decode.Pipeline exposing (optional, required)
@@ -15,7 +16,7 @@ type Current
 type alias Periode =
     { id : ID
     , start : Time.Posix
-    , stop : Time.Posix
+    , duration : Duration.Duration
     , comment : Maybe String
     }
 
@@ -25,7 +26,7 @@ periodeDecoder =
     Decode.succeed Periode
         |> required "id" idDecoder
         |> required "start" timeDecoder
-        |> required "stop" timeDecoder
+        |> required "duration" durationDecoder
         |> optional "comment" (map Just string) Nothing
 
 
@@ -93,6 +94,11 @@ timeDecoder =
     Decode.map (\n -> Time.millisToPosix (n * 1000)) int
 
 
+durationDecoder : Decoder Duration.Duration
+durationDecoder =
+    Decode.map (\n -> Duration.seconds (toFloat n)) int
+
+
 fetch : (Result Http.Error State -> msg) -> Cmd msg
 fetch result =
     Http.get
@@ -118,3 +124,62 @@ filterYearMonth zone ym periodes =
 
         _ ->
             periodes |> List.filter (\p -> YearMonth.fromPosix zone p.start == ym)
+
+
+byYearMonth : Time.Zone -> List Periode -> List ( String, List Periode )
+byYearMonth zone periodes =
+    List.foldl
+        (\p list ->
+            let
+                index =
+                    YearMonth.fromPosix zone p.start |> YearMonth.toString
+
+                foundIndex =
+                    anyIndex (\e -> Tuple.first e == index) list
+            in
+            if foundIndex == -1 then
+                ( index, [ p ] ) :: list
+
+            else
+                List.indexedMap
+                    (\idx ( ym, l ) ->
+                        if idx == foundIndex then
+                            ( ym, p :: l )
+
+                        else
+                            ( ym, l )
+                    )
+                    list
+        )
+        []
+        periodes
+
+
+{-| Like List.any but returns the index of the first found element. Returns -1
+if the list does not contain the required element
+
+    anyIndex isEven [ 2, 3 ] == 0
+
+    anyIndex isEven [ 1, 3 ] == -1
+
+-}
+anyIndex : (a -> Bool) -> List a -> Int
+anyIndex comparer list =
+    List.indexedMap
+        (\index element ->
+            if comparer element then
+                index
+
+            else
+                -1
+        )
+        list
+        |> List.foldl
+            (\element found ->
+                if element >= 0 then
+                    element
+
+                else
+                    found
+            )
+            -1

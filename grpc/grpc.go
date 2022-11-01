@@ -74,7 +74,7 @@ func (s grpcServer) List(ctx context.Context, req *proto.ListRequest) (*proto.Li
 		protoPeriodes[i] = &proto.Periode{
 			Id:         int32(p.ID),
 			Start:      p.Start.Unix(),
-			Stop:       p.Stop.Unix(),
+			Duration:   int64(p.Duration.Seconds()),
 			Comment:    comment,
 			HasComment: hasComment,
 		}
@@ -88,9 +88,9 @@ func (s grpcServer) Edit(ctx context.Context, req *proto.EditRequest) (*proto.Ed
 		start = model.Just(model.JSONTime(time.Unix(req.Start, 0)))
 	}
 
-	var stop model.Maybe[model.JSONTime]
-	if req.HasStop {
-		stop = model.Just(model.JSONTime(time.Unix(req.Stop, 0)))
+	var duration model.Maybe[model.JSONDuration]
+	if req.HasDuration {
+		duration = model.Just(model.JSONDuration(time.Duration(req.Duration) * time.Second))
 	}
 
 	var comment model.Maybe[string]
@@ -98,7 +98,7 @@ func (s grpcServer) Edit(ctx context.Context, req *proto.EditRequest) (*proto.Ed
 		comment = model.Just(req.Comment)
 	}
 
-	if err := s.model.Edit(int(req.Id), start, stop, comment); err != nil {
+	if err := s.model.Edit(int(req.Id), start, duration, comment); err != nil {
 		return nil, fmt.Errorf("editing periode: %w", err)
 	}
 	return new(proto.EditResponse), nil
@@ -106,14 +106,14 @@ func (s grpcServer) Edit(ctx context.Context, req *proto.EditRequest) (*proto.Ed
 
 func (s grpcServer) Insert(ctx context.Context, req *proto.InsertRequest) (*proto.InsertResponse, error) {
 	start := time.Unix(req.Start, 0)
-	stop := time.Unix(req.Stop, 0)
+	duration := time.Duration(req.Duration) * time.Second
 
 	var comment model.Maybe[string]
 	if req.HasComment {
 		comment = model.Just(req.Comment)
 	}
 
-	id, err := s.model.Insert(start, stop, comment)
+	id, err := s.model.Insert(start, duration, comment)
 
 	if err != nil {
 		return nil, fmt.Errorf("inserting periode: %w", err)
