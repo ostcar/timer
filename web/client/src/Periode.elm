@@ -1,8 +1,8 @@
-module Periode exposing (Current(..), ID, Periode, State, byYearMonth, fetch, filterYearMonth, idToString, sort)
+module Periode exposing (Current(..), ID, Periode, State, byYearMonth, fetch, filterYearMonth, idToString, sort, stateComment)
 
 import Duration
 import Http
-import Json.Decode as Decode exposing (Decoder, bool, int, map, string)
+import Json.Decode as Decode exposing (Decoder, bool, int, string)
 import Json.Decode.Pipeline exposing (optional, required)
 import Time
 import YearMonth exposing (YearMonthSelect(..))
@@ -10,14 +10,14 @@ import YearMonth exposing (YearMonthSelect(..))
 
 type Current
     = Stopped
-    | Started Time.Posix (Maybe String)
+    | Started Time.Posix String
 
 
 type alias Periode =
     { id : ID
     , start : Time.Posix
     , duration : Duration.Duration
-    , comment : Maybe String
+    , comment : String
     }
 
 
@@ -27,7 +27,7 @@ periodeDecoder =
         |> required "id" idDecoder
         |> required "start" timeDecoder
         |> required "duration" durationDecoder
-        |> optional "comment" (map Just string) Nothing
+        |> optional "comment" string ""
 
 
 periodeListDecoder : Decoder (List Periode)
@@ -46,16 +46,26 @@ stateDecoder =
     (Decode.succeed ServerState
         |> required "running" bool
         |> required "start" timeDecoder
-        |> optional "comment" (map Just string) Nothing
+        |> optional "comment" string ""
         |> required "periodes" periodeListDecoder
     )
-        |> map serverStateToState
+        |> Decode.map serverStateToState
+
+
+stateComment : State -> String
+stateComment state =
+    case state.current of
+        Stopped ->
+            ""
+
+        Started _ text ->
+            text
 
 
 type alias ServerState =
     { running : Bool
     , start : Time.Posix
-    , comment : Maybe String
+    , comment : String
     , periodes : List Periode
     }
 
@@ -123,7 +133,7 @@ filterYearMonth zone ym periodes =
             periodes
 
         _ ->
-            periodes |> List.filter (\p -> YearMonth.fromPosix zone p.start == ym)
+            List.filter (\p -> YearMonth.fromPosix zone p.start == ym) periodes
 
 
 byYearMonth : Time.Zone -> List Periode -> List ( String, List Periode )

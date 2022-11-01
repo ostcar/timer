@@ -12,13 +12,15 @@ type YearMonthSelect
 
 
 yearMonthList : Time.Zone -> List Time.Posix -> List YearMonthSelect
-yearMonthList zone periodes =
-    List.foldl (\p l -> fromPosix zone p :: l) [] periodes
+yearMonthList zone =
+    List.map (fromPosix zone)
 
 
 fromPosix : Time.Zone -> Time.Posix -> YearMonthSelect
 fromPosix zone time =
-    YearMonth (Time.toYear zone time) (Time.toMonth zone time)
+    YearMonth
+        (Time.toYear zone time)
+        (Time.toMonth zone time)
 
 
 toString : YearMonthSelect -> String
@@ -38,7 +40,10 @@ toAttr yearMonth =
             "alle"
 
         YearMonth year month ->
-            String.fromInt year ++ "_" ++ String.toLower (monthToString month)
+            String.fromInt year
+                ++ "_"
+                ++ monthToString month
+                |> String.toLower
 
 
 fromAttr : String -> YearMonthSelect
@@ -52,12 +57,8 @@ fromAttr value =
                 month =
                     stringToMonth strMonth
             in
-            case Maybe.map2 YearMonth year month of
-                Just ym ->
-                    ym
-
-                Nothing ->
-                    All
+            Maybe.map2 YearMonth year month
+                |> Maybe.withDefault All
 
         _ ->
             All
@@ -167,7 +168,7 @@ unique list =
             else
                 first :: unique (second :: tail)
 
-        first :: _ ->
+        first :: [] ->
             [ first ]
 
         [] ->
