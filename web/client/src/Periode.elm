@@ -1,11 +1,12 @@
-module Periode exposing (Current(..), ID, Periode, State, fetch, filterYearMonth, idToString, sort)
+module Periode exposing (Current(..), ID, Periode, State, byYearMonth, fetch, filterYearMonth, idToString, sort)
 
+import Dict
+import Duration
 import Http
 import Json.Decode as Decode exposing (Decoder, bool, int, map, string)
 import Json.Decode.Pipeline exposing (optional, required)
 import Time
 import YearMonth exposing (YearMonthSelect(..))
-import Duration
 
 
 type Current
@@ -93,8 +94,9 @@ timeDecoder : Decoder Time.Posix
 timeDecoder =
     Decode.map (\n -> Time.millisToPosix (n * 1000)) int
 
+
 durationDecoder : Decoder Duration.Duration
-durationDecoder=
+durationDecoder =
     Decode.map (\n -> Duration.seconds (toFloat n)) int
 
 
@@ -123,3 +125,26 @@ filterYearMonth zone ym periodes =
 
         _ ->
             periodes |> List.filter (\p -> YearMonth.fromPosix zone p.start == ym)
+
+
+byYearMonth : Time.Zone -> List Periode -> Dict.Dict String (List Periode)
+byYearMonth zone periodes =
+    List.foldr
+        (\periode d ->
+            Dict.update
+                (YearMonth.fromPosix zone periode.start |> YearMonth.toString)
+                (addPeriode periode)
+                d
+        )
+        Dict.empty
+        periodes
+
+
+addPeriode : Periode -> Maybe (List Periode) -> Maybe (List Periode)
+addPeriode newPeriode oldList =
+    case oldList of
+        Nothing ->
+            Just [ newPeriode ]
+
+        Just old ->
+            Just (newPeriode :: old)

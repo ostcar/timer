@@ -1,6 +1,7 @@
 module Main exposing (main)
 
 import Browser
+import Dict
 import Duration
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -9,6 +10,7 @@ import Http
 import Json.Decode as Decode
 import Json.Encode as Encode
 import Jwt
+import Mony
 import Periode
 import SingleDatePicker
 import String
@@ -17,9 +19,6 @@ import Time.Format
 import Time.Format.Config.Config_de_de
 import TimeZone
 import YearMonth exposing (YearMonthSelect(..))
-import Mony
-
-
 
 
 timeZone : Time.Zone
@@ -47,6 +46,7 @@ type alias Model =
     , permission : Permission
     , inputPassword : String
     , selectedYearMonth : YearMonth.YearMonthSelect
+    , viewBody : ViewBody
     }
 
 
@@ -86,6 +86,7 @@ type Msg
     | ReceiveAuth (Result Http.Error String)
     | Logout
     | SelectYearMonth String
+    | SetBody ViewBody
 
 
 init : String -> ( Model, Cmd Msg )
@@ -114,6 +115,7 @@ init token =
       , permission = permission
       , inputPassword = ""
       , selectedYearMonth = YearMonth.All
+      , viewBody = ViewPeriodes
       }
     , cmd
     )
@@ -364,6 +366,11 @@ update msg model =
             , Cmd.none
             )
 
+        SetBody value ->
+            ( { model | viewBody = value }
+            , Cmd.none
+            )
+
 
 emptyInsert : Insert
 emptyInsert =
@@ -461,7 +468,7 @@ view model =
                     div []
                         [ viewCurrent model.current model.comment model.currentTime |> canWrite model.permission
                         , viewInsert model.insert |> canWrite model.permission
-                        , viewPeriodes timeZone model.selectedYearMonth model.permission model.periodes
+                        , viewBody model
                         , viewFooter
                         ]
 
@@ -505,7 +512,9 @@ viewCurrent current comment currentTime =
             let
                 currentComment =
                     Maybe.withDefault "" maybeComment
-                mony = Duration.from start currentTime|> Mony.mydurationToEuroCent |> Mony.euroCentToString
+
+                mony =
+                    Duration.from start currentTime |> Mony.mydurationToEuroCent |> Mony.euroCentToString
             in
             div []
                 [ viewStartStopButton Stop comment
@@ -545,6 +554,86 @@ viewStartStopButton startStop comment =
         ]
 
 
+type ViewBody
+    = ViewMonthly
+    | ViewPeriodes
+
+
+viewBody : Model -> Html Msg
+viewBody model =
+    div []
+        [ ul [ class "nav nav-tabs" ]
+            [ navLink ViewMonthly model.viewBody
+            , navLink ViewPeriodes model.viewBody
+            ]
+        , case model.viewBody of
+            ViewMonthly ->
+                viewMonthly timeZone model.periodes
+
+            ViewPeriodes ->
+                viewPeriodes timeZone model.selectedYearMonth model.permission model.periodes
+        ]
+
+
+navLink : ViewBody -> ViewBody -> Html Msg
+navLink myViewBody activeViewBody =
+    let
+        linkClass =
+            if myViewBody == activeViewBody then
+                "nav-link active"
+
+            else
+                "nav-link"
+
+        viewText =
+            case myViewBody of
+                ViewMonthly ->
+                    "Monate"
+
+                ViewPeriodes ->
+                    "Zeiten"
+    in
+    li [ class "nav-item" ] [ a [ class linkClass, href "#", onClick (SetBody myViewBody) ] [ text viewText ] ]
+
+
+viewMonthly : Time.Zone -> List Periode.Periode -> Html Msg
+viewMonthly zone periodes =
+    div []
+        [ table [ class "table" ]
+            (tr []
+                [ th [] [ text "Monat" ]
+                , th [] [ text "Zeiten" ]
+                , th [] [ text "Euro" ]
+                ]
+                :: (Periode.byYearMonth zone periodes
+                        |> Dict.toList
+                        |> List.map viewMonthlyLine
+                   )
+            )
+        ]
+
+
+combineDurations : List Duration.Duration -> Duration.Duration
+combineDurations durations =
+    durations
+        |> List.map Duration.inMilliseconds
+        |> List.foldl (+) 0
+        |> Duration.milliseconds
+
+
+viewMonthlyLine : ( String, List Periode.Periode ) -> Html Msg
+viewMonthlyLine ( yearMonthText, periodes ) =
+    let
+        duration =
+            List.map .duration periodes |> combineDurations
+    in
+    tr []
+        [ td [] [ text yearMonthText ]
+        , td [] [ durationToString duration |> text ]
+        , td [] [ Mony.durationToString duration |> text ]
+        ]
+
+
 viewPeriodes : Time.Zone -> YearMonthSelect -> Permission -> List Periode.Periode -> Html Msg
 viewPeriodes zone selected permission periodes =
     let
@@ -559,7 +648,7 @@ viewPeriodes zone selected permission periodes =
     in
     div []
         [ sorted |> List.map (\p -> p.start) |> YearMonth.viewYearMonthSelect zone selected SelectYearMonth
-        , table [ Html.Attributes.class "table" ]
+        , table [ class "table" ]
             [ viewPeriodeHeader permission
             , tbody [] tableBody
             ]
@@ -579,17 +668,14 @@ viewPeriodeHeader permission =
         ]
 
 
-
-
-
 viewPeriodeLine : Permission -> Periode.Periode -> Html Msg
 viewPeriodeLine permission periode =
     tr []
         [ td [] [ text (posixToString periode.start) ]
-        , td [] [ div [] [ text (viewDuration periode.duration) ] ]
+        , td [] [ div [] [ text (durationToString periode.duration) ] ]
         , td [] [ text (Mony.mydurationToEuroCent periode.duration |> Mony.euroCentToString) ]
         , td [] [ text (Maybe.withDefault "" periode.comment) ]
-        , td [class "buttons"]
+        , td [ class "buttons" ]
             [ button [ type_ "button", class "btn btn-danger", onClick (SendDelete periode.id) ] [ text "✖" ]
             , button [ type_ "button", class "btn btn-danger", onClick (SendContinue periode.id) ] [ text "→" ]
             ]
@@ -597,8 +683,8 @@ viewPeriodeLine permission periode =
         ]
 
 
-viewDuration : Duration.Duration -> String
-viewDuration duration =
+durationToString : Duration.Duration -> String
+durationToString duration =
     let
         hours =
             Duration.inHours duration |> floor |> String.fromInt
@@ -624,7 +710,7 @@ viewPeriodeSummary permission periodes =
     in
     tr []
         [ td [] [ text "Gesamt" ]
-        , td [] [ text (viewDuration millis) ]
+        , td [] [ text (durationToString millis) ]
         , td [] [ text (Mony.mydurationToEuroCent millis |> Mony.euroCentToString) ]
         , td [] [ text "" ]
         , td [] [ text "" ] |> canWrite permission

@@ -1,4 +1,4 @@
-module YearMonth exposing (YearMonthSelect(..), fromAttr, fromPosix, viewYearMonthSelect, yearMonthList)
+module YearMonth exposing (YearMonthSelect(..), fromAttr, fromPosix, toString, viewYearMonthSelect, yearMonthList)
 
 import Html exposing (..)
 import Html.Attributes exposing (..)

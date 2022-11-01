@@ -53,3 +53,9 @@ euroCentToString euroCent =
             remainderBy 100 euroCent
     in
     String.fromInt euro ++ "," ++ intToString2 cent ++ " €"
+
+
+durationToString : Duration.Duration -> String
+durationToString duration =
+    mydurationToEuroCent duration
+    |> euroCentToString
