@@ -10230,17 +10230,22 @@ var $author$project$Main$navLink = F2(
 				]));
 	});
 var $elm$html$Html$ul = _VirtualDom_node('ul');
-var $author$project$Periode$addPeriode = F2(
-	function (newPeriode, oldList) {
-		if (oldList.$ === 'Nothing') {
-			return $elm$core$Maybe$Just(
-				_List_fromArray(
-					[newPeriode]));
-		} else {
-			var old = oldList.a;
-			return $elm$core$Maybe$Just(
-				A2($elm$core$List$cons, newPeriode, old));
-		}
+var $author$project$Periode$anyIndex = F2(
+	function (comparer, list) {
+		return A3(
+			$elm$core$List$foldl,
+			F2(
+				function (element, found) {
+					return (element >= 0) ? element : found;
+				}),
+			-1,
+			A2(
+				$elm$core$List$indexedMap,
+				F2(
+					function (index, element) {
+						return comparer(element) ? index : (-1);
+					}),
+				list));
 	});
 var $author$project$YearMonth$fromPosix = F2(
 	function (zone, time) {
@@ -10289,19 +10294,47 @@ var $author$project$YearMonth$toString = function (yearMonth) {
 var $author$project$Periode$byYearMonth = F2(
 	function (zone, periodes) {
 		return A3(
-			$elm$core$List$foldr,
+			$elm$core$List$foldl,
 			F2(
-				function (periode, d) {
-					return A3(
-						$elm$core$Dict$update,
-						$author$project$YearMonth$toString(
-							A2($author$project$YearMonth$fromPosix, zone, periode.start)),
-						$author$project$Periode$addPeriode(periode),
-						d);
+				function (p, list) {
+					var index = $author$project$YearMonth$toString(
+						A2($author$project$YearMonth$fromPosix, zone, p.start));
+					var foundIndex = A2(
+						$author$project$Periode$anyIndex,
+						function (e) {
+							return _Utils_eq(e.a, index);
+						},
+						list);
+					return _Utils_eq(foundIndex, -1) ? A2(
+						$elm$core$List$cons,
+						_Utils_Tuple2(
+							index,
+							_List_fromArray(
+								[p])),
+						list) : A2(
+						$elm$core$List$indexedMap,
+						F2(
+							function (idx, _v0) {
+								var ym = _v0.a;
+								var l = _v0.b;
+								return _Utils_eq(idx, foundIndex) ? _Utils_Tuple2(
+									ym,
+									A2($elm$core$List$cons, p, l)) : _Utils_Tuple2(ym, l);
+							}),
+						list);
 				}),
-			$elm$core$Dict$empty,
+			_List_Nil,
 			periodes);
 	});
+var $author$project$Periode$sort = function (periodes) {
+	return $elm$core$List$reverse(
+		A2(
+			$elm$core$List$sortBy,
+			function (p) {
+				return $elm$time$Time$posixToMillis(p.start);
+			},
+			periodes));
+};
 var $elm$html$Html$table = _VirtualDom_node('table');
 var $elm$html$Html$th = _VirtualDom_node('th');
 var $elm$html$Html$tr = _VirtualDom_node('tr');
@@ -10458,8 +10491,10 @@ var $author$project$Main$viewMonthly = F2(
 						A2(
 							$elm$core$List$map,
 							$author$project$Main$viewMonthlyLine,
-							$elm$core$Dict$toList(
-								A2($author$project$Periode$byYearMonth, zone, periodes)))))
+							A2(
+								$author$project$Periode$byYearMonth,
+								zone,
+								$author$project$Periode$sort(periodes)))))
 				]));
 	});
 var $author$project$Main$SelectYearMonth = function (a) {
@@ -10480,15 +10515,6 @@ var $author$project$Periode$filterYearMonth = F3(
 				periodes);
 		}
 	});
-var $author$project$Periode$sort = function (periodes) {
-	return $elm$core$List$reverse(
-		A2(
-			$elm$core$List$sortBy,
-			function (p) {
-				return $elm$time$Time$posixToMillis(p.start);
-			},
-			periodes));
-};
 var $elm$html$Html$tbody = _VirtualDom_node('tbody');
 var $elm$html$Html$Attributes$scope = $elm$html$Html$Attributes$stringProperty('scope');
 var $elm$html$Html$thead = _VirtualDom_node('thead');

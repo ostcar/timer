@@ -1,6 +1,5 @@
 module Periode exposing (Current(..), ID, Periode, State, byYearMonth, fetch, filterYearMonth, idToString, sort)
 
-import Dict
 import Duration
 import Http
 import Json.Decode as Decode exposing (Decoder, bool, int, map, string)
@@ -127,24 +126,60 @@ filterYearMonth zone ym periodes =
             periodes |> List.filter (\p -> YearMonth.fromPosix zone p.start == ym)
 
 
-byYearMonth : Time.Zone -> List Periode -> Dict.Dict String (List Periode)
+byYearMonth : Time.Zone -> List Periode -> List ( String, List Periode )
 byYearMonth zone periodes =
-    List.foldr
-        (\periode d ->
-            Dict.update
-                (YearMonth.fromPosix zone periode.start |> YearMonth.toString)
-                (addPeriode periode)
-                d
+    List.foldl
+        (\p list ->
+            let
+                index =
+                    YearMonth.fromPosix zone p.start |> YearMonth.toString
+
+                foundIndex =
+                    anyIndex (\e -> Tuple.first e == index) list
+            in
+            if foundIndex == -1 then
+                ( index, [ p ] ) :: list
+
+            else
+                List.indexedMap
+                    (\idx ( ym, l ) ->
+                        if idx == foundIndex then
+                            ( ym, p :: l )
+
+                        else
+                            ( ym, l )
+                    )
+                    list
         )
-        Dict.empty
+        []
         periodes
 
 
-addPeriode : Periode -> Maybe (List Periode) -> Maybe (List Periode)
-addPeriode newPeriode oldList =
-    case oldList of
-        Nothing ->
-            Just [ newPeriode ]
+{-| Like List.any but returns the index of the first found element. Returns -1
+if the list does not contain the required element
 
-        Just old ->
-            Just (newPeriode :: old)
+    anyIndex isEven [ 2, 3 ] == 0
+
+    anyIndex isEven [ 1, 3 ] == -1
+
+-}
+anyIndex : (a -> Bool) -> List a -> Int
+anyIndex comparer list =
+    List.indexedMap
+        (\index element ->
+            if comparer element then
+                index
+
+            else
+                -1
+        )
+        list
+        |> List.foldl
+            (\element found ->
+                if element >= 0 then
+                    element
+
+                else
+                    found
+            )
+            -1

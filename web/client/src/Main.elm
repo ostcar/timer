@@ -1,7 +1,6 @@
 module Main exposing (main)
 
 import Browser
-import Dict
 import Duration
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -605,8 +604,8 @@ viewMonthly zone periodes =
                 , th [] [ text "Zeiten" ]
                 , th [] [ text "Euro" ]
                 ]
-                :: (Periode.byYearMonth zone periodes
-                        |> Dict.toList
+                :: (Periode.sort periodes
+                        |> Periode.byYearMonth zone
                         |> List.map viewMonthlyLine
                    )
             )
