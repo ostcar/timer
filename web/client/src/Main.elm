@@ -452,6 +452,62 @@ passwordEncoder pass =
         [ ( "password", Encode.string pass ) ]
 
 
+intToString2 : Int -> String
+intToString2 n =
+    let
+        str =
+            String.fromInt n
+
+        formatted =
+            if String.length str < 2 then
+                "0" ++ str
+
+            else
+                str
+    in
+    formatted
+
+
+centToString : Int -> String
+centToString euroCent =
+    let
+        euro =
+            euroCent // 100
+
+        euroString =
+            intToFormattedString euro
+
+        cent =
+            remainderBy 100 euroCent
+    in
+    euroString ++ "," ++ intToString2 cent ++ " €"
+
+
+intToFormattedString : Int -> String
+intToFormattedString int =
+    String.fromInt int
+        |> String.foldr
+            (\c list ->
+                let
+                    last =
+                        List.head list |> Maybe.withDefault ""
+                in
+                if String.length last == 3 then
+                    String.fromChar c :: list
+
+                else
+                    String.cons c last :: List.drop 1 list
+            )
+            []
+        |> String.join "."
+
+
+durationToMonyString : Duration.Duration -> String
+durationToMonyString duration =
+    Mony.durationToCent duration
+        |> centToString
+
+
 view : Model -> Html Msg
 view model =
     case model.fetchErrMsg of
@@ -513,7 +569,7 @@ viewCurrent current comment currentTime =
                     Maybe.withDefault "" maybeComment
 
                 mony =
-                    Duration.from start currentTime |> Mony.mydurationToEuroCent |> Mony.euroCentToString
+                    Duration.from start currentTime |> durationToMonyString
             in
             div []
                 [ viewStartStopButton Stop comment
@@ -628,8 +684,8 @@ viewMonthlyLine ( yearMonthText, periodes ) =
     in
     tr []
         [ td [] [ text yearMonthText ]
-        , td [] [ durationToString duration |> text ]
-        , td [] [ Mony.durationToString duration |> text ]
+        , td [] [ durationToTimeString duration |> text ]
+        , td [] [ durationToMonyString duration |> text ]
         ]
 
 
@@ -671,8 +727,8 @@ viewPeriodeLine : Permission -> Periode.Periode -> Html Msg
 viewPeriodeLine permission periode =
     tr []
         [ td [] [ text (posixToString periode.start) ]
-        , td [] [ div [] [ text (durationToString periode.duration) ] ]
-        , td [] [ text (Mony.mydurationToEuroCent periode.duration |> Mony.euroCentToString) ]
+        , td [] [ div [] [ text (durationToTimeString periode.duration) ] ]
+        , td [] [ text (durationToMonyString periode.duration) ]
         , td [] [ text (Maybe.withDefault "" periode.comment) ]
         , td [ class "buttons" ]
             [ button [ type_ "button", class "btn btn-danger", onClick (SendDelete periode.id) ] [ text "✖" ]
@@ -682,43 +738,28 @@ viewPeriodeLine permission periode =
         ]
 
 
-durationToString : Duration.Duration -> String
-durationToString duration =
+durationToTimeString : Duration.Duration -> String
+durationToTimeString duration =
     let
-        hours =
-            Duration.inHours duration |> floor |> String.fromInt
-
-        minutesRaw =
-            Duration.inMinutes duration |> round |> modBy 60 |> String.fromInt
-
-        minutes =
-            if String.length minutesRaw == 1 then
-                "0" ++ minutesRaw
-
-            else
-                minutesRaw
+        ( hours, minutes ) =
+            Mony.durationInHourMinutes duration
     in
-    hours ++ ":" ++ minutes
+    String.fromInt hours ++ ":" ++ intToString2 minutes
 
 
 viewPeriodeSummary : Permission -> List Periode.Periode -> Html Msg
 viewPeriodeSummary permission periodes =
     let
-        millis =
-            List.foldl periodeAddMillis 0 periodes |> Duration.milliseconds
+        duration =
+            List.map .duration periodes |> combineDurations
     in
     tr []
         [ td [] [ text "Gesamt" ]
-        , td [] [ text (durationToString millis) ]
-        , td [] [ text (Mony.mydurationToEuroCent millis |> Mony.euroCentToString) ]
+        , td [] [ text (durationToTimeString duration) ]
+        , td [] [ text (durationToMonyString duration) ]
         , td [] [ text "" ]
         , td [] [ text "" ] |> canWrite permission
         ]
-
-
-periodeAddMillis : Periode.Periode -> Float -> Float
-periodeAddMillis periode millis =
-    millis + Duration.inMilliseconds periode.duration
 
 
 viewInsert : Maybe Insert -> Html Msg

@@ -10352,6 +10352,67 @@ var $author$project$Main$combineDurations = function (durations) {
 			0,
 			A2($elm$core$List$map, $ianmackenzie$elm_units$Duration$inMilliseconds, durations)));
 };
+var $elm$core$String$cons = _String_cons;
+var $elm$core$List$drop = F2(
+	function (n, list) {
+		drop:
+		while (true) {
+			if (n <= 0) {
+				return list;
+			} else {
+				if (!list.b) {
+					return list;
+				} else {
+					var x = list.a;
+					var xs = list.b;
+					var $temp$n = n - 1,
+						$temp$list = xs;
+					n = $temp$n;
+					list = $temp$list;
+					continue drop;
+				}
+			}
+		}
+	});
+var $elm$core$String$fromChar = function (_char) {
+	return A2($elm$core$String$cons, _char, '');
+};
+var $author$project$Main$intToFormattedString = function (_int) {
+	return A2(
+		$elm$core$String$join,
+		'.',
+		A3(
+			$elm$core$String$foldr,
+			F2(
+				function (c, list) {
+					var last = A2(
+						$elm$core$Maybe$withDefault,
+						'',
+						$elm$core$List$head(list));
+					return ($elm$core$String$length(last) === 3) ? A2(
+						$elm$core$List$cons,
+						$elm$core$String$fromChar(c),
+						list) : A2(
+						$elm$core$List$cons,
+						A2($elm$core$String$cons, c, last),
+						A2($elm$core$List$drop, 1, list));
+				}),
+			_List_Nil,
+			$elm$core$String$fromInt(_int)));
+};
+var $author$project$Main$intToString2 = function (n) {
+	var str = $elm$core$String$fromInt(n);
+	var formatted = ($elm$core$String$length(str) < 2) ? ('0' + str) : str;
+	return formatted;
+};
+var $author$project$Main$centToString = function (euroCent) {
+	var euro = (euroCent / 100) | 0;
+	var euroString = $author$project$Main$intToFormattedString(euro);
+	var cent = euroCent % 100;
+	return euroString + (',' + ($author$project$Main$intToString2(cent) + ' €'));
+};
+var $author$project$Mony$centPerHour = 8000;
+var $author$project$Mony$centPerMinute = 134;
 var $ianmackenzie$elm_units$Constants$second = 1;
 var $ianmackenzie$elm_units$Constants$minute = 60 * $ianmackenzie$elm_units$Constants$second;
 var $ianmackenzie$elm_units$Constants$hour = 60 * $ianmackenzie$elm_units$Constants$minute;
@@ -10361,49 +10422,31 @@ var $ianmackenzie$elm_units$Duration$inHours = function (duration) {
 var $ianmackenzie$elm_units$Duration$inMinutes = function (duration) {
 	return $ianmackenzie$elm_units$Duration$inSeconds(duration) / 60;
 };
-var $author$project$Main$durationToString = function (duration) {
-	var minutesRaw = $elm$core$String$fromInt(
+var $author$project$Mony$durationInHourMinutes = function (duration) {
+	return _Utils_Tuple2(
+		$elm$core$Basics$floor(
+			$ianmackenzie$elm_units$Duration$inHours(duration)),
 		A2(
 			$elm$core$Basics$modBy,
 			60,
-			$elm$core$Basics$round(
-				$ianmackenzie$elm_units$Duration$inMinutes(duration))));
-	var minutes = ($elm$core$String$length(minutesRaw) === 1) ? ('0' + minutesRaw) : minutesRaw;
-	var hours = $elm$core$String$fromInt(
-		$elm$core$Basics$floor(
-			$ianmackenzie$elm_units$Duration$inHours(duration)));
-	return hours + (':' + minutes);
-};
-var $author$project$Mony$intToString2 = function (n) {
-	var str = $elm$core$String$fromInt(n);
-	var formatted = ($elm$core$String$length(str) < 2) ? ('0' + str) : str;
-	return formatted;
-};
-var $author$project$Mony$euroCentToString = function (euroCent) {
-	var euro = (euroCent / 100) | 0;
-	var cent = euroCent % 100;
-	return $elm$core$String$fromInt(euro) + (',' + ($author$project$Mony$intToString2(cent) + ' €'));
-};
-var $author$project$Mony$durationToEuroCent = F2(
-	function (amount, duration) {
-		var minutes = A2(
-			$elm$core$Basics$modBy,
-			60,
 			$elm$core$Basics$ceiling(
-				$ianmackenzie$elm_units$Duration$inMinutes(duration)));
-		var minuteAmount = $elm$core$Basics$ceiling(amount / 60);
-		var hours = A2(
-			$elm$core$Basics$max,
-			0,
-			$elm$core$Basics$floor(
-				$ianmackenzie$elm_units$Duration$inHours(duration)));
-		return (hours * amount) + (minutes * minuteAmount);
-	});
-var $author$project$Mony$myHours = 8000;
-var $author$project$Mony$mydurationToEuroCent = $author$project$Mony$durationToEuroCent($author$project$Mony$myHours);
-var $author$project$Mony$durationToString = function (duration) {
-	return $author$project$Mony$euroCentToString(
-		$author$project$Mony$mydurationToEuroCent(duration));
+				$ianmackenzie$elm_units$Duration$inMinutes(duration))));
+};
+var $author$project$Mony$durationToCent = function (duration) {
+	var _v0 = $author$project$Mony$durationInHourMinutes(duration);
+	var hours = _v0.a;
+	var minutes = _v0.b;
+	return (hours * $author$project$Mony$centPerHour) + (minutes * $author$project$Mony$centPerMinute);
+};
+var $author$project$Main$durationToMonyString = function (duration) {
+	return $author$project$Main$centToString(
+		$author$project$Mony$durationToCent(duration));
+};
+var $author$project$Main$durationToTimeString = function (duration) {
+	var _v0 = $author$project$Mony$durationInHourMinutes(duration);
+	var hours = _v0.a;
+	var minutes = _v0.b;
+	return $elm$core$String$fromInt(hours) + (':' + $author$project$Main$intToString2(minutes));
 };
 var $elm$html$Html$td = _VirtualDom_node('td');
 var $author$project$Main$viewMonthlyLine = function (_v0) {
@@ -10434,7 +10477,7 @@ var $author$project$Main$viewMonthlyLine = function (_v0) {
 				_List_fromArray(
 					[
 						$elm$html$Html$text(
-						$author$project$Main$durationToString(duration))
+						$author$project$Main$durationToTimeString(duration))
 					])),
 				A2(
 				$elm$html$Html$td,
@@ -10442,7 +10485,7 @@ var $author$project$Main$viewMonthlyLine = function (_v0) {
 				_List_fromArray(
 					[
 						$elm$html$Html$text(
-						$author$project$Mony$durationToString(duration))
+						$author$project$Main$durationToMonyString(duration))
 					]))
 			]));
 };
@@ -10752,10 +10795,6 @@ var $CoderDennis$elm_time_format$Time$Format$Core$monthToInt = function (month) 
 			return 12;
 	}
 };
-var $elm$core$String$cons = _String_cons;
-var $elm$core$String$fromChar = function (_char) {
-	return A2($elm$core$String$cons, _char, '');
-};
 var $elm$core$Bitwise$and = _Bitwise_and;
 var $elm$core$String$repeatHelp = F3(
 	function (n, chunk, result) {
@@ -11019,7 +11058,7 @@ var $author$project$Main$viewPeriodeLine = F2(
 							_List_fromArray(
 								[
 									$elm$html$Html$text(
-									$author$project$Main$durationToString(periode.duration))
+									$author$project$Main$durationToTimeString(periode.duration))
 								]))
 						])),
 					A2(
@@ -11028,8 +11067,7 @@ var $author$project$Main$viewPeriodeLine = F2(
 					_List_fromArray(
 						[
 							$elm$html$Html$text(
-							$author$project$Mony$euroCentToString(
-								$author$project$Mony$mydurationToEuroCent(periode.duration)))
+							$author$project$Main$durationToMonyString(periode.duration))
 						])),
 					A2(
 					$elm$html$Html$td,
@@ -11079,14 +11117,15 @@ var $author$project$Main$viewPeriodeLine = F2(
 							])))
 				]));
 	});
-var $author$project$Main$periodeAddMillis = F2(
-	function (periode, millis) {
-		return millis + $ianmackenzie$elm_units$Duration$inMilliseconds(periode.duration);
-	});
 var $author$project$Main$viewPeriodeSummary = F2(
 	function (permission, periodes) {
-		var millis = $ianmackenzie$elm_units$Duration$milliseconds(
-			A3($elm$core$List$foldl, $author$project$Main$periodeAddMillis, 0, periodes));
+		var duration = $author$project$Main$combineDurations(
+			A2(
+				$elm$core$List$map,
+				function ($) {
+					return $.duration;
+				},
+				periodes));
 		return A2(
 			$elm$html$Html$tr,
 			_List_Nil,
@@ -11105,7 +11144,7 @@ var $author$project$Main$viewPeriodeSummary = F2(
 					_List_fromArray(
 						[
 							$elm$html$Html$text(
-							$author$project$Main$durationToString(millis))
+							$author$project$Main$durationToTimeString(duration))
 						])),
 					A2(
 					$elm$html$Html$td,
@@ -11113,8 +11152,7 @@ var $author$project$Main$viewPeriodeSummary = F2(
 					_List_fromArray(
 						[
 							$elm$html$Html$text(
-							$author$project$Mony$euroCentToString(
-								$author$project$Mony$mydurationToEuroCent(millis)))
+							$author$project$Main$durationToMonyString(duration))
 						])),
 					A2(
 					$elm$html$Html$td,
@@ -11390,9 +11428,8 @@ var $author$project$Main$viewCurrent = F3(
 		} else {
 			var start = current.a;
 			var maybeComment = current.b;
-			var mony = $author$project$Mony$euroCentToString(
-				$author$project$Mony$mydurationToEuroCent(
-					A2($ianmackenzie$elm_units$Duration$from, start, currentTime)));
+			var mony = $author$project$Main$durationToMonyString(
+				A2($ianmackenzie$elm_units$Duration$from, start, currentTime));
 			var currentComment = A2($elm$core$Maybe$withDefault, '', maybeComment);
 			return A2(
 				$elm$html$Html$div,
@@ -12513,27 +12550,6 @@ var $justinmimbs$time_extra$Time$Extra$range = F5(
 			until,
 			_List_Nil,
 			A3($justinmimbs$time_extra$Time$Extra$ceiling, interval, zone, start));
-	});
-var $elm$core$List$drop = F2(
-	function (n, list) {
-		drop:
-		while (true) {
-			if (n <= 0) {
-				return list;
-			} else {
-				if (!list.b) {
-					return list;
-				} else {
-					var x = list.a;
-					var xs = list.b;
-					var $temp$n = n - 1,
-						$temp$list = xs;
-					n = $temp$n;
-					list = $temp$list;
-					continue drop;
-				}
-			}
-		}
 	});
 var $elm$core$List$takeReverse = F3(
 	function (n, list, kept) {
