@@ -4357,181 +4357,6 @@ function _Browser_load(url)
 }
 
 
-
-// SEND REQUEST
-
-var _Http_toTask = F3(function(router, toTask, request)
-{
-	return _Scheduler_binding(function(callback)
-	{
-		function done(response) {
-			callback(toTask(request.expect.a(response)));
-		}
-
-		var xhr = new XMLHttpRequest();
-		xhr.addEventListener('error', function() { done($elm$http$Http$NetworkError_); });
-		xhr.addEventListener('timeout', function() { done($elm$http$Http$Timeout_); });
-		xhr.addEventListener('load', function() { done(_Http_toResponse(request.expect.b, xhr)); });
-		$elm$core$Maybe$isJust(request.tracker) && _Http_track(router, xhr, request.tracker.a);
-
-		try {
-			xhr.open(request.method, request.url, true);
-		} catch (e) {
-			return done($elm$http$Http$BadUrl_(request.url));
-		}
-
-		_Http_configureRequest(xhr, request);
-
-		request.body.a && xhr.setRequestHeader('Content-Type', request.body.a);
-		xhr.send(request.body.b);
-
-		return function() { xhr.c = true; xhr.abort(); };
-	});
-});
-
-
-// CONFIGURE
-
-function _Http_configureRequest(xhr, request)
-{
-	for (var headers = request.headers; headers.b; headers = headers.b) // WHILE_CONS
-	{
-		xhr.setRequestHeader(headers.a.a, headers.a.b);
-	}
-	xhr.timeout = request.timeout.a || 0;
-	xhr.responseType = request.expect.d;
-	xhr.withCredentials = request.allowCookiesFromOtherDomains;
-}
-
-
-// RESPONSES
-
-function _Http_toResponse(toBody, xhr)
-{
-	return A2(
-		200 <= xhr.status && xhr.status < 300 ? $elm$http$Http$GoodStatus_ : $elm$http$Http$BadStatus_,
-		_Http_toMetadata(xhr),
-		toBody(xhr.response)
-	);
-}
-
-
-// METADATA
-
-function _Http_toMetadata(xhr)
-{
-	return {
-		url: xhr.responseURL,
-		statusCode: xhr.status,
-		statusText: xhr.statusText,
-		headers: _Http_parseHeaders(xhr.getAllResponseHeaders())
-	};
-}
-
-
-// HEADERS
-
-function _Http_parseHeaders(rawHeaders)
-{
-	if (!rawHeaders)
-	{
-		return $elm$core$Dict$empty;
-	}
-
-	var headers = $elm$core$Dict$empty;
-	var headerPairs = rawHeaders.split('\r\n');
-	for (var i = headerPairs.length; i--; )
-	{
-		var headerPair = headerPairs[i];
-		var index = headerPair.indexOf(': ');
-		if (index > 0)
-		{
-			var key = headerPair.substring(0, index);
-			var value = headerPair.substring(index + 2);
-
-			headers = A3($elm$core$Dict$update, key, function(oldValue) {
-				return $elm$core$Maybe$Just($elm$core$Maybe$isJust(oldValue)
-					? value + ', ' + oldValue.a
-					: value
-				);
-			}, headers);
-		}
-	}
-	return headers;
-}
-
-
-// EXPECT
-
-var _Http_expect = F3(function(type, toBody, toValue)
-{
-	return {
-		$: 0,
-		d: type,
-		b: toBody,
-		a: toValue
-	};
-});
-
-var _Http_mapExpect = F2(function(func, expect)
-{
-	return {
-		$: 0,
-		d: expect.d,
-		b: expect.b,
-		a: function(x) { return func(expect.a(x)); }
-	};
-});
-
-function _Http_toDataView(arrayBuffer)
-{
-	return new DataView(arrayBuffer);
-}
-
-
-// BODY and PARTS
-
-var _Http_emptyBody = { $: 0 };
-var _Http_pair = F2(function(a, b) { return { $: 0, a: a, b: b }; });
-
-function _Http_toFormData(parts)
-{
-	for (var formData = new FormData(); parts.b; parts = parts.b) // WHILE_CONS
-	{
-		var part = parts.a;
-		formData.append(part.a, part.b);
-	}
-	return formData;
-}
-
-var _Http_bytesToBlob = F2(function(mime, bytes)
-{
-	return new Blob([bytes], { type: mime });
-});
-
-
-// PROGRESS
-
-function _Http_track(router, xhr, tracker)
-{
-	// TODO check out lengthComputable on loadstart event
-
-	xhr.upload.addEventListener('progress', function(event) {
-		if (xhr.c) { return; }
-		_Scheduler_rawSpawn(A2($elm$core$Platform$sendToSelf, router, _Utils_Tuple2(tracker, $elm$http$Http$Sending({
-			sent: event.loaded,
-			size: event.total
-		}))));
-	});
-	xhr.addEventListener('progress', function(event) {
-		if (xhr.c) { return; }
-		_Scheduler_rawSpawn(A2($elm$core$Platform$sendToSelf, router, _Utils_Tuple2(tracker, $elm$http$Http$Receiving({
-			received: event.loaded,
-			size: event.lengthComputable ? $elm$core$Maybe$Just(event.total) : $elm$core$Maybe$Nothing
-		}))));
-	});
-}
-
 // BYTES
 
 function _Bytes_width(bytes)
@@ -4746,6 +4571,181 @@ var _Bitwise_shiftRightZfBy = F2(function(offset, a)
 	return a >>> offset;
 });
 
+
+
+// SEND REQUEST
+
+var _Http_toTask = F3(function(router, toTask, request)
+{
+	return _Scheduler_binding(function(callback)
+	{
+		function done(response) {
+			callback(toTask(request.expect.a(response)));
+		}
+
+		var xhr = new XMLHttpRequest();
+		xhr.addEventListener('error', function() { done($elm$http$Http$NetworkError_); });
+		xhr.addEventListener('timeout', function() { done($elm$http$Http$Timeout_); });
+		xhr.addEventListener('load', function() { done(_Http_toResponse(request.expect.b, xhr)); });
+		$elm$core$Maybe$isJust(request.tracker) && _Http_track(router, xhr, request.tracker.a);
+
+		try {
+			xhr.open(request.method, request.url, true);
+		} catch (e) {
+			return done($elm$http$Http$BadUrl_(request.url));
+		}
+
+		_Http_configureRequest(xhr, request);
+
+		request.body.a && xhr.setRequestHeader('Content-Type', request.body.a);
+		xhr.send(request.body.b);
+
+		return function() { xhr.c = true; xhr.abort(); };
+	});
+});
+
+
+// CONFIGURE
+
+function _Http_configureRequest(xhr, request)
+{
+	for (var headers = request.headers; headers.b; headers = headers.b) // WHILE_CONS
+	{
+		xhr.setRequestHeader(headers.a.a, headers.a.b);
+	}
+	xhr.timeout = request.timeout.a || 0;
+	xhr.responseType = request.expect.d;
+	xhr.withCredentials = request.allowCookiesFromOtherDomains;
+}
+
+
+// RESPONSES
+
+function _Http_toResponse(toBody, xhr)
+{
+	return A2(
+		200 <= xhr.status && xhr.status < 300 ? $elm$http$Http$GoodStatus_ : $elm$http$Http$BadStatus_,
+		_Http_toMetadata(xhr),
+		toBody(xhr.response)
+	);
+}
+
+
+// METADATA
+
+function _Http_toMetadata(xhr)
+{
+	return {
+		url: xhr.responseURL,
+		statusCode: xhr.status,
+		statusText: xhr.statusText,
+		headers: _Http_parseHeaders(xhr.getAllResponseHeaders())
+	};
+}
+
+
+// HEADERS
+
+function _Http_parseHeaders(rawHeaders)
+{
+	if (!rawHeaders)
+	{
+		return $elm$core$Dict$empty;
+	}
+
+	var headers = $elm$core$Dict$empty;
+	var headerPairs = rawHeaders.split('\r\n');
+	for (var i = headerPairs.length; i--; )
+	{
+		var headerPair = headerPairs[i];
+		var index = headerPair.indexOf(': ');
+		if (index > 0)
+		{
+			var key = headerPair.substring(0, index);
+			var value = headerPair.substring(index + 2);
+
+			headers = A3($elm$core$Dict$update, key, function(oldValue) {
+				return $elm$core$Maybe$Just($elm$core$Maybe$isJust(oldValue)
+					? value + ', ' + oldValue.a
+					: value
+				);
+			}, headers);
+		}
+	}
+	return headers;
+}
+
+
+// EXPECT
+
+var _Http_expect = F3(function(type, toBody, toValue)
+{
+	return {
+		$: 0,
+		d: type,
+		b: toBody,
+		a: toValue
+	};
+});
+
+var _Http_mapExpect = F2(function(func, expect)
+{
+	return {
+		$: 0,
+		d: expect.d,
+		b: expect.b,
+		a: function(x) { return func(expect.a(x)); }
+	};
+});
+
+function _Http_toDataView(arrayBuffer)
+{
+	return new DataView(arrayBuffer);
+}
+
+
+// BODY and PARTS
+
+var _Http_emptyBody = { $: 0 };
+var _Http_pair = F2(function(a, b) { return { $: 0, a: a, b: b }; });
+
+function _Http_toFormData(parts)
+{
+	for (var formData = new FormData(); parts.b; parts = parts.b) // WHILE_CONS
+	{
+		var part = parts.a;
+		formData.append(part.a, part.b);
+	}
+	return formData;
+}
+
+var _Http_bytesToBlob = F2(function(mime, bytes)
+{
+	return new Blob([bytes], { type: mime });
+});
+
+
+// PROGRESS
+
+function _Http_track(router, xhr, tracker)
+{
+	// TODO check out lengthComputable on loadstart event
+
+	xhr.upload.addEventListener('progress', function(event) {
+		if (xhr.c) { return; }
+		_Scheduler_rawSpawn(A2($elm$core$Platform$sendToSelf, router, _Utils_Tuple2(tracker, $elm$http$Http$Sending({
+			sent: event.loaded,
+			size: event.total
+		}))));
+	});
+	xhr.addEventListener('progress', function(event) {
+		if (xhr.c) { return; }
+		_Scheduler_rawSpawn(A2($elm$core$Platform$sendToSelf, router, _Utils_Tuple2(tracker, $elm$http$Http$Receiving({
+			received: event.loaded,
+			size: event.lengthComputable ? $elm$core$Maybe$Just(event.total) : $elm$core$Maybe$Nothing
+		}))));
+	});
+}
 
 
 function _Time_now(millisToPosix)
@@ -5682,12 +5682,643 @@ var $elm$core$Task$perform = F2(
 	});
 var $elm$browser$Browser$element = _Browser_element;
 var $author$project$YearMonth$All = {$: 'All'};
+var $author$project$Periode$Stopped = {$: 'Stopped'};
+var $author$project$Main$ViewPeriodes = {$: 'ViewPeriodes'};
+var $elm$time$Time$Posix = function (a) {
+	return {$: 'Posix', a: a};
+};
+var $elm$time$Time$millisToPosix = $elm$time$Time$Posix;
+var $author$project$Main$PermissionNone = {$: 'PermissionNone'};
+var $elm$core$Result$andThen = F2(
+	function (callback, result) {
+		if (result.$ === 'Ok') {
+			var value = result.a;
+			return callback(value);
+		} else {
+			var msg = result.a;
+			return $elm$core$Result$Err(msg);
+		}
+	});
+var $elm$core$Basics$composeR = F3(
+	function (f, g, x) {
+		return g(
+			f(x));
+	});
+var $simonh1000$elm_jwt$Jwt$TokenDecodeError = function (a) {
+	return {$: 'TokenDecodeError', a: a};
+};
+var $elm$json$Json$Decode$decodeString = _Json_runOnString;
+var $simonh1000$elm_jwt$Jwt$TokenHeaderError = {$: 'TokenHeaderError'};
+var $simonh1000$elm_jwt$Jwt$TokenProcessingError = function (a) {
+	return {$: 'TokenProcessingError', a: a};
+};
+var $elm$core$String$concat = function (strings) {
+	return A2($elm$core$String$join, '', strings);
+};
+var $elm$core$Basics$modBy = _Basics_modBy;
+var $simonh1000$elm_jwt$Jwt$fixlength = function (s) {
+	var _v0 = A2(
+		$elm$core$Basics$modBy,
+		4,
+		$elm$core$String$length(s));
+	switch (_v0) {
+		case 0:
+			return $elm$core$Result$Ok(s);
+		case 2:
+			return $elm$core$Result$Ok(
+				$elm$core$String$concat(
+					_List_fromArray(
+						[s, '=='])));
+		case 3:
+			return $elm$core$Result$Ok(
+				$elm$core$String$concat(
+					_List_fromArray(
+						[s, '='])));
+		default:
+			return $elm$core$Result$Err(
+				$simonh1000$elm_jwt$Jwt$TokenProcessingError('Wrong length'));
+	}
+};
+var $elm$core$Result$fromMaybe = F2(
+	function (err, maybe) {
+		if (maybe.$ === 'Just') {
+			var v = maybe.a;
+			return $elm$core$Result$Ok(v);
+		} else {
+			return $elm$core$Result$Err(err);
+		}
+	});
+var $elm$core$Result$map = F2(
+	function (func, ra) {
+		if (ra.$ === 'Ok') {
+			var a = ra.a;
+			return $elm$core$Result$Ok(
+				func(a));
+		} else {
+			var e = ra.a;
+			return $elm$core$Result$Err(e);
+		}
+	});
+var $elm$core$Result$map2 = F3(
+	function (func, ra, rb) {
+		if (ra.$ === 'Err') {
+			var x = ra.a;
+			return $elm$core$Result$Err(x);
+		} else {
+			var a = ra.a;
+			if (rb.$ === 'Err') {
+				var x = rb.a;
+				return $elm$core$Result$Err(x);
+			} else {
+				var b = rb.a;
+				return $elm$core$Result$Ok(
+					A2(func, a, b));
+			}
+		}
+	});
+var $elm$core$Result$mapError = F2(
+	function (f, result) {
+		if (result.$ === 'Ok') {
+			var v = result.a;
+			return $elm$core$Result$Ok(v);
+		} else {
+			var e = result.a;
+			return $elm$core$Result$Err(
+				f(e));
+		}
+	});
+var $elm$bytes$Bytes$Encode$getWidth = function (builder) {
+	switch (builder.$) {
+		case 'I8':
+			return 1;
+		case 'I16':
+			return 2;
+		case 'I32':
+			return 4;
+		case 'U8':
+			return 1;
+		case 'U16':
+			return 2;
+		case 'U32':
+			return 4;
+		case 'F32':
+			return 4;
+		case 'F64':
+			return 8;
+		case 'Seq':
+			var w = builder.a;
+			return w;
+		case 'Utf8':
+			var w = builder.a;
+			return w;
+		default:
+			var bs = builder.a;
+			return _Bytes_width(bs);
+	}
+};
+var $elm$bytes$Bytes$LE = {$: 'LE'};
+var $elm$bytes$Bytes$Encode$write = F3(
+	function (builder, mb, offset) {
+		switch (builder.$) {
+			case 'I8':
+				var n = builder.a;
+				return A3(_Bytes_write_i8, mb, offset, n);
+			case 'I16':
+				var e = builder.a;
+				var n = builder.b;
+				return A4(
+					_Bytes_write_i16,
+					mb,
+					offset,
+					n,
+					_Utils_eq(e, $elm$bytes$Bytes$LE));
+			case 'I32':
+				var e = builder.a;
+				var n = builder.b;
+				return A4(
+					_Bytes_write_i32,
+					mb,
+					offset,
+					n,
+					_Utils_eq(e, $elm$bytes$Bytes$LE));
+			case 'U8':
+				var n = builder.a;
+				return A3(_Bytes_write_u8, mb, offset, n);
+			case 'U16':
+				var e = builder.a;
+				var n = builder.b;
+				return A4(
+					_Bytes_write_u16,
+					mb,
+					offset,
+					n,
+					_Utils_eq(e, $elm$bytes$Bytes$LE));
+			case 'U32':
+				var e = builder.a;
+				var n = builder.b;
+				return A4(
+					_Bytes_write_u32,
+					mb,
+					offset,
+					n,
+					_Utils_eq(e, $elm$bytes$Bytes$LE));
+			case 'F32':
+				var e = builder.a;
+				var n = builder.b;
+				return A4(
+					_Bytes_write_f32,
+					mb,
+					offset,
+					n,
+					_Utils_eq(e, $elm$bytes$Bytes$LE));
+			case 'F64':
+				var e = builder.a;
+				var n = builder.b;
+				return A4(
+					_Bytes_write_f64,
+					mb,
+					offset,
+					n,
+					_Utils_eq(e, $elm$bytes$Bytes$LE));
+			case 'Seq':
+				var bs = builder.b;
+				return A3($elm$bytes$Bytes$Encode$writeSequence, bs, mb, offset);
+			case 'Utf8':
+				var s = builder.b;
+				return A3(_Bytes_write_string, mb, offset, s);
+			default:
+				var bs = builder.a;
+				return A3(_Bytes_write_bytes, mb, offset, bs);
+		}
+	});
+var $elm$bytes$Bytes$Encode$writeSequence = F3(
+	function (builders, mb, offset) {
+		writeSequence:
+		while (true) {
+			if (!builders.b) {
+				return offset;
+			} else {
+				var b = builders.a;
+				var bs = builders.b;
+				var $temp$builders = bs,
+					$temp$mb = mb,
+					$temp$offset = A3($elm$bytes$Bytes$Encode$write, b, mb, offset);
+				builders = $temp$builders;
+				mb = $temp$mb;
+				offset = $temp$offset;
+				continue writeSequence;
+			}
+		}
+	});
+var $elm$bytes$Bytes$Decode$decode = F2(
+	function (_v0, bs) {
+		var decoder = _v0.a;
+		return A2(_Bytes_decode, decoder, bs);
+	});
+var $elm$bytes$Bytes$Decode$Decoder = function (a) {
+	return {$: 'Decoder', a: a};
+};
+var $elm$bytes$Bytes$Decode$string = function (n) {
+	return $elm$bytes$Bytes$Decode$Decoder(
+		_Bytes_read_string(n));
+};
+var $elm$bytes$Bytes$Encode$encode = _Bytes_encode;
+var $elm$bytes$Bytes$BE = {$: 'BE'};
+var $danfishgold$base64_bytes$Encode$isValidChar = function (c) {
+	if ($elm$core$Char$isAlphaNum(c)) {
+		return true;
+	} else {
+		switch (c.valueOf()) {
+			case '+':
+				return true;
+			case '/':
+				return true;
+			default:
+				return false;
+		}
+	}
+};
+var $elm$core$Bitwise$or = _Bitwise_or;
+var $elm$bytes$Bytes$Encode$Seq = F2(
+	function (a, b) {
+		return {$: 'Seq', a: a, b: b};
+	});
+var $elm$bytes$Bytes$Encode$getWidths = F2(
+	function (width, builders) {
+		getWidths:
+		while (true) {
+			if (!builders.b) {
+				return width;
+			} else {
+				var b = builders.a;
+				var bs = builders.b;
+				var $temp$width = width + $elm$bytes$Bytes$Encode$getWidth(b),
+					$temp$builders = bs;
+				width = $temp$width;
+				builders = $temp$builders;
+				continue getWidths;
+			}
+		}
+	});
+var $elm$bytes$Bytes$Encode$sequence = function (builders) {
+	return A2(
+		$elm$bytes$Bytes$Encode$Seq,
+		A2($elm$bytes$Bytes$Encode$getWidths, 0, builders),
+		builders);
+};
+var $elm$core$Bitwise$shiftLeftBy = _Bitwise_shiftLeftBy;
+var $elm$core$Bitwise$shiftRightBy = _Bitwise_shiftRightBy;
+var $elm$core$Basics$ge = _Utils_ge;
+var $elm$core$Basics$negate = function (n) {
+	return -n;
+};
+var $danfishgold$base64_bytes$Encode$unsafeConvertChar = function (_char) {
+	var key = $elm$core$Char$toCode(_char);
+	if ((key >= 65) && (key <= 90)) {
+		return key - 65;
+	} else {
+		if ((key >= 97) && (key <= 122)) {
+			return (key - 97) + 26;
+		} else {
+			if ((key >= 48) && (key <= 57)) {
+				return ((key - 48) + 26) + 26;
+			} else {
+				switch (_char.valueOf()) {
+					case '+':
+						return 62;
+					case '/':
+						return 63;
+					default:
+						return -1;
+				}
+			}
+		}
+	}
+};
+var $elm$bytes$Bytes$Encode$U16 = F2(
+	function (a, b) {
+		return {$: 'U16', a: a, b: b};
+	});
+var $elm$bytes$Bytes$Encode$unsignedInt16 = $elm$bytes$Bytes$Encode$U16;
+var $elm$bytes$Bytes$Encode$U8 = function (a) {
+	return {$: 'U8', a: a};
+};
+var $elm$bytes$Bytes$Encode$unsignedInt8 = $elm$bytes$Bytes$Encode$U8;
+var $danfishgold$base64_bytes$Encode$encodeCharacters = F4(
+	function (a, b, c, d) {
+		if ($danfishgold$base64_bytes$Encode$isValidChar(a) && $danfishgold$base64_bytes$Encode$isValidChar(b)) {
+			var n2 = $danfishgold$base64_bytes$Encode$unsafeConvertChar(b);
+			var n1 = $danfishgold$base64_bytes$Encode$unsafeConvertChar(a);
+			if ('=' === d.valueOf()) {
+				if ('=' === c.valueOf()) {
+					var n = (n1 << 18) | (n2 << 12);
+					var b1 = n >> 16;
+					return $elm$core$Maybe$Just(
+						$elm$bytes$Bytes$Encode$unsignedInt8(b1));
+				} else {
+					if ($danfishgold$base64_bytes$Encode$isValidChar(c)) {
+						var n3 = $danfishgold$base64_bytes$Encode$unsafeConvertChar(c);
+						var n = ((n1 << 18) | (n2 << 12)) | (n3 << 6);
+						var combined = n >> 8;
+						return $elm$core$Maybe$Just(
+							A2($elm$bytes$Bytes$Encode$unsignedInt16, $elm$bytes$Bytes$BE, combined));
+					} else {
+						return $elm$core$Maybe$Nothing;
+					}
+				}
+			} else {
+				if ($danfishgold$base64_bytes$Encode$isValidChar(c) && $danfishgold$base64_bytes$Encode$isValidChar(d)) {
+					var n4 = $danfishgold$base64_bytes$Encode$unsafeConvertChar(d);
+					var n3 = $danfishgold$base64_bytes$Encode$unsafeConvertChar(c);
+					var n = ((n1 << 18) | (n2 << 12)) | ((n3 << 6) | n4);
+					var combined = n >> 8;
+					var b3 = n;
+					return $elm$core$Maybe$Just(
+						$elm$bytes$Bytes$Encode$sequence(
+							_List_fromArray(
+								[
+									A2($elm$bytes$Bytes$Encode$unsignedInt16, $elm$bytes$Bytes$BE, combined),
+									$elm$bytes$Bytes$Encode$unsignedInt8(b3)
+								])));
+				} else {
+					return $elm$core$Maybe$Nothing;
+				}
+			}
+		} else {
+			return $elm$core$Maybe$Nothing;
+		}
+	});
+var $elm$core$String$foldr = _String_foldr;
+var $elm$core$String$toList = function (string) {
+	return A3($elm$core$String$foldr, $elm$core$List$cons, _List_Nil, string);
+};
+var $danfishgold$base64_bytes$Encode$encodeChunks = F2(
+	function (input, accum) {
+		encodeChunks:
+		while (true) {
+			var _v0 = $elm$core$String$toList(
+				A2($elm$core$String$left, 4, input));
+			_v0$4:
+			while (true) {
+				if (!_v0.b) {
+					return $elm$core$Maybe$Just(accum);
+				} else {
+					if (_v0.b.b) {
+						if (_v0.b.b.b) {
+							if (_v0.b.b.b.b) {
+								if (!_v0.b.b.b.b.b) {
+									var a = _v0.a;
+									var _v1 = _v0.b;
+									var b = _v1.a;
+									var _v2 = _v1.b;
+									var c = _v2.a;
+									var _v3 = _v2.b;
+									var d = _v3.a;
+									var _v4 = A4($danfishgold$base64_bytes$Encode$encodeCharacters, a, b, c, d);
+									if (_v4.$ === 'Just') {
+										var enc = _v4.a;
+										var $temp$input = A2($elm$core$String$dropLeft, 4, input),
+											$temp$accum = A2($elm$core$List$cons, enc, accum);
+										input = $temp$input;
+										accum = $temp$accum;
+										continue encodeChunks;
+									} else {
+										return $elm$core$Maybe$Nothing;
+									}
+								} else {
+									break _v0$4;
+								}
+							} else {
+								var a = _v0.a;
+								var _v5 = _v0.b;
+								var b = _v5.a;
+								var _v6 = _v5.b;
+								var c = _v6.a;
+								var _v7 = A4(
+									$danfishgold$base64_bytes$Encode$encodeCharacters,
+									a,
+									b,
+									c,
+									_Utils_chr('='));
+								if (_v7.$ === 'Nothing') {
+									return $elm$core$Maybe$Nothing;
+								} else {
+									var enc = _v7.a;
+									return $elm$core$Maybe$Just(
+										A2($elm$core$List$cons, enc, accum));
+								}
+							}
+						} else {
+							var a = _v0.a;
+							var _v8 = _v0.b;
+							var b = _v8.a;
+							var _v9 = A4(
+								$danfishgold$base64_bytes$Encode$encodeCharacters,
+								a,
+								b,
+								_Utils_chr('='),
+								_Utils_chr('='));
+							if (_v9.$ === 'Nothing') {
+								return $elm$core$Maybe$Nothing;
+							} else {
+								var enc = _v9.a;
+								return $elm$core$Maybe$Just(
+									A2($elm$core$List$cons, enc, accum));
+							}
+						}
+					} else {
+						break _v0$4;
+					}
+				}
+			}
+			return $elm$core$Maybe$Nothing;
+		}
+	});
+var $elm$core$Maybe$map = F2(
+	function (f, maybe) {
+		if (maybe.$ === 'Just') {
+			var value = maybe.a;
+			return $elm$core$Maybe$Just(
+				f(value));
+		} else {
+			return $elm$core$Maybe$Nothing;
+		}
+	});
+var $danfishgold$base64_bytes$Encode$encoder = function (string) {
+	return A2(
+		$elm$core$Maybe$map,
+		A2($elm$core$Basics$composeR, $elm$core$List$reverse, $elm$bytes$Bytes$Encode$sequence),
+		A2($danfishgold$base64_bytes$Encode$encodeChunks, string, _List_Nil));
+};
+var $danfishgold$base64_bytes$Encode$toBytes = function (string) {
+	return A2(
+		$elm$core$Maybe$map,
+		$elm$bytes$Bytes$Encode$encode,
+		$danfishgold$base64_bytes$Encode$encoder(string));
+};
+var $danfishgold$base64_bytes$Base64$toBytes = $danfishgold$base64_bytes$Encode$toBytes;
+var $elm$bytes$Bytes$width = _Bytes_width;
+var $danfishgold$base64_bytes$Base64$toString = function (b64String) {
+	var _v0 = $danfishgold$base64_bytes$Base64$toBytes(b64String);
+	if (_v0.$ === 'Nothing') {
+		return $elm$core$Maybe$Nothing;
+	} else {
+		var b64Bytes = _v0.a;
+		return A2(
+			$elm$bytes$Bytes$Decode$decode,
+			$elm$bytes$Bytes$Decode$string(
+				$elm$bytes$Bytes$width(b64Bytes)),
+			b64Bytes);
+	}
+};
+var $elm$core$String$map = _String_map;
+var $simonh1000$elm_jwt$Jwt$unurl = function () {
+	var fix = function (c) {
+		switch (c.valueOf()) {
+			case '-':
+				return _Utils_chr('+');
+			case '_':
+				return _Utils_chr('/');
+			default:
+				return c;
+		}
+	};
+	return $elm$core$String$map(fix);
+}();
+var $elm$json$Json$Decode$value = _Json_decodeValue;
+var $simonh1000$elm_jwt$Jwt$getTokenParts = function (token) {
+	var verifyJson = F2(
+		function (errorHandler, str) {
+			return A2(
+				$elm$core$Result$mapError,
+				errorHandler,
+				A2(
+					$elm$core$Result$map,
+					function (_v8) {
+						return str;
+					},
+					A2($elm$json$Json$Decode$decodeString, $elm$json$Json$Decode$value, str)));
+		});
+	var processor = A2(
+		$elm$core$Basics$composeR,
+		$simonh1000$elm_jwt$Jwt$unurl,
+		A2(
+			$elm$core$Basics$composeR,
+			$elm$core$String$split('.'),
+			$elm$core$List$map($simonh1000$elm_jwt$Jwt$fixlength)));
+	var _v0 = processor(token);
+	_v0$1:
+	while (true) {
+		if (((_v0.b && _v0.b.b) && _v0.b.b.b) && (!_v0.b.b.b.b)) {
+			if (_v0.a.$ === 'Ok') {
+				if (_v0.b.a.$ === 'Ok') {
+					var header = _v0.a.a;
+					var _v1 = _v0.b;
+					var body = _v1.a.a;
+					var _v2 = _v1.b;
+					var header_ = A2(
+						$elm$core$Result$andThen,
+						verifyJson(
+							function (_v3) {
+								return $simonh1000$elm_jwt$Jwt$TokenHeaderError;
+							}),
+						A2(
+							$elm$core$Result$fromMaybe,
+							$simonh1000$elm_jwt$Jwt$TokenHeaderError,
+							$danfishgold$base64_bytes$Base64$toString(header)));
+					var body_ = A2(
+						$elm$core$Result$andThen,
+						verifyJson($simonh1000$elm_jwt$Jwt$TokenDecodeError),
+						A2(
+							$elm$core$Result$fromMaybe,
+							$simonh1000$elm_jwt$Jwt$TokenProcessingError('Invalid UTF-16'),
+							$danfishgold$base64_bytes$Base64$toString(body)));
+					return A3(
+						$elm$core$Result$map2,
+						F2(
+							function (a, b) {
+								return _Utils_Tuple2(a, b);
+							}),
+						header_,
+						body_);
+				} else {
+					break _v0$1;
+				}
+			} else {
+				if (_v0.b.a.$ === 'Err') {
+					break _v0$1;
+				} else {
+					var err = _v0.a.a;
+					var _v6 = _v0.b;
+					var _v7 = _v6.b;
+					return $elm$core$Result$Err(err);
+				}
+			}
+		} else {
+			return $elm$core$Result$Err(
+				$simonh1000$elm_jwt$Jwt$TokenProcessingError('Token has invalid shape'));
+		}
+	}
+	var _v4 = _v0.b;
+	var err = _v4.a.a;
+	var _v5 = _v4.b;
+	return $elm$core$Result$Err(err);
+};
+var $elm$core$Tuple$second = function (_v0) {
+	var y = _v0.b;
+	return y;
+};
+var $simonh1000$elm_jwt$Jwt$decodeToken = F2(
+	function (dec, token) {
+		return A2(
+			$elm$core$Result$andThen,
+			A2(
+				$elm$core$Basics$composeR,
+				$elm$json$Json$Decode$decodeString(dec),
+				$elm$core$Result$mapError($simonh1000$elm_jwt$Jwt$TokenDecodeError)),
+			A2(
+				$elm$core$Result$map,
+				$elm$core$Tuple$second,
+				$simonh1000$elm_jwt$Jwt$getTokenParts(token)));
+	});
+var $elm$json$Json$Decode$field = _Json_decodeField;
+var $author$project$Main$PermissionRead = {$: 'PermissionRead'};
+var $author$project$Main$PermissionWrite = {$: 'PermissionWrite'};
+var $elm$core$String$trim = _String_trim;
+var $author$project$Main$permissionFromString = function (permStr) {
+	var _v0 = $elm$core$String$trim(permStr);
+	switch (_v0) {
+		case 'write':
+			return $author$project$Main$PermissionWrite;
+		case 'read':
+			return $author$project$Main$PermissionRead;
+		default:
+			return $author$project$Main$PermissionNone;
+	}
+};
+var $elm$json$Json$Decode$string = _Json_decodeString;
+var $elm$core$Result$withDefault = F2(
+	function (def, result) {
+		if (result.$ === 'Ok') {
+			var a = result.a;
+			return a;
+		} else {
+			return def;
+		}
+	});
+var $author$project$Main$permissionFromJWT = function (token) {
+	var decoder = A2($elm$json$Json$Decode$field, 'level', $elm$json$Json$Decode$string);
+	return A2(
+		$elm$core$Result$withDefault,
+		$author$project$Main$PermissionNone,
+		A2(
+			$elm$core$Result$andThen,
+			A2($elm$core$Basics$composeR, $author$project$Main$permissionFromString, $elm$core$Result$Ok),
+			A2($simonh1000$elm_jwt$Jwt$decodeToken, decoder, token)));
+};
 var $author$project$Main$ReceiveState = function (a) {
 	return {$: 'ReceiveState', a: a};
 };
-var $author$project$Periode$Stopped = {$: 'Stopped'};
-var $author$project$Main$ViewPeriodes = {$: 'ViewPeriodes'};
-var $elm$json$Json$Decode$decodeString = _Json_runOnString;
 var $elm$http$Http$BadStatus_ = F2(
 	function (a, b) {
 		return {$: 'BadStatus_', a: a, b: b};
@@ -6230,11 +6861,6 @@ var $elm$core$Dict$update = F3(
 			return A2($elm$core$Dict$remove, targetKey, dictionary);
 		}
 	});
-var $elm$core$Basics$composeR = F3(
-	function (f, g, x) {
-		return g(
-			f(x));
-	});
 var $elm$http$Http$expectStringResponse = F2(
 	function (toMsg, toResult) {
 		return A3(
@@ -6242,17 +6868,6 @@ var $elm$http$Http$expectStringResponse = F2(
 			'',
 			$elm$core$Basics$identity,
 			A2($elm$core$Basics$composeR, toResult, toMsg));
-	});
-var $elm$core$Result$mapError = F2(
-	function (f, result) {
-		if (result.$ === 'Ok') {
-			var v = result.a;
-			return $elm$core$Result$Ok(v);
-		} else {
-			var e = result.a;
-			return $elm$core$Result$Err(
-				f(e));
-		}
 	});
 var $elm$http$Http$BadBody = function (a) {
 	return {$: 'BadBody', a: a};
@@ -6481,7 +7096,6 @@ var $author$project$Periode$ServerState = F4(
 var $elm$json$Json$Decode$bool = _Json_decodeBool;
 var $NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$custom = $elm$json$Json$Decode$map2($elm$core$Basics$apR);
 var $elm$json$Json$Decode$andThen = _Json_andThen;
-var $elm$json$Json$Decode$field = _Json_decodeField;
 var $elm$json$Json$Decode$at = F2(
 	function (fields, decoder) {
 		return A3($elm$core$List$foldr, $elm$json$Json$Decode$field, decoder, fields);
@@ -6489,7 +7103,6 @@ var $elm$json$Json$Decode$at = F2(
 var $elm$json$Json$Decode$decodeValue = _Json_run;
 var $elm$json$Json$Decode$null = _Json_decodeNull;
 var $elm$json$Json$Decode$oneOf = _Json_oneOf;
-var $elm$json$Json$Decode$value = _Json_decodeValue;
 var $NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$optionalDecoder = F3(
 	function (path, valDecoder, fallback) {
 		var nullOr = function (decoder) {
@@ -6567,11 +7180,6 @@ var $NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required = F3(
 			A2($elm$json$Json$Decode$field, key, valDecoder),
 			decoder);
 	});
-var $elm$json$Json$Decode$string = _Json_decodeString;
-var $elm$time$Time$Posix = function (a) {
-	return {$: 'Posix', a: a};
-};
-var $elm$time$Time$millisToPosix = $elm$time$Time$Posix;
 var $author$project$Periode$timeDecoder = A2(
 	$elm$json$Json$Decode$map,
 	function (n) {
@@ -6581,8 +7189,8 @@ var $author$project$Periode$timeDecoder = A2(
 var $author$project$Periode$periodeDecoder = A4(
 	$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$optional,
 	'comment',
-	A2($elm$json$Json$Decode$map, $elm$core$Maybe$Just, $elm$json$Json$Decode$string),
-	$elm$core$Maybe$Nothing,
+	$elm$json$Json$Decode$string,
+	'',
 	A3(
 		$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
 		'duration',
@@ -6615,8 +7223,8 @@ var $author$project$Periode$stateDecoder = A2(
 		A4(
 			$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$optional,
 			'comment',
-			A2($elm$json$Json$Decode$map, $elm$core$Maybe$Just, $elm$json$Json$Decode$string),
-			$elm$core$Maybe$Nothing,
+			$elm$json$Json$Decode$string,
+			'',
 			A3(
 				$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
 				'start',
@@ -6635,630 +7243,35 @@ var $author$project$Periode$fetch = function (result) {
 };
 var $elm$core$Platform$Cmd$batch = _Platform_batch;
 var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
-var $author$project$Main$PermissionNone = {$: 'PermissionNone'};
-var $simonh1000$elm_jwt$Jwt$TokenDecodeError = function (a) {
-	return {$: 'TokenDecodeError', a: a};
-};
-var $elm$core$Result$andThen = F2(
-	function (callback, result) {
-		if (result.$ === 'Ok') {
-			var value = result.a;
-			return callback(value);
-		} else {
-			var msg = result.a;
-			return $elm$core$Result$Err(msg);
-		}
-	});
-var $simonh1000$elm_jwt$Jwt$TokenHeaderError = {$: 'TokenHeaderError'};
-var $simonh1000$elm_jwt$Jwt$TokenProcessingError = function (a) {
-	return {$: 'TokenProcessingError', a: a};
-};
-var $elm$core$String$concat = function (strings) {
-	return A2($elm$core$String$join, '', strings);
-};
-var $elm$core$Basics$modBy = _Basics_modBy;
-var $simonh1000$elm_jwt$Jwt$fixlength = function (s) {
-	var _v0 = A2(
-		$elm$core$Basics$modBy,
-		4,
-		$elm$core$String$length(s));
-	switch (_v0) {
-		case 0:
-			return $elm$core$Result$Ok(s);
-		case 2:
-			return $elm$core$Result$Ok(
-				$elm$core$String$concat(
-					_List_fromArray(
-						[s, '=='])));
-		case 3:
-			return $elm$core$Result$Ok(
-				$elm$core$String$concat(
-					_List_fromArray(
-						[s, '='])));
-		default:
-			return $elm$core$Result$Err(
-				$simonh1000$elm_jwt$Jwt$TokenProcessingError('Wrong length'));
-	}
-};
-var $elm$core$Result$fromMaybe = F2(
-	function (err, maybe) {
-		if (maybe.$ === 'Just') {
-			var v = maybe.a;
-			return $elm$core$Result$Ok(v);
-		} else {
-			return $elm$core$Result$Err(err);
-		}
-	});
-var $elm$core$Result$map = F2(
-	function (func, ra) {
-		if (ra.$ === 'Ok') {
-			var a = ra.a;
-			return $elm$core$Result$Ok(
-				func(a));
-		} else {
-			var e = ra.a;
-			return $elm$core$Result$Err(e);
-		}
-	});
-var $elm$core$Result$map2 = F3(
-	function (func, ra, rb) {
-		if (ra.$ === 'Err') {
-			var x = ra.a;
-			return $elm$core$Result$Err(x);
-		} else {
-			var a = ra.a;
-			if (rb.$ === 'Err') {
-				var x = rb.a;
-				return $elm$core$Result$Err(x);
-			} else {
-				var b = rb.a;
-				return $elm$core$Result$Ok(
-					A2(func, a, b));
-			}
-		}
-	});
-var $elm$bytes$Bytes$Encode$getWidth = function (builder) {
-	switch (builder.$) {
-		case 'I8':
-			return 1;
-		case 'I16':
-			return 2;
-		case 'I32':
-			return 4;
-		case 'U8':
-			return 1;
-		case 'U16':
-			return 2;
-		case 'U32':
-			return 4;
-		case 'F32':
-			return 4;
-		case 'F64':
-			return 8;
-		case 'Seq':
-			var w = builder.a;
-			return w;
-		case 'Utf8':
-			var w = builder.a;
-			return w;
-		default:
-			var bs = builder.a;
-			return _Bytes_width(bs);
-	}
-};
-var $elm$bytes$Bytes$LE = {$: 'LE'};
-var $elm$bytes$Bytes$Encode$write = F3(
-	function (builder, mb, offset) {
-		switch (builder.$) {
-			case 'I8':
-				var n = builder.a;
-				return A3(_Bytes_write_i8, mb, offset, n);
-			case 'I16':
-				var e = builder.a;
-				var n = builder.b;
-				return A4(
-					_Bytes_write_i16,
-					mb,
-					offset,
-					n,
-					_Utils_eq(e, $elm$bytes$Bytes$LE));
-			case 'I32':
-				var e = builder.a;
-				var n = builder.b;
-				return A4(
-					_Bytes_write_i32,
-					mb,
-					offset,
-					n,
-					_Utils_eq(e, $elm$bytes$Bytes$LE));
-			case 'U8':
-				var n = builder.a;
-				return A3(_Bytes_write_u8, mb, offset, n);
-			case 'U16':
-				var e = builder.a;
-				var n = builder.b;
-				return A4(
-					_Bytes_write_u16,
-					mb,
-					offset,
-					n,
-					_Utils_eq(e, $elm$bytes$Bytes$LE));
-			case 'U32':
-				var e = builder.a;
-				var n = builder.b;
-				return A4(
-					_Bytes_write_u32,
-					mb,
-					offset,
-					n,
-					_Utils_eq(e, $elm$bytes$Bytes$LE));
-			case 'F32':
-				var e = builder.a;
-				var n = builder.b;
-				return A4(
-					_Bytes_write_f32,
-					mb,
-					offset,
-					n,
-					_Utils_eq(e, $elm$bytes$Bytes$LE));
-			case 'F64':
-				var e = builder.a;
-				var n = builder.b;
-				return A4(
-					_Bytes_write_f64,
-					mb,
-					offset,
-					n,
-					_Utils_eq(e, $elm$bytes$Bytes$LE));
-			case 'Seq':
-				var bs = builder.b;
-				return A3($elm$bytes$Bytes$Encode$writeSequence, bs, mb, offset);
-			case 'Utf8':
-				var s = builder.b;
-				return A3(_Bytes_write_string, mb, offset, s);
-			default:
-				var bs = builder.a;
-				return A3(_Bytes_write_bytes, mb, offset, bs);
-		}
-	});
-var $elm$bytes$Bytes$Encode$writeSequence = F3(
-	function (builders, mb, offset) {
-		writeSequence:
-		while (true) {
-			if (!builders.b) {
-				return offset;
-			} else {
-				var b = builders.a;
-				var bs = builders.b;
-				var $temp$builders = bs,
-					$temp$mb = mb,
-					$temp$offset = A3($elm$bytes$Bytes$Encode$write, b, mb, offset);
-				builders = $temp$builders;
-				mb = $temp$mb;
-				offset = $temp$offset;
-				continue writeSequence;
-			}
-		}
-	});
-var $elm$bytes$Bytes$Decode$decode = F2(
-	function (_v0, bs) {
-		var decoder = _v0.a;
-		return A2(_Bytes_decode, decoder, bs);
-	});
-var $elm$bytes$Bytes$Decode$Decoder = function (a) {
-	return {$: 'Decoder', a: a};
-};
-var $elm$bytes$Bytes$Decode$string = function (n) {
-	return $elm$bytes$Bytes$Decode$Decoder(
-		_Bytes_read_string(n));
-};
-var $elm$bytes$Bytes$Encode$encode = _Bytes_encode;
-var $elm$bytes$Bytes$BE = {$: 'BE'};
-var $danfishgold$base64_bytes$Encode$isValidChar = function (c) {
-	if ($elm$core$Char$isAlphaNum(c)) {
-		return true;
+var $author$project$Main$updateStateIfPermission = function (perm) {
+	if (perm.$ === 'PermissionNone') {
+		return $elm$core$Platform$Cmd$none;
 	} else {
-		switch (c.valueOf()) {
-			case '+':
-				return true;
-			case '/':
-				return true;
-			default:
-				return false;
-		}
-	}
-};
-var $elm$core$Bitwise$or = _Bitwise_or;
-var $elm$bytes$Bytes$Encode$Seq = F2(
-	function (a, b) {
-		return {$: 'Seq', a: a, b: b};
-	});
-var $elm$bytes$Bytes$Encode$getWidths = F2(
-	function (width, builders) {
-		getWidths:
-		while (true) {
-			if (!builders.b) {
-				return width;
-			} else {
-				var b = builders.a;
-				var bs = builders.b;
-				var $temp$width = width + $elm$bytes$Bytes$Encode$getWidth(b),
-					$temp$builders = bs;
-				width = $temp$width;
-				builders = $temp$builders;
-				continue getWidths;
-			}
-		}
-	});
-var $elm$bytes$Bytes$Encode$sequence = function (builders) {
-	return A2(
-		$elm$bytes$Bytes$Encode$Seq,
-		A2($elm$bytes$Bytes$Encode$getWidths, 0, builders),
-		builders);
-};
-var $elm$core$Bitwise$shiftLeftBy = _Bitwise_shiftLeftBy;
-var $elm$core$Bitwise$shiftRightBy = _Bitwise_shiftRightBy;
-var $elm$core$Basics$ge = _Utils_ge;
-var $elm$core$Basics$negate = function (n) {
-	return -n;
-};
-var $danfishgold$base64_bytes$Encode$unsafeConvertChar = function (_char) {
-	var key = $elm$core$Char$toCode(_char);
-	if ((key >= 65) && (key <= 90)) {
-		return key - 65;
-	} else {
-		if ((key >= 97) && (key <= 122)) {
-			return (key - 97) + 26;
-		} else {
-			if ((key >= 48) && (key <= 57)) {
-				return ((key - 48) + 26) + 26;
-			} else {
-				switch (_char.valueOf()) {
-					case '+':
-						return 62;
-					case '/':
-						return 63;
-					default:
-						return -1;
-				}
-			}
-		}
-	}
-};
-var $elm$bytes$Bytes$Encode$U16 = F2(
-	function (a, b) {
-		return {$: 'U16', a: a, b: b};
-	});
-var $elm$bytes$Bytes$Encode$unsignedInt16 = $elm$bytes$Bytes$Encode$U16;
-var $elm$bytes$Bytes$Encode$U8 = function (a) {
-	return {$: 'U8', a: a};
-};
-var $elm$bytes$Bytes$Encode$unsignedInt8 = $elm$bytes$Bytes$Encode$U8;
-var $danfishgold$base64_bytes$Encode$encodeCharacters = F4(
-	function (a, b, c, d) {
-		if ($danfishgold$base64_bytes$Encode$isValidChar(a) && $danfishgold$base64_bytes$Encode$isValidChar(b)) {
-			var n2 = $danfishgold$base64_bytes$Encode$unsafeConvertChar(b);
-			var n1 = $danfishgold$base64_bytes$Encode$unsafeConvertChar(a);
-			if ('=' === d.valueOf()) {
-				if ('=' === c.valueOf()) {
-					var n = (n1 << 18) | (n2 << 12);
-					var b1 = n >> 16;
-					return $elm$core$Maybe$Just(
-						$elm$bytes$Bytes$Encode$unsignedInt8(b1));
-				} else {
-					if ($danfishgold$base64_bytes$Encode$isValidChar(c)) {
-						var n3 = $danfishgold$base64_bytes$Encode$unsafeConvertChar(c);
-						var n = ((n1 << 18) | (n2 << 12)) | (n3 << 6);
-						var combined = n >> 8;
-						return $elm$core$Maybe$Just(
-							A2($elm$bytes$Bytes$Encode$unsignedInt16, $elm$bytes$Bytes$BE, combined));
-					} else {
-						return $elm$core$Maybe$Nothing;
-					}
-				}
-			} else {
-				if ($danfishgold$base64_bytes$Encode$isValidChar(c) && $danfishgold$base64_bytes$Encode$isValidChar(d)) {
-					var n4 = $danfishgold$base64_bytes$Encode$unsafeConvertChar(d);
-					var n3 = $danfishgold$base64_bytes$Encode$unsafeConvertChar(c);
-					var n = ((n1 << 18) | (n2 << 12)) | ((n3 << 6) | n4);
-					var combined = n >> 8;
-					var b3 = n;
-					return $elm$core$Maybe$Just(
-						$elm$bytes$Bytes$Encode$sequence(
-							_List_fromArray(
-								[
-									A2($elm$bytes$Bytes$Encode$unsignedInt16, $elm$bytes$Bytes$BE, combined),
-									$elm$bytes$Bytes$Encode$unsignedInt8(b3)
-								])));
-				} else {
-					return $elm$core$Maybe$Nothing;
-				}
-			}
-		} else {
-			return $elm$core$Maybe$Nothing;
-		}
-	});
-var $elm$core$String$foldr = _String_foldr;
-var $elm$core$String$toList = function (string) {
-	return A3($elm$core$String$foldr, $elm$core$List$cons, _List_Nil, string);
-};
-var $danfishgold$base64_bytes$Encode$encodeChunks = F2(
-	function (input, accum) {
-		encodeChunks:
-		while (true) {
-			var _v0 = $elm$core$String$toList(
-				A2($elm$core$String$left, 4, input));
-			_v0$4:
-			while (true) {
-				if (!_v0.b) {
-					return $elm$core$Maybe$Just(accum);
-				} else {
-					if (_v0.b.b) {
-						if (_v0.b.b.b) {
-							if (_v0.b.b.b.b) {
-								if (!_v0.b.b.b.b.b) {
-									var a = _v0.a;
-									var _v1 = _v0.b;
-									var b = _v1.a;
-									var _v2 = _v1.b;
-									var c = _v2.a;
-									var _v3 = _v2.b;
-									var d = _v3.a;
-									var _v4 = A4($danfishgold$base64_bytes$Encode$encodeCharacters, a, b, c, d);
-									if (_v4.$ === 'Just') {
-										var enc = _v4.a;
-										var $temp$input = A2($elm$core$String$dropLeft, 4, input),
-											$temp$accum = A2($elm$core$List$cons, enc, accum);
-										input = $temp$input;
-										accum = $temp$accum;
-										continue encodeChunks;
-									} else {
-										return $elm$core$Maybe$Nothing;
-									}
-								} else {
-									break _v0$4;
-								}
-							} else {
-								var a = _v0.a;
-								var _v5 = _v0.b;
-								var b = _v5.a;
-								var _v6 = _v5.b;
-								var c = _v6.a;
-								var _v7 = A4(
-									$danfishgold$base64_bytes$Encode$encodeCharacters,
-									a,
-									b,
-									c,
-									_Utils_chr('='));
-								if (_v7.$ === 'Nothing') {
-									return $elm$core$Maybe$Nothing;
-								} else {
-									var enc = _v7.a;
-									return $elm$core$Maybe$Just(
-										A2($elm$core$List$cons, enc, accum));
-								}
-							}
-						} else {
-							var a = _v0.a;
-							var _v8 = _v0.b;
-							var b = _v8.a;
-							var _v9 = A4(
-								$danfishgold$base64_bytes$Encode$encodeCharacters,
-								a,
-								b,
-								_Utils_chr('='),
-								_Utils_chr('='));
-							if (_v9.$ === 'Nothing') {
-								return $elm$core$Maybe$Nothing;
-							} else {
-								var enc = _v9.a;
-								return $elm$core$Maybe$Just(
-									A2($elm$core$List$cons, enc, accum));
-							}
-						}
-					} else {
-						break _v0$4;
-					}
-				}
-			}
-			return $elm$core$Maybe$Nothing;
-		}
-	});
-var $elm$core$Maybe$map = F2(
-	function (f, maybe) {
-		if (maybe.$ === 'Just') {
-			var value = maybe.a;
-			return $elm$core$Maybe$Just(
-				f(value));
-		} else {
-			return $elm$core$Maybe$Nothing;
-		}
-	});
-var $danfishgold$base64_bytes$Encode$encoder = function (string) {
-	return A2(
-		$elm$core$Maybe$map,
-		A2($elm$core$Basics$composeR, $elm$core$List$reverse, $elm$bytes$Bytes$Encode$sequence),
-		A2($danfishgold$base64_bytes$Encode$encodeChunks, string, _List_Nil));
-};
-var $danfishgold$base64_bytes$Encode$toBytes = function (string) {
-	return A2(
-		$elm$core$Maybe$map,
-		$elm$bytes$Bytes$Encode$encode,
-		$danfishgold$base64_bytes$Encode$encoder(string));
-};
-var $danfishgold$base64_bytes$Base64$toBytes = $danfishgold$base64_bytes$Encode$toBytes;
-var $elm$bytes$Bytes$width = _Bytes_width;
-var $danfishgold$base64_bytes$Base64$toString = function (b64String) {
-	var _v0 = $danfishgold$base64_bytes$Base64$toBytes(b64String);
-	if (_v0.$ === 'Nothing') {
-		return $elm$core$Maybe$Nothing;
-	} else {
-		var b64Bytes = _v0.a;
-		return A2(
-			$elm$bytes$Bytes$Decode$decode,
-			$elm$bytes$Bytes$Decode$string(
-				$elm$bytes$Bytes$width(b64Bytes)),
-			b64Bytes);
-	}
-};
-var $elm$core$String$map = _String_map;
-var $simonh1000$elm_jwt$Jwt$unurl = function () {
-	var fix = function (c) {
-		switch (c.valueOf()) {
-			case '-':
-				return _Utils_chr('+');
-			case '_':
-				return _Utils_chr('/');
-			default:
-				return c;
-		}
-	};
-	return $elm$core$String$map(fix);
-}();
-var $simonh1000$elm_jwt$Jwt$getTokenParts = function (token) {
-	var verifyJson = F2(
-		function (errorHandler, str) {
-			return A2(
-				$elm$core$Result$mapError,
-				errorHandler,
-				A2(
-					$elm$core$Result$map,
-					function (_v8) {
-						return str;
-					},
-					A2($elm$json$Json$Decode$decodeString, $elm$json$Json$Decode$value, str)));
-		});
-	var processor = A2(
-		$elm$core$Basics$composeR,
-		$simonh1000$elm_jwt$Jwt$unurl,
-		A2(
-			$elm$core$Basics$composeR,
-			$elm$core$String$split('.'),
-			$elm$core$List$map($simonh1000$elm_jwt$Jwt$fixlength)));
-	var _v0 = processor(token);
-	_v0$1:
-	while (true) {
-		if (((_v0.b && _v0.b.b) && _v0.b.b.b) && (!_v0.b.b.b.b)) {
-			if (_v0.a.$ === 'Ok') {
-				if (_v0.b.a.$ === 'Ok') {
-					var header = _v0.a.a;
-					var _v1 = _v0.b;
-					var body = _v1.a.a;
-					var _v2 = _v1.b;
-					var header_ = A2(
-						$elm$core$Result$andThen,
-						verifyJson(
-							function (_v3) {
-								return $simonh1000$elm_jwt$Jwt$TokenHeaderError;
-							}),
-						A2(
-							$elm$core$Result$fromMaybe,
-							$simonh1000$elm_jwt$Jwt$TokenHeaderError,
-							$danfishgold$base64_bytes$Base64$toString(header)));
-					var body_ = A2(
-						$elm$core$Result$andThen,
-						verifyJson($simonh1000$elm_jwt$Jwt$TokenDecodeError),
-						A2(
-							$elm$core$Result$fromMaybe,
-							$simonh1000$elm_jwt$Jwt$TokenProcessingError('Invalid UTF-16'),
-							$danfishgold$base64_bytes$Base64$toString(body)));
-					return A3(
-						$elm$core$Result$map2,
-						F2(
-							function (a, b) {
-								return _Utils_Tuple2(a, b);
-							}),
-						header_,
-						body_);
-				} else {
-					break _v0$1;
-				}
-			} else {
-				if (_v0.b.a.$ === 'Err') {
-					break _v0$1;
-				} else {
-					var err = _v0.a.a;
-					var _v6 = _v0.b;
-					var _v7 = _v6.b;
-					return $elm$core$Result$Err(err);
-				}
-			}
-		} else {
-			return $elm$core$Result$Err(
-				$simonh1000$elm_jwt$Jwt$TokenProcessingError('Token has invalid shape'));
-		}
-	}
-	var _v4 = _v0.b;
-	var err = _v4.a.a;
-	var _v5 = _v4.b;
-	return $elm$core$Result$Err(err);
-};
-var $elm$core$Tuple$second = function (_v0) {
-	var y = _v0.b;
-	return y;
-};
-var $simonh1000$elm_jwt$Jwt$decodeToken = F2(
-	function (dec, token) {
-		return A2(
-			$elm$core$Result$andThen,
-			A2(
-				$elm$core$Basics$composeR,
-				$elm$json$Json$Decode$decodeString(dec),
-				$elm$core$Result$mapError($simonh1000$elm_jwt$Jwt$TokenDecodeError)),
-			A2(
-				$elm$core$Result$map,
-				$elm$core$Tuple$second,
-				$simonh1000$elm_jwt$Jwt$getTokenParts(token)));
-	});
-var $author$project$Main$PermissionRead = {$: 'PermissionRead'};
-var $author$project$Main$PermissionWrite = {$: 'PermissionWrite'};
-var $elm$core$String$trim = _String_trim;
-var $author$project$Main$permissionFromString = function (permRaw) {
-	var perm = $elm$core$String$trim(permRaw);
-	return (perm === 'write') ? $author$project$Main$PermissionWrite : ((perm === 'read') ? $author$project$Main$PermissionRead : $author$project$Main$PermissionNone);
-};
-var $author$project$Main$permissionFromJWT = function (token) {
-	var decoder = A2($elm$json$Json$Decode$field, 'level', $elm$json$Json$Decode$string);
-	var _v0 = A2($simonh1000$elm_jwt$Jwt$decodeToken, decoder, token);
-	if (_v0.$ === 'Ok') {
-		var pass = _v0.a;
-		return $author$project$Main$permissionFromString(pass);
-	} else {
-		return $author$project$Main$PermissionNone;
+		return $author$project$Periode$fetch($author$project$Main$ReceiveState);
 	}
 };
 var $author$project$Main$init = function (token) {
 	var permission = $author$project$Main$permissionFromJWT(token);
-	var cmd = function () {
-		switch (permission.$) {
-			case 'PermissionRead':
-				return $author$project$Periode$fetch($author$project$Main$ReceiveState);
-			case 'PermissionWrite':
-				return $author$project$Periode$fetch($author$project$Main$ReceiveState);
-			default:
-				return $elm$core$Platform$Cmd$none;
-		}
-	}();
 	return _Utils_Tuple2(
 		{
-			comment: '',
 			current: $author$project$Periode$Stopped,
 			currentTime: $elm$time$Time$millisToPosix(0),
-			fetchErrMsg: $elm$core$Maybe$Nothing,
-			inputPassword: '',
-			insert: $elm$core$Maybe$Nothing,
+			errMsg: $elm$core$Maybe$Nothing,
+			formComment: '',
+			formInsert: $elm$core$Maybe$Nothing,
+			formPassword: '',
+			formYearMonth: $author$project$YearMonth$All,
 			periodes: _List_Nil,
 			permission: permission,
-			selectedYearMonth: $author$project$YearMonth$All,
 			viewBody: $author$project$Main$ViewPeriodes
 		},
-		cmd);
+		$author$project$Main$updateStateIfPermission(permission));
 };
-var $author$project$Main$Tick = function (a) {
-	return {$: 'Tick', a: a};
+var $author$project$Main$BrowserTick = function (a) {
+	return {$: 'BrowserTick', a: a};
 };
-var $author$project$Main$UpdatePicker = function (a) {
-	return {$: 'UpdatePicker', a: a};
+var $author$project$Main$UpdateDatePicker = function (a) {
+	return {$: 'UpdateDatePicker', a: a};
 };
 var $elm$core$Platform$Sub$batch = _Platform_batch;
 var $mercurymedia$elm_datetime_picker$SingleDatePicker$AlwaysVisible = function (a) {
@@ -7341,13 +7354,6 @@ var $mercurymedia$elm_datetime_picker$SingleDatePicker$defaultSettings = F2(
 			zone: zone
 		};
 	});
-var $mercurymedia$elm_datetime_picker$SingleDatePicker$Closed = {$: 'Closed'};
-var $mercurymedia$elm_datetime_picker$SingleDatePicker$DatePicker = function (a) {
-	return {$: 'DatePicker', a: a};
-};
-var $mercurymedia$elm_datetime_picker$SingleDatePicker$init = $mercurymedia$elm_datetime_picker$SingleDatePicker$DatePicker(
-	{hovered: $elm$core$Maybe$Nothing, selectionTuple: $elm$core$Maybe$Nothing, status: $mercurymedia$elm_datetime_picker$SingleDatePicker$Closed, viewOffset: 0});
-var $author$project$Main$emptyInsert = {comment: '', duration: '', error: $elm$core$Maybe$Nothing, picker: $mercurymedia$elm_datetime_picker$SingleDatePicker$init, start: $elm$core$Maybe$Nothing};
 var $elm$time$Time$Every = F2(
 	function (a, b) {
 		return {$: 'Every', a: a, b: b};
@@ -7614,6 +7620,30 @@ var $elm$time$Time$every = F2(
 		return $elm$time$Time$subscription(
 			A2($elm$time$Time$Every, interval, tagger));
 	});
+var $mercurymedia$elm_datetime_picker$SingleDatePicker$Closed = {$: 'Closed'};
+var $mercurymedia$elm_datetime_picker$SingleDatePicker$DatePicker = function (a) {
+	return {$: 'DatePicker', a: a};
+};
+var $mercurymedia$elm_datetime_picker$SingleDatePicker$init = $mercurymedia$elm_datetime_picker$SingleDatePicker$DatePicker(
+	{hovered: $elm$core$Maybe$Nothing, selectionTuple: $elm$core$Maybe$Nothing, status: $mercurymedia$elm_datetime_picker$SingleDatePicker$Closed, viewOffset: 0});
+var $author$project$Main$emptyInsert = function (currentTime) {
+	return {error: $elm$core$Maybe$Nothing, formComment: '', formDuration: '', picker: $mercurymedia$elm_datetime_picker$SingleDatePicker$init, start: currentTime};
+};
+var $elm$core$Maybe$withDefault = F2(
+	function (_default, maybe) {
+		if (maybe.$ === 'Just') {
+			var value = maybe.a;
+			return value;
+		} else {
+			return _default;
+		}
+	});
+var $author$project$Main$insertForm = function (model) {
+	return A2(
+		$elm$core$Maybe$withDefault,
+		$author$project$Main$emptyInsert(model.currentTime),
+		model.formInsert);
+};
 var $mercurymedia$elm_datetime_picker$SingleDatePicker$Close = {$: 'Close'};
 var $elm$json$Json$Decode$fail = _Json_fail;
 var $elm$json$Json$Decode$lazy = function (thunk) {
@@ -8064,15 +8094,6 @@ var $mercurymedia$elm_datetime_picker$DatePicker$Utilities$validSelectionOrDefau
 		var selectionDayEqualsPickerDay = A3($mercurymedia$elm_datetime_picker$DatePicker$Utilities$doDaysMatch, zone, selection, selectionPickerDay.start);
 		return (A3($mercurymedia$elm_datetime_picker$DatePicker$Utilities$posixWithinPickerDayBoundaries, zone, selectionPickerDay, selection) && ((!selectionPickerDay.disabled) && selectionDayEqualsPickerDay)) ? $elm$core$Maybe$Just(
 			_Utils_Tuple2(selectionPickerDay, selection)) : _default;
-	});
-var $elm$core$Maybe$withDefault = F2(
-	function (_default, maybe) {
-		if (maybe.$ === 'Just') {
-			var value = maybe.a;
-			return value;
-		} else {
-			return _default;
-		}
 	});
 var $mercurymedia$elm_datetime_picker$DatePicker$SingleUtilities$selectHour = F4(
 	function (zone, basePickerDay, selectionTuple, newHour) {
@@ -9039,24 +9060,15 @@ var $justinmimbs$timezone_data$TimeZone$europe__berlin = function (_v0) {
 };
 var $author$project$Main$timeZone = $justinmimbs$timezone_data$TimeZone$europe__berlin(_Utils_Tuple0);
 var $author$project$Main$subscriptions = function (model) {
-	var insert = function () {
-		var _v0 = model.insert;
-		if (_v0.$ === 'Nothing') {
-			return $author$project$Main$emptyInsert;
-		} else {
-			var i = _v0.a;
-			return i;
-		}
-	}();
 	return $elm$core$Platform$Sub$batch(
 		_List_fromArray(
 			[
 				A3(
 				$mercurymedia$elm_datetime_picker$SingleDatePicker$subscriptions,
-				A2($mercurymedia$elm_datetime_picker$SingleDatePicker$defaultSettings, $author$project$Main$timeZone, $author$project$Main$UpdatePicker),
-				$author$project$Main$UpdatePicker,
-				insert.picker),
-				A2($elm$time$Time$every, 100, $author$project$Main$Tick)
+				A2($mercurymedia$elm_datetime_picker$SingleDatePicker$defaultSettings, $author$project$Main$timeZone, $author$project$Main$UpdateDatePicker),
+				$author$project$Main$UpdateDatePicker,
+				$author$project$Main$insertForm(model).picker),
+				A2($elm$time$Time$every, 1000, $author$project$Main$BrowserTick)
 			]));
 };
 var $author$project$Main$ReceiveAuth = function (a) {
@@ -9165,13 +9177,10 @@ var $author$project$YearMonth$fromAttr = function (value) {
 		var strMonth = _v1.a;
 		var year = $elm$core$String$toInt(strYear);
 		var month = $author$project$YearMonth$stringToMonth(strMonth);
-		var _v2 = A3($elm$core$Maybe$map2, $author$project$YearMonth$YearMonth, year, month);
-		if (_v2.$ === 'Just') {
-			var ym = _v2.a;
-			return ym;
-		} else {
-			return $author$project$YearMonth$All;
-		}
+		return A2(
+			$elm$core$Maybe$withDefault,
+			$author$project$YearMonth$All,
+			A3($elm$core$Maybe$map2, $author$project$YearMonth$YearMonth, year, month));
 	} else {
 		return $author$project$YearMonth$All;
 	}
@@ -9654,6 +9663,10 @@ var $mercurymedia$elm_datetime_picker$SingleDatePicker$openPicker = F4(
 					viewOffset: viewOffset
 				}));
 	});
+var $author$project$Main$resultFromEmptyString = F2(
+	function (error, str) {
+		return (str === '') ? $elm$core$Result$Err(error) : $elm$core$Result$Ok(str);
+	});
 var $author$project$Periode$idToString = function (_v0) {
 	var id = _v0.a;
 	return $elm$core$String$fromInt(id);
@@ -9692,35 +9705,23 @@ var $elm$json$Json$Encode$object = function (pairs) {
 var $elm$core$Basics$round = _Basics_round;
 var $elm$json$Json$Encode$string = _Json_wrap;
 var $author$project$Main$insertEncoder = F3(
-	function (start, duration, maybeComment) {
-		var comment = function () {
-			if (maybeComment.$ === 'Nothing') {
-				return _List_Nil;
-			} else {
-				var s = maybeComment.a;
-				return _List_fromArray(
-					[
-						_Utils_Tuple2(
-						'comment',
-						$elm$json$Json$Encode$string(s))
-					]);
-			}
-		}();
+	function (start, duration, comment) {
 		return $elm$json$Json$Encode$object(
-			_Utils_ap(
-				_List_fromArray(
-					[
-						_Utils_Tuple2(
-						'start',
-						$elm$json$Json$Encode$int(
-							($elm$time$Time$posixToMillis(start) / 1000) | 0)),
-						_Utils_Tuple2(
-						'duration',
-						$elm$json$Json$Encode$int(
-							$elm$core$Basics$round(
-								$ianmackenzie$elm_units$Duration$inSeconds(duration))))
-					]),
-				comment));
+			_List_fromArray(
+				[
+					_Utils_Tuple2(
+					'start',
+					$elm$json$Json$Encode$int(
+						($elm$time$Time$posixToMillis(start) / 1000) | 0)),
+					_Utils_Tuple2(
+					'duration',
+					$elm$json$Json$Encode$int(
+						$elm$core$Basics$round(
+							$ianmackenzie$elm_units$Duration$inSeconds(duration)))),
+					_Utils_Tuple2(
+					'comment',
+					$elm$json$Json$Encode$string(comment))
+				]));
 	});
 var $elm$http$Http$jsonBody = function (value) {
 	return A2(
@@ -9786,6 +9787,15 @@ var $author$project$Main$sendStartStop = F3(
 				url: '/api/' + startStop
 			});
 	});
+var $author$project$Periode$stateComment = function (state) {
+	var _v0 = state.current;
+	if (_v0.$ === 'Stopped') {
+		return '';
+	} else {
+		var text = _v0.b;
+		return text;
+	}
+};
 var $elm$core$String$toFloat = _String_toFloat;
 var $author$project$Main$update = F2(
 	function (msg, model) {
@@ -9793,20 +9803,16 @@ var $author$project$Main$update = F2(
 			case 'ReceiveState':
 				var response = msg.a;
 				if (response.$ === 'Ok') {
-					var a = response.a;
-					var comment = function () {
-						var _v2 = a.current;
-						if (_v2.$ === 'Stopped') {
-							return '';
-						} else {
-							var text = _v2.b;
-							return A2($elm$core$Maybe$withDefault, '', text);
-						}
-					}();
+					var state = response.a;
 					return _Utils_Tuple2(
 						_Utils_update(
 							model,
-							{comment: comment, current: a.current, fetchErrMsg: $elm$core$Maybe$Nothing, periodes: a.periodes}),
+							{
+								current: state.current,
+								errMsg: $elm$core$Maybe$Nothing,
+								formComment: $author$project$Periode$stateComment(state),
+								periodes: state.periodes
+							}),
 						$elm$core$Platform$Cmd$none);
 				} else {
 					var e = response.a;
@@ -9815,35 +9821,55 @@ var $author$project$Main$update = F2(
 							model,
 							{
 								current: $author$project$Periode$Stopped,
-								fetchErrMsg: $elm$core$Maybe$Just(
+								errMsg: $elm$core$Maybe$Just(
 									$author$project$Main$buildErrorMessage(e)),
 								periodes: _List_Nil
 							}),
 						$elm$core$Platform$Cmd$none);
 				}
-			case 'Tick':
+			case 'ReceiveEvent':
+				var response = msg.a;
+				if (response.$ === 'Ok') {
+					return _Utils_Tuple2(
+						model,
+						$author$project$Main$updateStateIfPermission(model.permission));
+				} else {
+					var e = response.a;
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{
+								current: $author$project$Periode$Stopped,
+								errMsg: $elm$core$Maybe$Just(
+									$author$project$Main$buildErrorMessage(e)),
+								periodes: _List_Nil,
+								permission: $author$project$Main$PermissionNone
+							}),
+						$elm$core$Platform$Cmd$none);
+				}
+			case 'BrowserTick':
 				var newTime = msg.a;
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
 						{currentTime: newTime}),
 					$elm$core$Platform$Cmd$none);
-			case 'SaveComment':
+			case 'InsertComment':
 				var comment = msg.a;
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
-						{comment: comment}),
+						{formComment: comment}),
 					$elm$core$Platform$Cmd$none);
-			case 'SendStart':
+			case 'ClickStart':
 				return _Utils_Tuple2(
 					model,
-					A3($author$project$Main$sendStartStop, 'start', $author$project$Main$ReceiveEvent, model.comment));
-			case 'SendStop':
+					A3($author$project$Main$sendStartStop, 'start', $author$project$Main$ReceiveEvent, model.formComment));
+			case 'ClickStop':
 				return _Utils_Tuple2(
 					model,
-					A3($author$project$Main$sendStartStop, 'stop', $author$project$Main$ReceiveEvent, model.comment));
-			case 'SendContinue':
+					A3($author$project$Main$sendStartStop, 'stop', $author$project$Main$ReceiveEvent, model.formComment));
+			case 'ClickContinue':
 				var id = msg.a;
 				return _Utils_Tuple2(
 					model,
@@ -9852,220 +9878,117 @@ var $author$project$Main$update = F2(
 						$elm$core$Platform$Cmd$none,
 						A2(
 							$elm$core$Maybe$andThen,
-							function (c) {
+							function (p) {
 								return $elm$core$Maybe$Just(
-									A3($author$project$Main$sendStartStop, 'start', $author$project$Main$ReceiveEvent, c));
+									A3($author$project$Main$sendStartStop, 'start', $author$project$Main$ReceiveEvent, p.comment));
 							},
-							A2(
-								$elm$core$Maybe$andThen,
-								function (c) {
-									return $elm$core$Maybe$Just(
-										A2($elm$core$Maybe$withDefault, '', c));
-								},
+							$elm$core$List$head(
 								A2(
-									$elm$core$Maybe$andThen,
+									$elm$core$List$filter,
 									function (p) {
-										return $elm$core$Maybe$Just(p.comment);
+										return _Utils_eq(p.id, id);
 									},
-									$elm$core$List$head(
-										A2(
-											$elm$core$List$filter,
-											function (p) {
-												return _Utils_eq(p.id, id);
-											},
-											model.periodes)))))));
-			case 'SendDelete':
+									model.periodes)))));
+			case 'ClickDelete':
 				var id = msg.a;
 				return _Utils_Tuple2(
 					model,
 					A2($author$project$Main$sendDelete, $author$project$Main$ReceiveEvent, id));
-			case 'ReceiveEvent':
-				var response = msg.a;
-				if (response.$ === 'Ok') {
-					return _Utils_Tuple2(
-						model,
-						function () {
-							var _v4 = model.permission;
-							if (_v4.$ === 'PermissionNone') {
-								return $elm$core$Platform$Cmd$none;
-							} else {
-								return $author$project$Periode$fetch($author$project$Main$ReceiveState);
-							}
-						}());
-				} else {
-					var e = response.a;
-					return _Utils_Tuple2(
-						_Utils_update(
-							model,
-							{
-								current: $author$project$Periode$Stopped,
-								fetchErrMsg: $elm$core$Maybe$Just(
-									$author$project$Main$buildErrorMessage(e)),
-								periodes: _List_Nil,
-								permission: $author$project$Main$PermissionNone
-							}),
-						$elm$core$Platform$Cmd$none);
-				}
-			case 'OpenInsert':
+			case 'ClickAdd':
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
 						{
-							insert: $elm$core$Maybe$Just($author$project$Main$emptyInsert)
+							formInsert: $elm$core$Maybe$Just(
+								$author$project$Main$emptyInsert(model.currentTime))
 						}),
 					$elm$core$Platform$Cmd$none);
-			case 'CloseInsert':
-				return _Utils_Tuple2(
-					_Utils_update(
-						model,
-						{insert: $elm$core$Maybe$Nothing}),
-					$elm$core$Platform$Cmd$none);
-			case 'OpenPicker':
-				var insert = function () {
-					var _v5 = model.insert;
-					if (_v5.$ === 'Nothing') {
-						return $author$project$Main$emptyInsert;
-					} else {
-						var i = _v5.a;
-						return i;
-					}
-				}();
+			case 'ClickDatePicker':
+				var insert = $author$project$Main$insertForm(model);
+				var picker = A4(
+					$mercurymedia$elm_datetime_picker$SingleDatePicker$openPicker,
+					A2($mercurymedia$elm_datetime_picker$SingleDatePicker$defaultSettings, $author$project$Main$timeZone, $author$project$Main$UpdateDatePicker),
+					model.currentTime,
+					$elm$core$Maybe$Just(insert.start),
+					insert.picker);
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
 						{
-							insert: $elm$core$Maybe$Just(
+							formInsert: $elm$core$Maybe$Just(
 								_Utils_update(
 									insert,
-									{
-										picker: A4(
-											$mercurymedia$elm_datetime_picker$SingleDatePicker$openPicker,
-											A2($mercurymedia$elm_datetime_picker$SingleDatePicker$defaultSettings, $author$project$Main$timeZone, $author$project$Main$UpdatePicker),
-											model.currentTime,
-											insert.start,
-											insert.picker)
-									}))
+									{picker: picker}))
 						}),
 					$elm$core$Platform$Cmd$none);
-			case 'UpdatePicker':
-				var _v6 = msg.a;
-				var newPicker = _v6.a;
-				var maybeRuntime = _v6.b;
-				var insert = function () {
-					var _v7 = model.insert;
-					if (_v7.$ === 'Nothing') {
-						return $author$project$Main$emptyInsert;
-					} else {
-						var i = _v7.a;
-						return i;
-					}
-				}();
-				var runtime = A2(
-					$elm$core$Maybe$withDefault,
-					insert.start,
-					A2(
-						$elm$core$Maybe$map,
-						function (rt) {
-							return $elm$core$Maybe$Just(rt);
-						},
-						maybeRuntime));
+			case 'UpdateDatePicker':
+				var _v3 = msg.a;
+				var updatedPicker = _v3.a;
+				var maybePickedTime = _v3.b;
+				var insert = $author$project$Main$insertForm(model);
+				var pickedTime = A2($elm$core$Maybe$withDefault, insert.start, maybePickedTime);
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
 						{
-							insert: $elm$core$Maybe$Just(
+							formInsert: $elm$core$Maybe$Just(
 								_Utils_update(
 									insert,
-									{picker: newPicker, start: runtime}))
+									{picker: updatedPicker, start: pickedTime}))
 						}),
 					$elm$core$Platform$Cmd$none);
-			case 'SaveInsertDuration':
+			case 'InsertAddDuration':
 				var durationStr = msg.a;
-				var insert = function () {
-					var _v8 = model.insert;
-					if (_v8.$ === 'Nothing') {
-						return $author$project$Main$emptyInsert;
-					} else {
-						var i = _v8.a;
-						return i;
-					}
-				}();
+				var insert = $author$project$Main$insertForm(model);
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
 						{
-							insert: $elm$core$Maybe$Just(
+							formInsert: $elm$core$Maybe$Just(
 								_Utils_update(
 									insert,
-									{duration: durationStr}))
+									{formDuration: durationStr}))
 						}),
 					$elm$core$Platform$Cmd$none);
-			case 'SaveInsertComment':
+			case 'InsertAddComment':
 				var comment = msg.a;
-				var insert = function () {
-					var _v9 = model.insert;
-					if (_v9.$ === 'Nothing') {
-						return $author$project$Main$emptyInsert;
-					} else {
-						var i = _v9.a;
-						return i;
-					}
-				}();
+				var insert = $author$project$Main$insertForm(model);
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
 						{
-							insert: $elm$core$Maybe$Just(
+							formInsert: $elm$core$Maybe$Just(
 								_Utils_update(
 									insert,
-									{comment: comment}))
+									{formComment: comment}))
 						}),
 					$elm$core$Platform$Cmd$none);
-			case 'SendInsert':
-				var insert = function () {
-					var _v12 = model.insert;
-					if (_v12.$ === 'Nothing') {
-						return $author$project$Main$emptyInsert;
-					} else {
-						var i = _v12.a;
-						return i;
-					}
-				}();
-				var insertCMD = function () {
-					var _v11 = insert.start;
-					if (_v11.$ === 'Nothing') {
-						return $elm$core$Result$Err('No start time selected');
-					} else {
-						var start = _v11.a;
-						return (insert.duration === '') ? $elm$core$Result$Err('No duration providedd') : A2(
-							$elm$core$Result$andThen,
-							function (duration) {
-								return $elm$core$Result$Ok(
-									A4(
-										$author$project$Main$sendInsert,
-										$author$project$Main$ReceiveEvent,
-										start,
-										duration,
-										$elm$core$Maybe$Just(insert.comment)));
-							},
+			case 'ClickInsert':
+				var insert = $author$project$Main$insertForm(model);
+				var insertCMD = A2(
+					$elm$core$Result$andThen,
+					A2(
+						$elm$core$Basics$composeR,
+						$elm$core$String$toFloat,
+						A2(
+							$elm$core$Basics$composeR,
+							$elm$core$Result$fromMaybe('Duration has to be a number'),
 							A2(
-								$elm$core$Result$andThen,
-								function (n) {
-									return $elm$core$Result$Ok(
-										$ianmackenzie$elm_units$Duration$minutes(n));
-								},
-								A2(
-									$elm$core$Result$fromMaybe,
-									'no number',
-									$elm$core$String$toFloat(insert.duration))));
-					}
-				}();
+								$elm$core$Basics$composeR,
+								$elm$core$Result$andThen(
+									A2($elm$core$Basics$composeR, $ianmackenzie$elm_units$Duration$minutes, $elm$core$Result$Ok)),
+								$elm$core$Result$andThen(
+									function (duration) {
+										return $elm$core$Result$Ok(
+											A4($author$project$Main$sendInsert, $author$project$Main$ReceiveEvent, insert.start, duration, insert.formComment));
+									})))),
+					A2($author$project$Main$resultFromEmptyString, 'No duration provided', insert.formDuration));
 				if (insertCMD.$ === 'Ok') {
 					var cmd = insertCMD.a;
 					return _Utils_Tuple2(
 						_Utils_update(
 							model,
-							{insert: $elm$core$Maybe$Nothing}),
+							{formInsert: $elm$core$Maybe$Nothing}),
 						cmd);
 				} else {
 					var errMSG = insertCMD.a;
@@ -10073,7 +9996,7 @@ var $author$project$Main$update = F2(
 						_Utils_update(
 							model,
 							{
-								insert: $elm$core$Maybe$Just(
+								formInsert: $elm$core$Maybe$Just(
 									_Utils_update(
 										insert,
 										{
@@ -10082,28 +10005,28 @@ var $author$project$Main$update = F2(
 							}),
 						$elm$core$Platform$Cmd$none);
 				}
-			case 'SavePassword':
-				var pass = msg.a;
+			case 'InsertLoginPassword':
+				var password = msg.a;
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
-						{inputPassword: pass}),
+						{formPassword: password}),
 					$elm$core$Platform$Cmd$none);
-			case 'SendPassword':
+			case 'ClickLogin':
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
-						{inputPassword: ''}),
-					A2($author$project$Main$sendPassword, $author$project$Main$ReceiveAuth, model.inputPassword));
+						{formPassword: ''}),
+					A2($author$project$Main$sendPassword, $author$project$Main$ReceiveAuth, model.formPassword));
 			case 'ReceiveAuth':
 				var response = msg.a;
 				if (response.$ === 'Ok') {
-					var level = response.a;
+					var permissionLevel = response.a;
 					return _Utils_Tuple2(
 						_Utils_update(
 							model,
 							{
-								permission: $author$project$Main$permissionFromString(level)
+								permission: $author$project$Main$permissionFromString(permissionLevel)
 							}),
 						$author$project$Periode$fetch($author$project$Main$ReceiveState));
 				} else {
@@ -10113,13 +10036,13 @@ var $author$project$Main$update = F2(
 							model,
 							{
 								current: $author$project$Periode$Stopped,
-								fetchErrMsg: $elm$core$Maybe$Just(
+								errMsg: $elm$core$Maybe$Just(
 									$author$project$Main$buildErrorMessage(e)),
 								periodes: _List_Nil
 							}),
 						$elm$core$Platform$Cmd$none);
 				}
-			case 'Logout':
+			case 'ClickLogout':
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
@@ -10135,7 +10058,7 @@ var $author$project$Main$update = F2(
 					_Utils_update(
 						model,
 						{
-							selectedYearMonth: $author$project$YearMonth$fromAttr(value)
+							formYearMonth: $author$project$YearMonth$fromAttr(value)
 						}),
 					$elm$core$Platform$Cmd$none);
 			default:
@@ -10149,13 +10072,12 @@ var $author$project$Main$update = F2(
 	});
 var $elm$virtual_dom$VirtualDom$text = _VirtualDom_text;
 var $elm$html$Html$text = $elm$virtual_dom$VirtualDom$text;
-var $author$project$Main$viewEmpty = $elm$html$Html$text('');
 var $author$project$Main$canWrite = F2(
 	function (permission, html) {
 		if (permission.$ === 'PermissionWrite') {
 			return html;
 		} else {
-			return $author$project$Main$viewEmpty;
+			return $elm$html$Html$text('');
 		}
 	});
 var $elm$html$Html$div = _VirtualDom_node('div');
@@ -10168,8 +10090,8 @@ var $elm$html$Html$Attributes$stringProperty = F2(
 			$elm$json$Json$Encode$string(string));
 	});
 var $elm$html$Html$Attributes$class = $elm$html$Html$Attributes$stringProperty('className');
-var $author$project$Main$SetBody = function (a) {
-	return {$: 'SetBody', a: a};
+var $author$project$Main$ClickBodyNav = function (a) {
+	return {$: 'ClickBodyNav', a: a};
 };
 var $elm$html$Html$a = _VirtualDom_node('a');
 var $elm$html$Html$Attributes$href = function (url) {
@@ -10221,7 +10143,7 @@ var $author$project$Main$navLink = F2(
 							$elm$html$Html$Attributes$class(linkClass),
 							$elm$html$Html$Attributes$href('#'),
 							$elm$html$Html$Events$onClick(
-							$author$project$Main$SetBody(myViewBody))
+							$author$project$Main$ClickBodyNav(myViewBody))
 						]),
 					_List_fromArray(
 						[
@@ -10400,7 +10322,7 @@ var $author$project$Main$intToFormattedString = function (_int) {
 			_List_Nil,
 			$elm$core$String$fromInt(_int)));
 };
-var $author$project$Main$intToString2 = function (n) {
+var $author$project$Main$intToPadding2String = function (n) {
 	var str = $elm$core$String$fromInt(n);
 	var formatted = ($elm$core$String$length(str) < 2) ? ('0' + str) : str;
 	return formatted;
@@ -10409,7 +10331,7 @@ var $author$project$Main$centToString = function (euroCent) {
 	var euro = (euroCent / 100) | 0;
 	var euroString = $author$project$Main$intToFormattedString(euro);
 	var cent = euroCent % 100;
-	return euroString + (',' + ($author$project$Main$intToString2(cent) + ' €'));
+	return euroString + (',' + ($author$project$Main$intToPadding2String(cent) + ' €'));
 };
 var $author$project$Mony$centPerHour = 8000;
 var $author$project$Mony$centPerMinute = 134;
@@ -10446,7 +10368,7 @@ var $author$project$Main$durationToTimeString = function (duration) {
 	var _v0 = $author$project$Mony$durationInHourMinutes(duration);
 	var hours = _v0.a;
 	var minutes = _v0.b;
-	return $elm$core$String$fromInt(hours) + (':' + $author$project$Main$intToString2(minutes));
+	return $elm$core$String$fromInt(hours) + (':' + $author$project$Main$intToPadding2String(minutes));
 };
 var $elm$html$Html$td = _VirtualDom_node('td');
 var $author$project$Main$viewMonthlyLine = function (_v0) {
@@ -10517,7 +10439,10 @@ var $author$project$Main$viewMonthly = F2(
 								[
 									A2(
 									$elm$html$Html$th,
-									_List_Nil,
+									_List_fromArray(
+										[
+											$elm$html$Html$Attributes$class('month')
+										]),
 									_List_fromArray(
 										[
 											$elm$html$Html$text('Monat')
@@ -10643,11 +10568,11 @@ var $author$project$Main$viewPeriodeHeader = function (permission) {
 					]))
 			]));
 };
-var $author$project$Main$SendContinue = function (a) {
-	return {$: 'SendContinue', a: a};
+var $author$project$Main$ClickContinue = function (a) {
+	return {$: 'ClickContinue', a: a};
 };
-var $author$project$Main$SendDelete = function (a) {
-	return {$: 'SendDelete', a: a};
+var $author$project$Main$ClickDelete = function (a) {
+	return {$: 'ClickDelete', a: a};
 };
 var $elm$html$Html$button = _VirtualDom_node('button');
 var $CoderDennis$elm_time_format$Time$Format$I18n$I_de_de$dayName = function (day) {
@@ -11064,14 +10989,8 @@ var $author$project$Main$viewPeriodeLine = F2(
 					_List_Nil,
 					_List_fromArray(
 						[
-							A2(
-							$elm$html$Html$div,
-							_List_Nil,
-							_List_fromArray(
-								[
-									$elm$html$Html$text(
-									$author$project$Main$durationToTimeString(periode.duration))
-								]))
+							$elm$html$Html$text(
+							$author$project$Main$durationToTimeString(periode.duration))
 						])),
 					A2(
 					$elm$html$Html$td,
@@ -11086,8 +11005,7 @@ var $author$project$Main$viewPeriodeLine = F2(
 					_List_Nil,
 					_List_fromArray(
 						[
-							$elm$html$Html$text(
-							A2($elm$core$Maybe$withDefault, '', periode.comment))
+							$elm$html$Html$text(periode.comment)
 						])),
 					A2(
 					$author$project$Main$canWrite,
@@ -11107,11 +11025,11 @@ var $author$project$Main$viewPeriodeLine = F2(
 										$elm$html$Html$Attributes$type_('button'),
 										$elm$html$Html$Attributes$class('btn btn-danger'),
 										$elm$html$Html$Events$onClick(
-										$author$project$Main$SendDelete(periode.id))
+										$author$project$Main$ClickContinue(periode.id))
 									]),
 								_List_fromArray(
 									[
-										$elm$html$Html$text('✖')
+										$elm$html$Html$text('→')
 									])),
 								A2(
 								$elm$html$Html$button,
@@ -11120,11 +11038,11 @@ var $author$project$Main$viewPeriodeLine = F2(
 										$elm$html$Html$Attributes$type_('button'),
 										$elm$html$Html$Attributes$class('btn btn-danger'),
 										$elm$html$Html$Events$onClick(
-										$author$project$Main$SendContinue(periode.id))
+										$author$project$Main$ClickDelete(periode.id))
 									]),
 								_List_fromArray(
 									[
-										$elm$html$Html$text('→')
+										$elm$html$Html$text('✖')
 									]))
 							])))
 				]));
@@ -11260,8 +11178,8 @@ var $author$project$YearMonth$toAttr = function (yearMonth) {
 	} else {
 		var year = yearMonth.a;
 		var month = yearMonth.b;
-		return $elm$core$String$fromInt(year) + ('_' + $elm$core$String$toLower(
-			$author$project$YearMonth$monthToString(month)));
+		return $elm$core$String$toLower(
+			$elm$core$String$fromInt(year) + ('_' + $author$project$YearMonth$monthToString(month)));
 	}
 };
 var $elm$html$Html$Attributes$value = $elm$html$Html$Attributes$stringProperty('value');
@@ -11282,20 +11200,10 @@ var $author$project$YearMonth$viewYearMonthOption = F2(
 					$author$project$YearMonth$toString(ym))
 				]));
 	});
-var $author$project$YearMonth$yearMonthList = F2(
-	function (zone, periodes) {
-		return A3(
-			$elm$core$List$foldl,
-			F2(
-				function (p, l) {
-					return A2(
-						$elm$core$List$cons,
-						A2($author$project$YearMonth$fromPosix, zone, p),
-						l);
-				}),
-			_List_Nil,
-			periodes);
-	});
+var $author$project$YearMonth$yearMonthList = function (zone) {
+	return $elm$core$List$map(
+		$author$project$YearMonth$fromPosix(zone));
+};
 var $author$project$YearMonth$viewYearMonthSelect = F4(
 	function (zone, selected, event, times) {
 		return A2(
@@ -11336,8 +11244,8 @@ var $author$project$Main$viewPeriodes = F4(
 					$author$project$Main$SelectYearMonth,
 					A2(
 						$elm$core$List$map,
-						function (p) {
-							return p.start;
+						function ($) {
+							return $.start;
 						},
 						sorted)),
 					A2(
@@ -11375,7 +11283,7 @@ var $author$project$Main$viewBody = function (model) {
 				if (_v0.$ === 'ViewMonthly') {
 					return A2($author$project$Main$viewMonthly, $author$project$Main$timeZone, model.periodes);
 				} else {
-					return A4($author$project$Main$viewPeriodes, $author$project$Main$timeZone, model.selectedYearMonth, model.permission, model.periodes);
+					return A4($author$project$Main$viewPeriodes, $author$project$Main$timeZone, model.formYearMonth, model.permission, model.periodes);
 				}
 			}()
 			]));
@@ -11387,20 +11295,20 @@ var $ianmackenzie$elm_units$Duration$from = F2(
 		var numMilliseconds = $elm$time$Time$posixToMillis(endTime) - $elm$time$Time$posixToMillis(startTime);
 		return $ianmackenzie$elm_units$Duration$milliseconds(numMilliseconds);
 	});
-var $author$project$Main$SaveComment = function (a) {
-	return {$: 'SaveComment', a: a};
+var $author$project$Main$ClickStart = {$: 'ClickStart'};
+var $author$project$Main$ClickStop = {$: 'ClickStop'};
+var $author$project$Main$InsertComment = function (a) {
+	return {$: 'InsertComment', a: a};
 };
-var $author$project$Main$SendStart = {$: 'SendStart'};
-var $author$project$Main$SendStop = {$: 'SendStop'};
 var $elm$html$Html$Attributes$id = $elm$html$Html$Attributes$stringProperty('id');
 var $elm$html$Html$input = _VirtualDom_node('input');
-var $author$project$Main$viewStartStopButton = F2(
+var $author$project$Main$viewStartStopForm = F2(
 	function (startStop, comment) {
 		var _v0 = function () {
 			if (startStop.$ === 'Start') {
-				return _Utils_Tuple2($author$project$Main$SendStart, 'Start');
+				return _Utils_Tuple2($author$project$Main$ClickStart, 'Start');
 			} else {
-				return _Utils_Tuple2($author$project$Main$SendStop, 'Stop');
+				return _Utils_Tuple2($author$project$Main$ClickStop, 'Stop');
 			}
 		}();
 		var event = _v0.a;
@@ -11428,39 +11336,38 @@ var $author$project$Main$viewStartStopButton = F2(
 							$elm$html$Html$Attributes$id('comment'),
 							$elm$html$Html$Attributes$type_('text'),
 							$elm$html$Html$Attributes$value(comment),
-							$elm$html$Html$Events$onInput($author$project$Main$SaveComment)
+							$elm$html$Html$Events$onInput($author$project$Main$InsertComment)
 						]),
 					_List_Nil)
 				]));
 	});
 var $author$project$Main$viewCurrent = F3(
-	function (current, comment, currentTime) {
+	function (current, insertedComment, currentTime) {
 		if (current.$ === 'Stopped') {
-			return A2($author$project$Main$viewStartStopButton, $author$project$Main$Start, comment);
+			return A2($author$project$Main$viewStartStopForm, $author$project$Main$Start, insertedComment);
 		} else {
 			var start = current.a;
-			var maybeComment = current.b;
+			var serverComment = current.b;
 			var mony = $author$project$Main$durationToMonyString(
 				A2($ianmackenzie$elm_units$Duration$from, start, currentTime));
-			var currentComment = A2($elm$core$Maybe$withDefault, '', maybeComment);
 			return A2(
 				$elm$html$Html$div,
 				_List_Nil,
 				_List_fromArray(
 					[
-						A2($author$project$Main$viewStartStopButton, $author$project$Main$Stop, comment),
+						A2($author$project$Main$viewStartStopForm, $author$project$Main$Stop, insertedComment),
 						A2(
 						$elm$html$Html$div,
 						_List_Nil,
 						_List_fromArray(
 							[
 								$elm$html$Html$text(
-								'running since ' + ($author$project$Main$posixToString(start) + (': ' + (currentComment + (': ' + mony)))))
+								'running since ' + ($author$project$Main$posixToString(start) + (': ' + (serverComment + (': ' + mony)))))
 							]))
 					]));
 		}
 	});
-var $author$project$Main$Logout = {$: 'Logout'};
+var $author$project$Main$ClickLogout = {$: 'ClickLogout'};
 var $elm$html$Html$footer = _VirtualDom_node('footer');
 var $author$project$Main$viewFooter = A2(
 	$elm$html$Html$footer,
@@ -11487,22 +11394,22 @@ var $author$project$Main$viewFooter = A2(
 				[
 					$elm$html$Html$Attributes$href('#'),
 					$elm$html$Html$Attributes$class('link-primary'),
-					$elm$html$Html$Events$onClick($author$project$Main$Logout)
+					$elm$html$Html$Events$onClick($author$project$Main$ClickLogout)
 				]),
 			_List_fromArray(
 				[
 					$elm$html$Html$text('logout')
 				]))
 		]));
-var $author$project$Main$OpenInsert = {$: 'OpenInsert'};
-var $author$project$Main$OpenPicker = {$: 'OpenPicker'};
-var $author$project$Main$SaveInsertComment = function (a) {
-	return {$: 'SaveInsertComment', a: a};
+var $author$project$Main$ClickAdd = {$: 'ClickAdd'};
+var $author$project$Main$ClickDatePicker = {$: 'ClickDatePicker'};
+var $author$project$Main$ClickInsert = {$: 'ClickInsert'};
+var $author$project$Main$InsertAddComment = function (a) {
+	return {$: 'InsertAddComment', a: a};
 };
-var $author$project$Main$SaveInsertDuration = function (a) {
-	return {$: 'SaveInsertDuration', a: a};
+var $author$project$Main$InsertAddDuration = function (a) {
+	return {$: 'InsertAddDuration', a: a};
 };
-var $author$project$Main$SendInsert = {$: 'SendInsert'};
 var $elm$html$Html$Attributes$placeholder = $elm$html$Html$Attributes$stringProperty('placeholder');
 var $elm$html$Html$span = _VirtualDom_node('span');
 var $justinmimbs$date$Date$Days = {$: 'Days'};
@@ -12933,7 +12840,7 @@ var $author$project$Main$viewInsert = function (maybeInsert) {
 			_List_fromArray(
 				[
 					$elm$html$Html$Attributes$class('btn btn-secondary'),
-					$elm$html$Html$Events$onClick($author$project$Main$OpenInsert)
+					$elm$html$Html$Events$onClick($author$project$Main$ClickAdd)
 				]),
 			_List_fromArray(
 				[
@@ -12941,15 +12848,6 @@ var $author$project$Main$viewInsert = function (maybeInsert) {
 				]));
 	} else {
 		var insert = maybeInsert.a;
-		var startTime = function () {
-			var _v1 = insert.start;
-			if (_v1.$ === 'Nothing') {
-				return 'No time selected';
-			} else {
-				var s = _v1.a;
-				return $author$project$Main$posixToString(s);
-			}
-		}();
 		return A2(
 			$elm$html$Html$div,
 			_List_Nil,
@@ -12959,15 +12857,16 @@ var $author$project$Main$viewInsert = function (maybeInsert) {
 					$elm$html$Html$span,
 					_List_fromArray(
 						[
-							$elm$html$Html$Events$onClick($author$project$Main$OpenPicker)
+							$elm$html$Html$Events$onClick($author$project$Main$ClickDatePicker)
 						]),
 					_List_fromArray(
 						[
-							$elm$html$Html$text(startTime)
+							$elm$html$Html$text(
+							$author$project$Main$posixToString(insert.start))
 						])),
 					A2(
 					$mercurymedia$elm_datetime_picker$SingleDatePicker$view,
-					A2($mercurymedia$elm_datetime_picker$SingleDatePicker$defaultSettings, $author$project$Main$timeZone, $author$project$Main$UpdatePicker),
+					A2($mercurymedia$elm_datetime_picker$SingleDatePicker$defaultSettings, $author$project$Main$timeZone, $author$project$Main$UpdateDatePicker),
 					insert.picker),
 					A2(
 					$elm$html$Html$input,
@@ -12976,8 +12875,8 @@ var $author$project$Main$viewInsert = function (maybeInsert) {
 							$elm$html$Html$Attributes$id('duration'),
 							$elm$html$Html$Attributes$type_('text'),
 							$elm$html$Html$Attributes$placeholder('minutes'),
-							$elm$html$Html$Attributes$value(insert.duration),
-							$elm$html$Html$Events$onInput($author$project$Main$SaveInsertDuration)
+							$elm$html$Html$Attributes$value(insert.formDuration),
+							$elm$html$Html$Events$onInput($author$project$Main$InsertAddDuration)
 						]),
 					_List_Nil),
 					A2(
@@ -12987,8 +12886,8 @@ var $author$project$Main$viewInsert = function (maybeInsert) {
 							$elm$html$Html$Attributes$id('comment'),
 							$elm$html$Html$Attributes$type_('text'),
 							$elm$html$Html$Attributes$placeholder('comment'),
-							$elm$html$Html$Attributes$value(insert.comment),
-							$elm$html$Html$Events$onInput($author$project$Main$SaveInsertComment)
+							$elm$html$Html$Attributes$value(insert.formComment),
+							$elm$html$Html$Events$onInput($author$project$Main$InsertAddComment)
 						]),
 					_List_Nil),
 					A2(
@@ -12996,7 +12895,7 @@ var $author$project$Main$viewInsert = function (maybeInsert) {
 					_List_fromArray(
 						[
 							$elm$html$Html$Attributes$class('btn btn-primary'),
-							$elm$html$Html$Events$onClick($author$project$Main$SendInsert)
+							$elm$html$Html$Events$onClick($author$project$Main$ClickInsert)
 						]),
 					_List_fromArray(
 						[
@@ -13013,10 +12912,10 @@ var $author$project$Main$viewInsert = function (maybeInsert) {
 				]));
 	}
 };
-var $author$project$Main$SavePassword = function (a) {
-	return {$: 'SavePassword', a: a};
+var $author$project$Main$ClickLogin = {$: 'ClickLogin'};
+var $author$project$Main$InsertLoginPassword = function (a) {
+	return {$: 'InsertLoginPassword', a: a};
 };
-var $author$project$Main$SendPassword = {$: 'SendPassword'};
 var $elm$html$Html$h5 = _VirtualDom_node('h5');
 var $author$project$Main$viewLogin = function (pass) {
 	return A2(
@@ -13037,7 +12936,7 @@ var $author$project$Main$viewLogin = function (pass) {
 					[
 						$elm$html$Html$Attributes$type_('password'),
 						$elm$html$Html$Attributes$value(pass),
-						$elm$html$Html$Events$onInput($author$project$Main$SavePassword)
+						$elm$html$Html$Events$onInput($author$project$Main$InsertLoginPassword)
 					]),
 				_List_Nil),
 				A2(
@@ -13045,7 +12944,7 @@ var $author$project$Main$viewLogin = function (pass) {
 				_List_fromArray(
 					[
 						$elm$html$Html$Attributes$class('btn btn-primary'),
-						$elm$html$Html$Events$onClick($author$project$Main$SendPassword)
+						$elm$html$Html$Events$onClick($author$project$Main$ClickLogin)
 					]),
 				_List_fromArray(
 					[
@@ -13054,7 +12953,7 @@ var $author$project$Main$viewLogin = function (pass) {
 			]));
 };
 var $author$project$Main$view = function (model) {
-	var _v0 = model.fetchErrMsg;
+	var _v0 = model.errMsg;
 	if (_v0.$ === 'Just') {
 		var err = _v0.a;
 		return A2(
@@ -13067,7 +12966,7 @@ var $author$project$Main$view = function (model) {
 	} else {
 		var _v1 = model.permission;
 		if (_v1.$ === 'PermissionNone') {
-			return $author$project$Main$viewLogin(model.inputPassword);
+			return $author$project$Main$viewLogin(model.formPassword);
 		} else {
 			return A2(
 				$elm$html$Html$div,
@@ -13077,11 +12976,11 @@ var $author$project$Main$view = function (model) {
 						A2(
 						$author$project$Main$canWrite,
 						model.permission,
-						A3($author$project$Main$viewCurrent, model.current, model.comment, model.currentTime)),
+						A3($author$project$Main$viewCurrent, model.current, model.formComment, model.currentTime)),
 						A2(
 						$author$project$Main$canWrite,
 						model.permission,
-						$author$project$Main$viewInsert(model.insert)),
+						$author$project$Main$viewInsert(model.formInsert)),
 						$author$project$Main$viewBody(model),
 						$author$project$Main$viewFooter
 					]));
