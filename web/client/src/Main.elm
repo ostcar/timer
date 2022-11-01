@@ -2,7 +2,6 @@ module Main exposing (main)
 
 import Browser
 import Duration
-import DurationDatePicker
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
@@ -11,6 +10,8 @@ import Json.Decode as Decode
 import Json.Encode as Encode
 import Jwt
 import Periode
+import SingleDatePicker
+import String 
 import Time
 import Time.Format
 import Time.Format.Config.Config_de_de
@@ -52,9 +53,11 @@ type alias Model =
 
 
 type alias Insert =
-    { startStop : Maybe ( Time.Posix, Time.Posix )
+    { start : Maybe Time.Posix
+    , duration : String
     , comment : String
-    , picker : DurationDatePicker.DatePicker
+    , picker : SingleDatePicker.DatePicker
+    , error : Maybe String
     }
 
 
@@ -76,7 +79,8 @@ type Msg
     | OpenInsert
     | CloseInsert
     | OpenPicker
-    | UpdatePicker ( DurationDatePicker.DatePicker, Maybe ( Time.Posix, Time.Posix ) )
+    | UpdatePicker ( SingleDatePicker.DatePicker, Maybe Time.Posix )
+    | SaveInsertDuration String
     | SaveInsertComment String
     | SendInsert
     | SavePassword String
@@ -235,16 +239,8 @@ update msg model =
 
                         Just i ->
                             i
-
-                ( start, stop ) =
-                    case insert.startStop of
-                        Nothing ->
-                            ( Nothing, Nothing )
-
-                        Just ( s, t ) ->
-                            ( Just s, Just t )
             in
-            ( { model | insert = Just { insert | picker = DurationDatePicker.openPicker (DurationDatePicker.defaultSettings timeZone UpdatePicker) model.currentTime start stop insert.picker } }
+            ( { model | insert = Just { insert | picker = SingleDatePicker.openPicker (SingleDatePicker.defaultSettings timeZone UpdatePicker) model.currentTime insert.start insert.picker } }
             , Cmd.none
             )
 
@@ -259,9 +255,23 @@ update msg model =
                             i
 
                 runtime =
-                    Maybe.map (\rt -> Just rt) maybeRuntime |> Maybe.withDefault insert.startStop
+                    Maybe.map (\rt -> Just rt) maybeRuntime |> Maybe.withDefault insert.start
             in
-            ( { model | insert = Just { insert | picker = newPicker, startStop = runtime } }
+            ( { model | insert = Just { insert | picker = newPicker, start = runtime } }
+            , Cmd.none
+            )
+
+        SaveInsertDuration durationStr ->
+            let
+                insert =
+                    case model.insert of
+                        Nothing ->
+                            emptyInsert
+
+                        Just i ->
+                            i
+            in
+            ( { model | insert = Just { insert | duration = durationStr } }
             , Cmd.none
             )
 
@@ -289,17 +299,32 @@ update msg model =
                         Just i ->
                             i
 
-                cmd =
-                    case insert.startStop of
+                insertCMD =
+                    case insert.start of
                         Nothing ->
-                            Cmd.none
+                            Result.Err "No start time selected"
 
-                        Just ( start, stop ) ->
-                            sendInsert ReceiveEvent start stop (Just insert.comment)
+                        Just start ->
+                            if insert.duration == "" then
+                                Result.Err "No duration providedd"
+
+                            else
+                                insert.duration
+                                    |> String.toFloat
+                                    |> Result.fromMaybe "no number"
+                                    |> Result.andThen (\n -> Result.Ok (Duration.minutes n))
+                                    |> Result.andThen (\duration -> sendInsert ReceiveEvent start duration (Just insert.comment) |> Result.Ok)
             in
-            ( { model | insert = Nothing }
-            , cmd
-            )
+            case insertCMD of
+                Ok cmd ->
+                    ( { model | insert = Nothing }
+                    , cmd
+                    )
+
+                Err errMSG ->
+                    ( { model | insert = Just { insert | error = Just errMSG } }
+                    , Cmd.none
+                    )
 
         SavePassword pass ->
             ( { model | inputPassword = pass }
@@ -354,9 +379,11 @@ lastComment periodes =
 
 emptyInsert : Insert
 emptyInsert =
-    { startStop = Nothing
+    { start = Nothing
+    , duration = ""
     , comment = ""
-    , picker = DurationDatePicker.init
+    , picker = SingleDatePicker.init
+    , error = Nothing
     }
 
 
@@ -369,11 +396,11 @@ sendStartStop startStop result comment =
         }
 
 
-sendInsert : (Result Http.Error () -> Msg) -> Time.Posix -> Time.Posix -> Maybe String -> Cmd Msg
-sendInsert result start stop comment =
+sendInsert : (Result Http.Error () -> Msg) -> Time.Posix -> Duration.Duration -> Maybe String -> Cmd Msg
+sendInsert result start duration comment =
     Http.post
         { url = "/api/periode"
-        , body = Http.jsonBody (insertEncoder start stop comment)
+        , body = Http.jsonBody (insertEncoder start duration comment)
         , expect = Http.expectWhatever result
         }
 
@@ -397,8 +424,8 @@ commentEncoder comment =
         [ ( "comment", Encode.string comment ) ]
 
 
-insertEncoder : Time.Posix -> Time.Posix -> Maybe String -> Encode.Value
-insertEncoder start stop maybeComment =
+insertEncoder : Time.Posix -> Duration.Duration -> Maybe String -> Encode.Value
+insertEncoder start duration maybeComment =
     let
         comment =
             case maybeComment of
@@ -410,7 +437,7 @@ insertEncoder start stop maybeComment =
     in
     Encode.object
         ([ ( "start", (Time.posixToMillis start // 1000) |> Encode.int )
-         , ( "stop", (Time.posixToMillis stop // 1000) |> Encode.int )
+         , ( "duration", (Duration.inSeconds duration |> round) |> Encode.int )
          ]
             ++ comment
         )
@@ -618,7 +645,7 @@ viewPeriodeLine : Permission -> Periode.Periode -> Html Msg
 viewPeriodeLine permission periode =
     tr []
         [ td [] [ text (posixToString periode.start) ]
-        , td [] [ div [ ] [ text (viewDuration periode.duration) ] ]
+        , td [] [ div [] [ text (viewDuration periode.duration) ] ]
         , td [] [ text (mydurationToEuroCent periode.duration |> euroCentToString) ]
         , td [] [ text (Maybe.withDefault "" periode.comment) ]
         , td [] [ button [ type_ "button", class "btn btn-danger", onClick (SendDelete periode.id) ] [ text "X" ] ] |> canWrite permission
@@ -672,17 +699,24 @@ viewInsert maybeInsert =
 
         Just insert ->
             let
-                startStopTime =
-                    case insert.startStop of
+                startTime =
+                    case insert.start of
                         Nothing ->
                             "No time selected"
 
-                        Just ( s, t ) ->
-                            posixToString s ++ " - " ++ posixToString t
+                        Just s ->
+                            posixToString s
             in
             div []
-                [ span [ onClick OpenPicker ] [ text startStopTime ]
-                , DurationDatePicker.view (DurationDatePicker.defaultSettings timeZone UpdatePicker) insert.picker
+                [ span [ onClick OpenPicker ] [ text startTime ]
+                , SingleDatePicker.view (SingleDatePicker.defaultSettings timeZone UpdatePicker) insert.picker
+                , input
+                    [ id "duration"
+                    , type_ "text"
+                    , value insert.duration
+                    , onInput SaveInsertDuration
+                    ]
+                    []
                 , input
                     [ id "comment"
                     , type_ "text"
@@ -691,6 +725,7 @@ viewInsert maybeInsert =
                     ]
                     []
                 , button [ class "btn btn-primary", onClick SendInsert ] [ text "Insert" ]
+                , div [] [ Maybe.withDefault "" insert.error |> text ]
                 ]
 
 
@@ -739,6 +774,6 @@ subscriptions model =
                     i
     in
     Sub.batch
-        [ DurationDatePicker.subscriptions (DurationDatePicker.defaultSettings timeZone UpdatePicker) UpdatePicker insert.picker
+        [ SingleDatePicker.subscriptions (SingleDatePicker.defaultSettings timeZone UpdatePicker) UpdatePicker insert.picker
         , Time.every 1000 Tick
         ]
