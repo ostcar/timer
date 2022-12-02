@@ -50,6 +50,10 @@ func New[Model any](db database, getEvent func(name string) Event[Model], os ...
 		now:   time.Now,
 		db:    db,
 	}
+
+	for _, o := range os {
+		o(&s)
+	}
 	return &s, nil
 }
 
