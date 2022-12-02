@@ -1,4 +1,4 @@
-package model
+package sticky
 
 import (
 	"encoding/json"
@@ -8,7 +8,7 @@ import (
 
 const timeFormat = "2006-01-02 15:04:05"
 
-// JSONTime is a time type with a consum marshaling to json.
+// JSONTime is a time type that can be converted to json.
 type JSONTime time.Time
 
 // MarshalJSON converts the value to json.

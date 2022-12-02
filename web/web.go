@@ -12,6 +12,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/ostcar/timer/config"
 	"github.com/ostcar/timer/model"
+	"github.com/ostcar/timer/sticky"
 )
 
 //go:embed client/index.html
@@ -24,7 +25,7 @@ var defaultElm []byte
 var defaultStatic embed.FS
 
 // Run starts the webserver on the given port
-func Run(ctx context.Context, model *model.Model, cfg config.Config) error {
+func Run(ctx context.Context, s *sticky.Sticky[model.Model], cfg config.Config) error {
 	static, err := fs.Sub(defaultStatic, "static")
 	if err != nil {
 		return fmt.Errorf("open static folder: %w", err)
@@ -37,7 +38,7 @@ func Run(ctx context.Context, model *model.Model, cfg config.Config) error {
 	}
 
 	router := mux.NewRouter()
-	registerHandlers(router, model, cfg, defaultFiles)
+	registerHandlers(router, s, cfg, defaultFiles)
 
 	srv := &http.Server{
 		Addr:        cfg.WebListenAddr,

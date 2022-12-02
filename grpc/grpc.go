@@ -9,18 +9,19 @@ import (
 
 	"github.com/ostcar/timer/grpc/proto"
 	"github.com/ostcar/timer/model"
+	"github.com/ostcar/timer/sticky"
 	"google.golang.org/grpc"
 )
 
 // Run starts the grpc server on the given port.
-func Run(ctx context.Context, model *model.Model, addr string) error {
+func Run(ctx context.Context, s *sticky.Sticky[model.Model], addr string) error {
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
 		return fmt.Errorf("listen on address %q: %w", addr, err)
 	}
 
 	registrar := grpc.NewServer()
-	timerServer := grpcServer{model}
+	timerServer := grpcServer{s}
 
 	proto.RegisterTimerServer(registrar, timerServer)
 
@@ -42,11 +43,14 @@ func Run(ctx context.Context, model *model.Model, addr string) error {
 }
 
 type grpcServer struct {
-	model *model.Model
+	s *sticky.Sticky[model.Model]
 }
 
 func (s grpcServer) Start(ctx context.Context, req *proto.StartRequest) (*proto.StartResponse, error) {
-	if err := s.model.Start(model.Just(req.Comment)); err != nil {
+	err := s.s.Write(func(m model.Model) sticky.Event[model.Model] {
+		return m.Start(model.Just(req.Comment))
+	})
+	if err != nil {
 		return nil, fmt.Errorf("starting timer: %w", err)
 	}
 	return new(proto.StartResponse), nil
@@ -58,7 +62,12 @@ func (s grpcServer) Stop(ctx context.Context, req *proto.StopRequest) (*proto.St
 		comment = model.Just(req.Comment)
 	}
 
-	id, err := s.model.Stop(comment)
+	var id int
+	err := s.s.Write(func(m model.Model) sticky.Event[model.Model] {
+		eventID, event := m.Stop(comment)
+		id = eventID
+		return event
+	})
 
 	if err != nil {
 		return nil, fmt.Errorf("stopping timer: %w", err)
@@ -67,7 +76,11 @@ func (s grpcServer) Stop(ctx context.Context, req *proto.StopRequest) (*proto.St
 }
 
 func (s grpcServer) List(ctx context.Context, req *proto.ListRequest) (*proto.ListResponse, error) {
-	modelPeriodes := s.model.List()
+	var modelPeriodes []model.Periode
+	s.s.Read(func(m model.Model) {
+		modelPeriodes = m.List()
+	})
+
 	protoPeriodes := make([]*proto.Periode, len(modelPeriodes))
 	for i, p := range modelPeriodes {
 		comment, hasComment := p.Comment.Value()
@@ -83,14 +96,14 @@ func (s grpcServer) List(ctx context.Context, req *proto.ListRequest) (*proto.Li
 }
 
 func (s grpcServer) Edit(ctx context.Context, req *proto.EditRequest) (*proto.EditResponse, error) {
-	var start model.Maybe[model.JSONTime]
+	var start model.Maybe[sticky.JSONTime]
 	if req.HasStart {
-		start = model.Just(model.JSONTime(time.Unix(req.Start, 0)))
+		start = model.Just(sticky.JSONTime(time.Unix(req.Start, 0)))
 	}
 
-	var duration model.Maybe[model.JSONDuration]
+	var duration model.Maybe[sticky.JSONDuration]
 	if req.HasDuration {
-		duration = model.Just(model.JSONDuration(time.Duration(req.Duration) * time.Second))
+		duration = model.Just(sticky.JSONDuration(time.Duration(req.Duration) * time.Second))
 	}
 
 	var comment model.Maybe[string]
@@ -98,7 +111,10 @@ func (s grpcServer) Edit(ctx context.Context, req *proto.EditRequest) (*proto.Ed
 		comment = model.Just(req.Comment)
 	}
 
-	if err := s.model.Edit(int(req.Id), start, duration, comment); err != nil {
+	err := s.s.Write(func(m model.Model) sticky.Event[model.Model] {
+		return m.Edit(int(req.Id), start, duration, comment)
+	})
+	if err != nil {
 		return nil, fmt.Errorf("editing periode: %w", err)
 	}
 	return new(proto.EditResponse), nil
@@ -113,16 +129,24 @@ func (s grpcServer) Insert(ctx context.Context, req *proto.InsertRequest) (*prot
 		comment = model.Just(req.Comment)
 	}
 
-	id, err := s.model.Insert(start, duration, comment)
-
+	var id int
+	err := s.s.Write(func(m model.Model) sticky.Event[model.Model] {
+		eventID, event := m.Insert(start, duration, comment)
+		id = eventID
+		return event
+	})
 	if err != nil {
 		return nil, fmt.Errorf("inserting periode: %w", err)
 	}
+
 	return &proto.InsertResponse{Id: int32(id)}, nil
 }
 
 func (s grpcServer) Delete(ctx context.Context, req *proto.DeleteRequest) (*proto.DeleteResponse, error) {
-	if err := s.model.Delete(int(req.Id)); err != nil {
+	err := s.s.Write(func(m model.Model) sticky.Event[model.Model] {
+		return m.Delete(int(req.Id))
+	})
+	if err != nil {
 		return nil, fmt.Errorf("starting timer: %w", err)
 	}
 	return new(proto.DeleteResponse), nil
