@@ -8,7 +8,7 @@ import (
 )
 
 // GetEvent returns an empty event for a name.
-func GetEvent(eventType string) sticky.Event[Model] {
+func GetEvent(eventType string) Event {
 	switch eventType {
 	case eventStart{}.Name():
 		return &eventStart{}
@@ -40,15 +40,6 @@ type eventStart struct {
 	Comment Maybe[string] `json:"comment"`
 }
 
-func (e eventStart) String() string {
-	comment, exist := e.Comment.Value()
-	if exist {
-		return fmt.Sprintf("Start with comment `%s`", comment)
-	}
-
-	return fmt.Sprintf("Start with no comment")
-}
-
 func (e eventStart) Name() string {
 	return "start"
 }
@@ -69,14 +60,6 @@ func (e eventStart) Execute(model Model, time time.Time) Model {
 type eventStop struct {
 	ID      int           `json:"id"`
 	Comment Maybe[string] `json:"comment"`
-}
-
-func (e eventStop) String() string {
-	comment, ok := e.Comment.Value()
-	if ok {
-		return fmt.Sprintf("End with comment `%s`", comment)
-	}
-	return fmt.Sprintf("End without comment")
 }
 
 func (e eventStop) Name() string {
@@ -125,10 +108,6 @@ type eventInsertV1 struct {
 	Comment Maybe[string]   `json:"comment"`
 }
 
-func (e eventInsertV1) String() string {
-	return "insertV1 event ..."
-}
-
 func (e eventInsertV1) Name() string {
 	return "insert"
 }
@@ -167,10 +146,6 @@ type eventInsertV2 struct {
 	Comment  Maybe[string]       `json:"comment"`
 }
 
-func (e eventInsertV2) String() string {
-	return "insertV2 event ..."
-}
-
 func (e eventInsertV2) Name() string {
 	return "insertV2"
 }
@@ -206,10 +181,6 @@ type eventDelete struct {
 	ID int `json:"id"`
 }
 
-func (e eventDelete) String() string {
-	return fmt.Sprintf("delete event for %d", e.ID)
-}
-
 func (e eventDelete) Name() string {
 	return "delete"
 }
@@ -236,10 +207,6 @@ type eventEditV1 struct {
 	Start   Maybe[sticky.JSONTime] `json:"start"`
 	Stop    Maybe[sticky.JSONTime] `json:"stop"`
 	Comment Maybe[string]          `json:"comment"`
-}
-
-func (e eventEditV1) String() string {
-	return "editV1 event ..."
 }
 
 func (e eventEditV1) Name() string {
@@ -285,10 +252,6 @@ type eventEditV2 struct {
 	Start    Maybe[sticky.JSONTime]     `json:"start"`
 	Duration Maybe[sticky.JSONDuration] `json:"duration"`
 	Comment  Maybe[string]              `json:"comment"`
-}
-
-func (e eventEditV2) String() string {
-	return "editV2 event ..."
 }
 
 func (e eventEditV2) Name() string {
