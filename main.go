@@ -12,6 +12,7 @@ import (
 	"github.com/ostcar/timer/config"
 	"github.com/ostcar/timer/grpc"
 	"github.com/ostcar/timer/model"
+	"github.com/ostcar/timer/sticky"
 	"github.com/ostcar/timer/web"
 	"golang.org/x/sync/errgroup"
 )
@@ -29,7 +30,7 @@ func run() error {
 	ctx, cancel := interruptContext()
 	defer cancel()
 
-	model, err := model.New(model.FileDB{File: "db.jsonl"})
+	s, err := sticky.New(sticky.FileDB{File: "db.jsonl"}, model.GetEvent)
 	if err != nil {
 		return fmt.Errorf("loading model: %w", err)
 	}
@@ -43,14 +44,14 @@ func run() error {
 	group, ctx = errgroup.WithContext(ctx)
 
 	group.Go(func() error {
-		if err := grpc.Run(ctx, model, config.GRPCListenAddr); err != nil {
+		if err := grpc.Run(ctx, s, config.GRPCListenAddr); err != nil {
 			return fmt.Errorf("running grpc server: %w", err)
 		}
 		return nil
 	})
 
 	group.Go(func() error {
-		if err := web.Run(ctx, model, config); err != nil {
+		if err := web.Run(ctx, s, config); err != nil {
 			return fmt.Errorf("running http server: %w", err)
 		}
 		return nil

@@ -3,9 +3,12 @@ package model
 import (
 	"fmt"
 	"time"
+
+	"github.com/ostcar/timer/sticky"
 )
 
-func getEvent(eventType string) Event {
+// GetEvent returns an empty event for a name.
+func GetEvent(eventType string) Event {
 	switch eventType {
 	case eventStart{}.Name():
 		return &eventStart{}
@@ -33,43 +36,25 @@ func getEvent(eventType string) Event {
 	}
 }
 
-// Event is one change of the model.
-//
-// An implementation of an Event has to be able to be encoded to json.
-type Event interface {
-	validate(db *Model) error
-	execute(db *Model, time time.Time) error
-	Name() string
-}
-
 type eventStart struct {
 	Comment Maybe[string] `json:"comment"`
-}
-
-func (e eventStart) String() string {
-	comment, exist := e.Comment.Value()
-	if exist {
-		return fmt.Sprintf("Start with comment `%s`", comment)
-	}
-
-	return fmt.Sprintf("Start with no comment")
 }
 
 func (e eventStart) Name() string {
 	return "start"
 }
 
-func (e eventStart) validate(model *Model) error {
+func (e eventStart) Validate(model Model) error {
 	if !model.current.start.IsZero() {
-		return validationError{"Timer is already started"}
+		return fmt.Errorf("Timer is already started")
 	}
 	return nil
 }
 
-func (e eventStart) execute(model *Model, time time.Time) error {
+func (e eventStart) Execute(model Model, time time.Time) Model {
 	model.current.start = time
 	model.current.comment = e.Comment
-	return nil
+	return model
 }
 
 type eventStop struct {
@@ -77,34 +62,26 @@ type eventStop struct {
 	Comment Maybe[string] `json:"comment"`
 }
 
-func (e eventStop) String() string {
-	comment, ok := e.Comment.Value()
-	if ok {
-		return fmt.Sprintf("End with comment `%s`", comment)
-	}
-	return fmt.Sprintf("End without comment")
-}
-
 func (e eventStop) Name() string {
 	return "stop"
 }
 
-func (e eventStop) validate(model *Model) error {
+func (e eventStop) Validate(model Model) error {
 	if e.ID == 0 {
-		return validationError{"ID is required"}
+		return fmt.Errorf("ID is required")
 	}
 
 	if _, ok := model.periodes[e.ID]; ok {
-		return validationError{"ID is already used"}
+		return fmt.Errorf("ID is already used")
 	}
 
 	if model.current.start.IsZero() {
-		return validationError{"Timer is not started"}
+		return fmt.Errorf("Timer is not started")
 	}
 	return nil
 }
 
-func (e eventStop) execute(model *Model, eventTime time.Time) error {
+func (e eventStop) Execute(model Model, eventTime time.Time) Model {
 	comment := model.current.comment
 
 	if _, ok := e.Comment.Value(); ok {
@@ -121,31 +98,27 @@ func (e eventStop) execute(model *Model, eventTime time.Time) error {
 	model.periodes[e.ID] = p
 	model.current.start = time.Time{}
 	model.current.comment = Maybe[string]{}
-	return nil
+	return model
 }
 
 type eventInsertV1 struct {
-	ID      int           `json:"id"`
-	Start   JSONTime      `json:"start"`
-	Stop    JSONTime      `json:"stop"`
-	Comment Maybe[string] `json:"comment"`
-}
-
-func (e eventInsertV1) String() string {
-	return "insertV1 event ..."
+	ID      int             `json:"id"`
+	Start   sticky.JSONTime `json:"start"`
+	Stop    sticky.JSONTime `json:"stop"`
+	Comment Maybe[string]   `json:"comment"`
 }
 
 func (e eventInsertV1) Name() string {
 	return "insert"
 }
 
-func (e eventInsertV1) validate(model *Model) error {
+func (e eventInsertV1) Validate(model Model) error {
 	if e.ID == 0 {
-		return validationError{"ID is required"}
+		return fmt.Errorf("ID is required")
 	}
 
 	if _, ok := model.periodes[e.ID]; ok {
-		return validationError{"ID is taken "}
+		return fmt.Errorf("ID is taken ")
 	}
 
 	// TODO: Validate, that start is before stop and does not overlap with other periodes.
@@ -153,7 +126,7 @@ func (e eventInsertV1) validate(model *Model) error {
 	return nil
 }
 
-func (e eventInsertV1) execute(model *Model, eventTime time.Time) error {
+func (e eventInsertV1) Execute(model Model, eventTime time.Time) Model {
 	p := Periode{
 		ID:       e.ID,
 		Start:    time.Time(e.Start),
@@ -163,31 +136,27 @@ func (e eventInsertV1) execute(model *Model, eventTime time.Time) error {
 
 	model.periodes[e.ID] = p
 
-	return nil
+	return model
 }
 
 type eventInsertV2 struct {
-	ID       int           `json:"id"`
-	Start    JSONTime      `json:"start"`
-	Duration JSONDuration  `json:"duration"`
-	Comment  Maybe[string] `json:"comment"`
-}
-
-func (e eventInsertV2) String() string {
-	return "insertV2 event ..."
+	ID       int                 `json:"id"`
+	Start    sticky.JSONTime     `json:"start"`
+	Duration sticky.JSONDuration `json:"duration"`
+	Comment  Maybe[string]       `json:"comment"`
 }
 
 func (e eventInsertV2) Name() string {
 	return "insertV2"
 }
 
-func (e eventInsertV2) validate(model *Model) error {
+func (e eventInsertV2) Validate(model Model) error {
 	if e.ID == 0 {
-		return validationError{"ID is required"}
+		return fmt.Errorf("ID is required")
 	}
 
 	if _, ok := model.periodes[e.ID]; ok {
-		return validationError{"ID is taken "}
+		return fmt.Errorf("ID is taken")
 	}
 
 	// TODO: Validate, that start is before stop and does not overlap with other periodes.
@@ -195,7 +164,7 @@ func (e eventInsertV2) validate(model *Model) error {
 	return nil
 }
 
-func (e eventInsertV2) execute(model *Model, eventTime time.Time) error {
+func (e eventInsertV2) Execute(model Model, eventTime time.Time) Model {
 	p := Periode{
 		ID:       e.ID,
 		Start:    time.Time(e.Start),
@@ -205,60 +174,52 @@ func (e eventInsertV2) execute(model *Model, eventTime time.Time) error {
 
 	model.periodes[e.ID] = p
 
-	return nil
+	return model
 }
 
 type eventDelete struct {
 	ID int `json:"id"`
 }
 
-func (e eventDelete) String() string {
-	return fmt.Sprintf("delete event for %d", e.ID)
-}
-
 func (e eventDelete) Name() string {
 	return "delete"
 }
 
-func (e eventDelete) validate(model *Model) error {
+func (e eventDelete) Validate(model Model) error {
 	if e.ID == 0 {
-		return validationError{"ID is required"}
+		return fmt.Errorf("ID is required")
 	}
 
 	if _, ok := model.periodes[e.ID]; !ok {
-		return validationError{"ID is unknown"}
+		return fmt.Errorf("ID is unknown")
 	}
 
 	return nil
 }
 
-func (e eventDelete) execute(model *Model, eventTime time.Time) error {
+func (e eventDelete) Execute(model Model, eventTime time.Time) Model {
 	delete(model.periodes, e.ID)
-	return nil
+	return model
 }
 
 type eventEditV1 struct {
-	ID      int             `json:"id"`
-	Start   Maybe[JSONTime] `json:"start"`
-	Stop    Maybe[JSONTime] `json:"stop"`
-	Comment Maybe[string]   `json:"comment"`
-}
-
-func (e eventEditV1) String() string {
-	return "editV1 event ..."
+	ID      int                    `json:"id"`
+	Start   Maybe[sticky.JSONTime] `json:"start"`
+	Stop    Maybe[sticky.JSONTime] `json:"stop"`
+	Comment Maybe[string]          `json:"comment"`
 }
 
 func (e eventEditV1) Name() string {
 	return "edit"
 }
 
-func (e eventEditV1) validate(model *Model) error {
+func (e eventEditV1) Validate(model Model) error {
 	if e.ID == 0 {
-		return validationError{"ID is required"}
+		return fmt.Errorf("ID is required")
 	}
 
 	if _, ok := model.periodes[e.ID]; !ok {
-		return validationError{"ID is unknown"}
+		return fmt.Errorf("ID is unknown")
 	}
 
 	// TODO: Validate, that start is before stop and does not overlap with other periodes.
@@ -266,7 +227,7 @@ func (e eventEditV1) validate(model *Model) error {
 	return nil
 }
 
-func (e eventEditV1) execute(model *Model, eventTime time.Time) error {
+func (e eventEditV1) Execute(model Model, eventTime time.Time) Model {
 	p := model.periodes[e.ID]
 
 	if start, ok := e.Start.Value(); ok {
@@ -283,31 +244,27 @@ func (e eventEditV1) execute(model *Model, eventTime time.Time) error {
 
 	model.periodes[e.ID] = p
 
-	return nil
+	return model
 }
 
 type eventEditV2 struct {
-	ID       int                 `json:"id"`
-	Start    Maybe[JSONTime]     `json:"start"`
-	Duration Maybe[JSONDuration] `json:"duration"`
-	Comment  Maybe[string]       `json:"comment"`
-}
-
-func (e eventEditV2) String() string {
-	return "editV2 event ..."
+	ID       int                        `json:"id"`
+	Start    Maybe[sticky.JSONTime]     `json:"start"`
+	Duration Maybe[sticky.JSONDuration] `json:"duration"`
+	Comment  Maybe[string]              `json:"comment"`
 }
 
 func (e eventEditV2) Name() string {
 	return "editV2"
 }
 
-func (e eventEditV2) validate(model *Model) error {
+func (e eventEditV2) Validate(model Model) error {
 	if e.ID == 0 {
-		return validationError{"ID is required"}
+		return fmt.Errorf("ID is required")
 	}
 
 	if _, ok := model.periodes[e.ID]; !ok {
-		return validationError{"ID is unknown"}
+		return fmt.Errorf("ID is unknown")
 	}
 
 	// TODO: Validate, that start is before stop and does not overlap with other periodes.
@@ -315,7 +272,7 @@ func (e eventEditV2) validate(model *Model) error {
 	return nil
 }
 
-func (e eventEditV2) execute(model *Model, eventTime time.Time) error {
+func (e eventEditV2) Execute(model Model, eventTime time.Time) Model {
 	p := model.periodes[e.ID]
 
 	if start, ok := e.Start.Value(); ok {
@@ -332,17 +289,5 @@ func (e eventEditV2) execute(model *Model, eventTime time.Time) error {
 
 	model.periodes[e.ID] = p
 
-	return nil
-}
-
-type validationError struct {
-	msg string
-}
-
-func (e validationError) Error() string {
-	return e.msg
-}
-
-func (e validationError) forClient() string {
-	return "Ungültige Daten: " + e.msg
+	return model
 }

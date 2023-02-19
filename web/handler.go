@@ -15,6 +15,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/ostcar/timer/config"
 	"github.com/ostcar/timer/model"
+	"github.com/ostcar/timer/sticky"
 )
 
 const (
@@ -31,7 +32,7 @@ type Files struct {
 	Static fs.FS
 }
 
-func registerHandlers(router *mux.Router, model *model.Model, cfg config.Config, files Files) {
+func registerHandlers(router *mux.Router, s *sticky.Sticky[model.Model], cfg config.Config, files Files) {
 	router.Use(loggingMiddleware)
 
 	handleElmJS(router, files.Elm)
@@ -39,9 +40,9 @@ func registerHandlers(router *mux.Router, model *model.Model, cfg config.Config,
 	handleStatic(router, files.Static)
 	handleAuth(router, cfg)
 
-	handleStart(router, model, cfg)
-	handleStop(router, model, cfg)
-	handlePeriode(router, model, cfg)
+	handleStart(router, s, cfg)
+	handleStop(router, s, cfg)
+	handlePeriode(router, s, cfg)
 }
 
 type responselogger struct {
@@ -131,7 +132,7 @@ func handleAuth(router *mux.Router, cfg config.Config) {
 	})
 }
 
-func handlePeriode(router *mux.Router, mdl *model.Model, cfg config.Config) {
+func handlePeriode(router *mux.Router, s *sticky.Sticky[model.Model], cfg config.Config) {
 	pathList := pathPrefixAPI + "/periode"
 	pathSingle := pathList + "/{id}"
 
@@ -149,35 +150,38 @@ func handlePeriode(router *mux.Router, mdl *model.Model, cfg config.Config) {
 			return
 		}
 
-		modelPeriodes := mdl.List()
-		outPeriodes := make([]periode, len(modelPeriodes))
-		for i, p := range modelPeriodes {
-			outPeriodes[i] = periode{
-				ID:       p.ID,
-				Start:    p.Start.Unix(),
-				Duration: int64(p.Duration.Seconds()),
-				Comment:  p.Comment,
+		s.Read(func(m model.Model) {
+			modelPeriodes := m.List()
+
+			outPeriodes := make([]periode, len(modelPeriodes))
+			for i, p := range modelPeriodes {
+				outPeriodes[i] = periode{
+					ID:       p.ID,
+					Start:    p.Start.Unix(),
+					Duration: int64(p.Duration.Seconds()),
+					Comment:  p.Comment,
+				}
 			}
-		}
 
-		start, comment, isRunning := mdl.Running()
+			start, comment, isRunning := m.Running()
 
-		data := struct {
-			Running  bool                `json:"running"`
-			Start    int64               `json:"start"`
-			Comment  model.Maybe[string] `json:"comment"`
-			Periodes []periode           `json:"periodes"`
-		}{
-			isRunning,
-			start.Unix(),
-			comment,
-			outPeriodes,
-		}
+			data := struct {
+				Running  bool                `json:"running"`
+				Start    int64               `json:"start"`
+				Comment  model.Maybe[string] `json:"comment"`
+				Periodes []periode           `json:"periodes"`
+			}{
+				isRunning,
+				start.Unix(),
+				comment,
+				outPeriodes,
+			}
 
-		if err := json.NewEncoder(w).Encode(data); err != nil {
-			handleError(w, err)
-			return
-		}
+			if err := json.NewEncoder(w).Encode(data); err != nil {
+				handleError(w, err)
+				return
+			}
+		})
 	})
 
 	// Create Handler
@@ -198,7 +202,13 @@ func handlePeriode(router *mux.Router, mdl *model.Model, cfg config.Config) {
 			return
 		}
 
-		id, err := mdl.Insert(time.Unix(content.Start, 0), time.Duration(content.Duration)*time.Second, content.Content)
+		var id int
+		err := s.Write(func(m model.Model) sticky.Event[model.Model] {
+			newID, event := m.Insert(time.Unix(content.Start, 0), time.Duration(content.Duration)*time.Second, content.Content)
+			id = newID
+			return event
+		})
+
 		if err != nil {
 			handleError(w, err)
 			return
@@ -213,6 +223,7 @@ func handlePeriode(router *mux.Router, mdl *model.Model, cfg config.Config) {
 			handleError(w, err)
 			return
 		}
+
 	})
 
 	// Edit Handler
@@ -235,20 +246,25 @@ func handlePeriode(router *mux.Router, mdl *model.Model, cfg config.Config) {
 			return
 		}
 
-		var start model.Maybe[model.JSONTime]
+		var start model.Maybe[sticky.JSONTime]
 		if v, ok := content.Start.Value(); ok {
-			start = model.Just(model.JSONTime(time.Unix(v, 0)))
+			start = model.Just(sticky.JSONTime(time.Unix(v, 0)))
 		}
 
-		var duration model.Maybe[model.JSONDuration]
+		var duration model.Maybe[sticky.JSONDuration]
 		if v, ok := content.Duration.Value(); ok {
-			duration = model.Just(model.JSONDuration(time.Duration(v) * time.Second))
+			duration = model.Just(sticky.JSONDuration(time.Duration(v) * time.Second))
 		}
 
-		if err := mdl.Edit(id, start, duration, content.Content); err != nil {
+		err := s.Write(func(m model.Model) sticky.Event[model.Model] {
+			return m.Edit(id, start, duration, content.Content)
+
+		})
+		if err != nil {
 			handleError(w, err)
 			return
 		}
+
 	})
 
 	// Delete Handler
@@ -260,14 +276,17 @@ func handlePeriode(router *mux.Router, mdl *model.Model, cfg config.Config) {
 
 		id, _ := strconv.Atoi(mux.Vars(r)["id"])
 
-		if err := mdl.Delete(id); err != nil {
+		err := s.Write(func(m model.Model) sticky.Event[model.Model] {
+			return m.Delete(id)
+		})
+		if err != nil {
 			handleError(w, err)
 			return
 		}
 	})
 }
 
-func handleStart(router *mux.Router, mdl *model.Model, cfg config.Config) {
+func handleStart(router *mux.Router, s *sticky.Sticky[model.Model], cfg config.Config) {
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		if !canWrite(r, cfg) {
 			w.WriteHeader(403)
@@ -282,16 +301,20 @@ func handleStart(router *mux.Router, mdl *model.Model, cfg config.Config) {
 			return
 		}
 
-		if err := mdl.Start(content.Comment); err != nil {
+		err := s.Write(func(m model.Model) sticky.Event[model.Model] {
+			return m.Start(content.Comment)
+		})
+		if err != nil {
 			handleError(w, err)
 			return
 		}
+
 	}
 
 	router.Path(pathPrefixAPI + "/start").Methods("POST").HandlerFunc(handler)
 }
 
-func handleStop(router *mux.Router, mdl *model.Model, cfg config.Config) {
+func handleStop(router *mux.Router, s *sticky.Sticky[model.Model], cfg config.Config) {
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		if !canWrite(r, cfg) {
 			w.WriteHeader(403)
@@ -306,7 +329,12 @@ func handleStop(router *mux.Router, mdl *model.Model, cfg config.Config) {
 			return
 		}
 
-		id, err := mdl.Stop(content.Comment)
+		var id int
+		err := s.Write(func(m model.Model) sticky.Event[model.Model] {
+			stopID, event := m.Stop(content.Comment)
+			id = stopID
+			return event
+		})
 		if err != nil {
 			handleError(w, err)
 			return
@@ -331,13 +359,10 @@ func handleError(w http.ResponseWriter, err error) {
 	status := 500
 	var skipLog bool
 
-	var forClient interface {
-		forClient() string
-	}
-	if errors.As(err, &forClient) {
-		msg = forClient.forClient()
+	var errValidation sticky.ValidationError
+	if errors.As(err, &errValidation) {
+		msg = errValidation.Error()
 		status = 400
-		//skipLog = true
 	}
 
 	var httpStatus interface {

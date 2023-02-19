@@ -1,4 +1,4 @@
-package model
+package sticky
 
 import (
 	"bytes"
@@ -47,5 +47,28 @@ func (db FileDB) Append(bs []byte) error {
 		return fmt.Errorf("writing event to file: %q: %w", bs, err)
 	}
 
+	return nil
+}
+
+// MemoryDB stores Events in memory.
+//
+// Usefull for testing.
+type MemoryDB struct {
+	Content string
+}
+
+// NewMemoryDB initializes a MemoryDB
+func NewMemoryDB(content string) *MemoryDB {
+	return &MemoryDB{content}
+}
+
+// Reader reads the content.
+func (db *MemoryDB) Reader() (io.ReadCloser, error) {
+	return io.NopCloser(strings.NewReader(db.Content)), nil
+}
+
+// Append adds a new event.
+func (db *MemoryDB) Append(bs []byte) error {
+	db.Content += fmt.Sprintf("%s\n", bs)
 	return nil
 }
