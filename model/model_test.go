@@ -20,7 +20,7 @@ func TestModelLoad(t *testing.T) {
 	{"type":"editV2","time":"2022-01-02 15:45:00","payload":{"id":3,"duration":"3m"}}
 	`)
 
-	s, err := sticky.New(db, GetEvent)
+	s, err := sticky.New(db, New(), GetEvent)
 	if err != nil {
 		t.Fatalf("loadDatabase: %v", err)
 	}
@@ -56,7 +56,7 @@ func TestModelWriteEvent(t *testing.T) {
 	db := sticky.NewMemoryDB("")
 	now := func() time.Time { return time.Time{} }
 
-	s, err := sticky.New(db, GetEvent, sticky.WithNow[Model](now))
+	s, err := sticky.New(db, New(), GetEvent, sticky.WithNow[Model](now))
 	if err != nil {
 		t.Fatalf("loadDatabase: %v", err)
 	}
@@ -73,5 +73,4 @@ func TestModelWriteEvent(t *testing.T) {
 	if strings.TrimSpace(db.Content) != expect {
 		t.Errorf("got `%v`, expect `%v`", db.Content, expect)
 	}
-
 }

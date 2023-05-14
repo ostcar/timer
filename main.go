@@ -30,7 +30,7 @@ func run() error {
 	ctx, cancel := interruptContext()
 	defer cancel()
 
-	s, err := sticky.New(sticky.FileDB{File: "db.jsonl"}, model.GetEvent)
+	s, err := sticky.New(sticky.FileDB{File: "db.jsonl"}, model.New(), model.GetEvent)
 	if err != nil {
 		return fmt.Errorf("loading model: %w", err)
 	}
