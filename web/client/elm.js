@@ -9149,7 +9149,7 @@ var $author$project$YearMonth$stringToMonth = function (month) {
 			return $elm$core$Maybe$Just($elm$time$Time$Mar);
 		case 'april':
 			return $elm$core$Maybe$Just($elm$time$Time$Apr);
-		case 'may':
+		case 'mai':
 			return $elm$core$Maybe$Just($elm$time$Time$May);
 		case 'juni':
 			return $elm$core$Maybe$Just($elm$time$Time$Jun);
@@ -10187,7 +10187,7 @@ var $author$project$YearMonth$monthToString = function (month) {
 		case 'Apr':
 			return 'April';
 		case 'May':
-			return 'May';
+			return 'Mai';
 		case 'Jun':
 			return 'Juni';
 		case 'Jul':
