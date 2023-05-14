@@ -80,7 +80,7 @@ monthToString month =
             "April"
 
         Time.May ->
-            "May"
+            "Mai"
 
         Time.Jun ->
             "Juni"
@@ -119,7 +119,7 @@ stringToMonth month =
         "april" ->
             Just Time.Apr
 
-        "may" ->
+        "mai" ->
             Just Time.May
 
         "juni" ->
