@@ -33,14 +33,14 @@ type Sticky[Model any] struct {
 }
 
 // New initializes a new Sticky instance.
-func New[Model any](db database, getEvent func(name string) Event[Model], os ...Option[Model]) (*Sticky[Model], error) {
+func New[Model any](db database, emptyModel Model, getEvent func(name string) Event[Model], os ...Option[Model]) (*Sticky[Model], error) {
 	dbReader, err := db.Reader()
 	if err != nil {
 		return nil, fmt.Errorf("open database: %w", err)
 	}
 	defer dbReader.Close()
 
-	model, err := loadModel(dbReader, getEvent)
+	model, err := loadModel(dbReader, getEvent, emptyModel)
 	if err != nil {
 		return nil, fmt.Errorf("loading database: %w", err)
 	}
@@ -57,8 +57,7 @@ func New[Model any](db database, getEvent func(name string) Event[Model], os ...
 	return &s, nil
 }
 
-func loadModel[Model any](r io.Reader, getEvent func(name string) Event[Model]) (Model, error) {
-	var model Model
+func loadModel[Model any](r io.Reader, getEvent func(name string) Event[Model], model Model) (Model, error) {
 	var zero Model
 
 	scanner := bufio.NewScanner(r)

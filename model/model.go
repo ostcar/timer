@@ -20,6 +20,11 @@ type Model struct {
 	periodes map[int]Periode
 }
 
+// New returns an initialized Model.
+func New() Model {
+	return Model{periodes: make(map[int]Periode)}
+}
+
 // Periode is a duration of time.
 type Periode struct {
 	ID       int
