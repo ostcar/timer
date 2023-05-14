@@ -10,11 +10,9 @@ import (
 	"time"
 
 	"github.com/ostcar/timer/config"
-	"github.com/ostcar/timer/grpc"
 	"github.com/ostcar/timer/model"
 	"github.com/ostcar/timer/sticky"
 	"github.com/ostcar/timer/web"
-	"golang.org/x/sync/errgroup"
 )
 
 func main() {
@@ -40,24 +38,10 @@ func run() error {
 		return fmt.Errorf("loading config: %w", err)
 	}
 
-	var group *errgroup.Group
-	group, ctx = errgroup.WithContext(ctx)
-
-	group.Go(func() error {
-		if err := grpc.Run(ctx, s, config.GRPCListenAddr); err != nil {
-			return fmt.Errorf("running grpc server: %w", err)
-		}
-		return nil
-	})
-
-	group.Go(func() error {
-		if err := web.Run(ctx, s, config); err != nil {
-			return fmt.Errorf("running http server: %w", err)
-		}
-		return nil
-	})
-
-	return group.Wait()
+	if err := web.Run(ctx, s, config); err != nil {
+		return fmt.Errorf("running http server: %w", err)
+	}
+	return nil
 }
 
 // interruptContext works like signal.NotifyContext
