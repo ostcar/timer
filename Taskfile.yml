@@ -10,13 +10,14 @@ tasks:
       - CGO_ENABLED=0 go build
     sources:
       - main.go
-      - maybe/*
+      - config/*
       - model/*
+      - sticky/*
       - web/*
       - web/client/elm.js
       - web/client/index.html
       - web/static/*/*
-      - config/*
+      
     generates:
       - timer
     

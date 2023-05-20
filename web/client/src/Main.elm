@@ -11,6 +11,7 @@ import Json.Encode as Encode
 import Jwt
 import Mony
 import Periode
+import Platform.Cmd as Cmd
 import SingleDatePicker
 import String
 import Time
@@ -89,6 +90,7 @@ type Msg
     | InsertAddDuration String
     | InsertAddComment String
     | ClickInsert
+    | ClickUntilNow
 
 
 init : String -> ( Model, Cmd Msg )
@@ -243,6 +245,28 @@ update msg model =
             , Cmd.none
             )
 
+        ClickUntilNow ->
+            let
+                insert =
+                    insertForm model
+
+                newStartResult =
+                    insert.formDuration
+                        |> stringToDuration
+                        |> Result.map (\duration -> Duration.subtractFrom model.currentTime duration)
+
+                newFormInsert =
+                    case newStartResult of
+                        Ok time ->
+                            { insert | start = time, error = Nothing }
+
+                        Err errMSG ->
+                            { insert | error = Just errMSG }
+            in
+            ( { model | formInsert = Just newFormInsert }
+            , Cmd.none
+            )
+
         ClickInsert ->
             let
                 insert =
@@ -251,10 +275,8 @@ update msg model =
                 insertCMD =
                     resultFromEmptyString "No duration provided" insert.formDuration
                         |> Result.andThen
-                            (String.toFloat
-                                >> Result.fromMaybe "Duration has to be a number"
-                                >> Result.andThen (Duration.minutes >> Result.Ok)
-                                >> Result.andThen (\duration -> sendInsert ReceiveEvent insert.start duration insert.formComment |> Result.Ok)
+                            (stringToDuration
+                                >> Result.map (\duration -> sendInsert ReceiveEvent insert.start duration insert.formComment)
                             )
             in
             case insertCMD of
@@ -311,6 +333,14 @@ update msg model =
             ( { model | viewBody = value }
             , Cmd.none
             )
+
+
+stringToDuration : String -> Result String Duration.Duration
+stringToDuration s =
+    s
+        |> String.toFloat
+        |> Result.fromMaybe "Duration has to be a number"
+        |> Result.map Duration.minutes
 
 
 updateStateIfPermission : Permission -> Cmd Msg
@@ -668,6 +698,7 @@ viewInsert maybeInsert =
                     , onInput InsertAddDuration
                     ]
                     []
+                , button [ class "btn btn-secondary", onClick ClickUntilNow, title "Set start minutes before now" ] [ text "↺" ]
                 , input
                     [ id "comment"
                     , type_ "text"
@@ -749,8 +780,8 @@ viewMonthlyLine ( yearMonthText, periodes ) =
     in
     tr []
         [ td [] [ text yearMonthText ]
-        , td [ class "time" ] [ text <|durationToTimeString duration  ]
-        , td [ class "mony" ] [ text <|durationToMonyString duration  ]
+        , td [ class "time" ] [ text <| durationToTimeString duration ]
+        , td [ class "mony" ] [ text <| durationToMonyString duration ]
         ]
 
 
