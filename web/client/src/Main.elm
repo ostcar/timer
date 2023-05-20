@@ -38,6 +38,7 @@ main =
 
 type alias Model =
     { periodes : List Periode.Periode
+    , periodeAction : Action
     , current : Periode.Current
     , permission : Permission
     , currentTime : Time.Posix
@@ -48,6 +49,12 @@ type alias Model =
     , formPassword : String
     , formYearMonth : YearMonth.YearMonthSelect
     }
+
+
+type Action
+    = ActionNone
+    | ActionEdit Edit
+    | ActionDelete Periode.ID
 
 
 insertForm : Model -> Insert
@@ -61,6 +68,19 @@ type alias Insert =
     , formComment : String
     , picker : SingleDatePicker.DatePicker
     , error : Maybe String
+    }
+
+
+type alias Edit =
+    { id : Periode.ID
+    , comment : String
+    }
+
+
+emptyEdit : Periode.Periode -> Edit
+emptyEdit periode =
+    { id = periode.id
+    , comment = periode.comment
     }
 
 
@@ -82,7 +102,9 @@ type Msg
     | ClickStop
       -- Periode Actions
     | ClickContinue Periode.ID
+    | ClickEdit Periode.Periode
     | ClickDelete Periode.ID
+    | ClickDeleteSubmit Periode.ID
       -- Add Periode
     | ClickAdd
     | ClickDatePicker
@@ -91,6 +113,10 @@ type Msg
     | InsertAddComment String
     | ClickInsert
     | ClickUntilNow
+      -- Edit Periode
+    | ClickActionAbort
+    | ClickEditSubmit
+    | InsertEditComment String
 
 
 init : String -> ( Model, Cmd Msg )
@@ -100,6 +126,7 @@ init token =
             permissionFromJWT token
     in
     ( { periodes = []
+      , periodeAction = ActionNone
       , current = Periode.Stopped
       , permission = permission
       , currentTime = Time.millisToPosix 0
@@ -189,10 +216,49 @@ update msg model =
                 |> Maybe.withDefault Cmd.none
             )
 
+        ClickEdit periode ->
+            ( { model | periodeAction = ActionEdit (emptyEdit periode) }
+            , Cmd.none
+            )
+
         ClickDelete id ->
+            ( { model | periodeAction = ActionDelete id }
+            , Cmd.none
+            )
+
+        ClickDeleteSubmit id ->
             ( model
             , sendDelete ReceiveEvent id
             )
+
+        ClickActionAbort ->
+            ( { model | periodeAction = ActionNone }
+            , Cmd.none
+            )
+
+        ClickEditSubmit ->
+            case model.periodeAction of
+                ActionEdit ep ->
+                    ( { model | periodeAction = ActionNone }
+                    , sendEdit ReceiveEvent ep
+                    )
+
+                _ ->
+                    ( model
+                    , Cmd.none
+                    )
+
+        InsertEditComment comment ->
+            case model.periodeAction of
+                ActionEdit ep ->
+                    ( { model | periodeAction = ActionEdit { ep | comment = comment } }
+                    , Cmd.none
+                    )
+
+                _ ->
+                    ( model
+                    , Cmd.none
+                    )
 
         ClickAdd ->
             ( { model | formInsert = emptyInsert model.currentTime |> Just }
@@ -472,6 +538,19 @@ sendInsert result start duration comment =
         }
 
 
+sendEdit : (Result Http.Error () -> Msg) -> Edit -> Cmd Msg
+sendEdit result edit =
+    Http.request
+        { method = "PUT"
+        , headers = []
+        , url = "/api/periode/" ++ Periode.idToString edit.id
+        , body = Http.jsonBody (editEncoder Nothing Nothing (Just edit.comment))
+        , expect = Http.expectWhatever result
+        , timeout = Nothing
+        , tracker = Nothing
+        }
+
+
 
 -- Periode Actions
 
@@ -496,6 +575,23 @@ insertEncoder start duration comment =
         , ( "duration", (Duration.inSeconds duration |> round) |> Encode.int )
         , ( "comment", Encode.string comment )
         ]
+
+
+editEncoder : Maybe Time.Posix -> Maybe Duration.Duration -> Maybe String -> Encode.Value
+editEncoder mayStart mayDuration mayComment =
+    let
+        encodedStart =
+            Maybe.map (\start -> ( "start", (Time.posixToMillis start // 1000) |> Encode.int )) mayStart
+
+        encodedDuration =
+            Maybe.map (\duration -> ( "duration", (Duration.inSeconds duration |> round) |> Encode.int )) mayDuration
+
+        encodedComment =
+            Maybe.map (\comment -> ( "comment", Encode.string comment )) mayComment
+    in
+    [ encodedStart, encodedDuration, encodedComment ]
+        |> List.filterMap identity
+        |> Encode.object
 
 
 
@@ -729,7 +825,7 @@ viewBody model =
                 viewMonthly timeZone model.periodes
 
             ViewPeriodes ->
-                viewPeriodes timeZone model.formYearMonth model.permission model.periodes
+                viewPeriodes timeZone model.formYearMonth model.periodeAction model.permission model.periodes
         ]
 
 
@@ -785,8 +881,8 @@ viewMonthlyLine ( yearMonthText, periodes ) =
         ]
 
 
-viewPeriodes : Time.Zone -> YearMonthSelect -> Permission -> List Periode.Periode -> Html Msg
-viewPeriodes zone selected permission periodes =
+viewPeriodes : Time.Zone -> YearMonthSelect -> Action -> Permission -> List Periode.Periode -> Html Msg
+viewPeriodes zone selected edit permission periodes =
     let
         sorted =
             Periode.sort periodes
@@ -795,7 +891,7 @@ viewPeriodes zone selected permission periodes =
             Periode.filterYearMonth timeZone selected sorted
 
         tableBody =
-            viewPeriodeSummary permission filtered :: List.map (viewPeriodeLine permission) filtered
+            viewPeriodeSummary permission filtered :: List.map (viewPeriodeLine edit permission) filtered
     in
     div []
         [ sorted
@@ -836,18 +932,79 @@ viewPeriodeSummary permission periodes =
         ]
 
 
-viewPeriodeLine : Permission -> Periode.Periode -> Html Msg
-viewPeriodeLine permission periode =
+viewPeriodeLine : Action -> Permission -> Periode.Periode -> Html Msg
+viewPeriodeLine action permission periode =
+    case ( action, permission ) of
+        ( ActionEdit edit, PermissionWrite ) ->
+            if edit.id == periode.id then
+                viewPeriodeEditLine periode edit
+
+            else
+                viewPeriodeShowLine permission periode
+
+        ( ActionDelete id, PermissionWrite ) ->
+            if id == periode.id then
+                viewPeriodeDeleteLine periode
+
+            else
+                viewPeriodeShowLine permission periode
+
+        _ ->
+            viewPeriodeShowLine permission periode
+
+
+viewPeriodeShowLine : Permission -> Periode.Periode -> Html Msg
+viewPeriodeShowLine permission periode =
     tr []
         [ td [] [ text <| posixToString periode.start ]
         , td [] [ text <| durationToTimeString periode.duration ]
         , td [] [ text <| durationToMonyString periode.duration ]
         , td [] [ text periode.comment ]
         , td [ class "buttons" ]
-            [ button [ type_ "button", class "btn btn-danger", onClick (ClickContinue periode.id) ] [ text "→" ]
+            [ button [ type_ "button", class "btn btn-info", onClick (ClickContinue periode.id) ] [ text "→" ]
+            , button [ type_ "button", class "btn btn-warning", onClick (ClickEdit periode) ] [ text "✎" ]
             , button [ type_ "button", class "btn btn-danger", onClick (ClickDelete periode.id) ] [ text "✖" ]
             ]
             |> canWrite permission
+        ]
+
+
+viewPeriodeEditLine : Periode.Periode -> Edit -> Html Msg
+viewPeriodeEditLine periode edit =
+    tr []
+        [ td [] [ text <| posixToString periode.start ]
+        , td [] [ text <| durationToTimeString periode.duration ]
+        , td [] [ text <| durationToMonyString periode.duration ]
+        , td []
+            [ input
+                [ id "comment"
+                , type_ "text"
+                , placeholder "comment"
+                , value edit.comment
+                , onInput InsertEditComment
+                ]
+                []
+            ]
+        , td [ class "buttons" ]
+            [ text "Edit?"
+            , button [ type_ "button", class "btn btn-danger", onClick ClickActionAbort ] [ text "✖" ]
+            , button [ type_ "button", class "btn btn-success", onClick ClickEditSubmit ] [ text "⏎" ]
+            ]
+        ]
+
+
+viewPeriodeDeleteLine : Periode.Periode -> Html Msg
+viewPeriodeDeleteLine periode =
+    tr []
+        [ td [] [ text <| posixToString periode.start ]
+        , td [] [ text <| durationToTimeString periode.duration ]
+        , td [] [ text <| durationToMonyString periode.duration ]
+        , td [] [ text periode.comment ]
+        , td [ class "buttons" ]
+            [ text "Delete?"
+            , button [ type_ "button", class "btn btn-danger", onClick ClickActionAbort ] [ text "✖" ]
+            , button [ type_ "button", class "btn btn-success", onClick (ClickDeleteSubmit periode.id) ] [ text "⏎" ]
+            ]
         ]
 
 

@@ -12,8 +12,7 @@ import (
 
 // Config holds all settings to start the server
 type Config struct {
-	WebListenAddr  string `toml:"web_listen_addr"`
-	GRPCListenAddr string `toml:"grpc_listen_addr"`
+	WebListenAddr string `toml:"web_listen_addr"`
 
 	PasswordRead  string `toml:"password_read"`
 	PasswordWrite string `toml:"password_write"`
@@ -24,8 +23,7 @@ type Config struct {
 // DefaultConfig returns a config object with default values.
 func DefaultConfig() Config {
 	return Config{
-		WebListenAddr:  ":8080",
-		GRPCListenAddr: ":4040",
+		WebListenAddr: ":8080",
 
 		PasswordRead:  "read",
 		PasswordWrite: "write",

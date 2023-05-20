@@ -194,7 +194,7 @@ func handlePeriode(router *mux.Router, s *sticky.Sticky[model.Model], cfg config
 		var content struct {
 			Start    int64               `json:"start"`
 			Duration int64               `json:"duration"`
-			Content  model.Maybe[string] `json:"comment"`
+			Comment  model.Maybe[string] `json:"comment"`
 		}
 
 		if err := json.NewDecoder(r.Body).Decode(&content); err != nil {
@@ -204,11 +204,10 @@ func handlePeriode(router *mux.Router, s *sticky.Sticky[model.Model], cfg config
 
 		var id int
 		err := s.Write(func(m model.Model) sticky.Event[model.Model] {
-			newID, event := m.Insert(time.Unix(content.Start, 0), time.Duration(content.Duration)*time.Second, content.Content)
+			newID, event := m.Insert(time.Unix(content.Start, 0), time.Duration(content.Duration)*time.Second, content.Comment)
 			id = newID
 			return event
 		})
-
 		if err != nil {
 			handleError(w, err)
 			return
@@ -223,7 +222,6 @@ func handlePeriode(router *mux.Router, s *sticky.Sticky[model.Model], cfg config
 			handleError(w, err)
 			return
 		}
-
 	})
 
 	// Edit Handler
@@ -238,7 +236,7 @@ func handlePeriode(router *mux.Router, s *sticky.Sticky[model.Model], cfg config
 		var content struct {
 			Start    model.Maybe[int64]  `json:"start"`
 			Duration model.Maybe[int64]  `json:"duration"`
-			Content  model.Maybe[string] `json:"content"`
+			Comment  model.Maybe[string] `json:"comment"`
 		}
 
 		if err := json.NewDecoder(r.Body).Decode(&content); err != nil {
@@ -257,14 +255,12 @@ func handlePeriode(router *mux.Router, s *sticky.Sticky[model.Model], cfg config
 		}
 
 		err := s.Write(func(m model.Model) sticky.Event[model.Model] {
-			return m.Edit(id, start, duration, content.Content)
-
+			return m.Edit(id, start, duration, content.Comment)
 		})
 		if err != nil {
 			handleError(w, err)
 			return
 		}
-
 	})
 
 	// Delete Handler
@@ -308,7 +304,6 @@ func handleStart(router *mux.Router, s *sticky.Sticky[model.Model], cfg config.C
 			handleError(w, err)
 			return
 		}
-
 	}
 
 	router.Path(pathPrefixAPI + "/start").Methods("POST").HandlerFunc(handler)
