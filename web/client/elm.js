@@ -9194,9 +9194,6 @@ var $elm$core$List$head = function (list) {
 		return $elm$core$Maybe$Nothing;
 	}
 };
-var $ianmackenzie$elm_units$Duration$minutes = function (numMinutes) {
-	return $ianmackenzie$elm_units$Duration$seconds(60 * numMinutes);
-};
 var $justinmimbs$time_extra$Time$Extra$Month = {$: 'Month'};
 var $justinmimbs$time_extra$Time$Extra$Day = {$: 'Day'};
 var $justinmimbs$time_extra$Time$Extra$Millisecond = {$: 'Millisecond'};
@@ -9796,7 +9793,28 @@ var $author$project$Periode$stateComment = function (state) {
 		return text;
 	}
 };
+var $ianmackenzie$elm_units$Duration$minutes = function (numMinutes) {
+	return $ianmackenzie$elm_units$Duration$seconds(60 * numMinutes);
+};
 var $elm$core$String$toFloat = _String_toFloat;
+var $author$project$Main$stringToDuration = function (s) {
+	return A2(
+		$elm$core$Result$map,
+		$ianmackenzie$elm_units$Duration$minutes,
+		A2(
+			$elm$core$Result$fromMaybe,
+			'Duration has to be a number',
+			$elm$core$String$toFloat(s)));
+};
+var $ianmackenzie$elm_units$Duration$inMilliseconds = function (duration) {
+	return $ianmackenzie$elm_units$Duration$inSeconds(duration) * 1000;
+};
+var $ianmackenzie$elm_units$Duration$subtractFrom = F2(
+	function (time, duration) {
+		return $elm$time$Time$millisToPosix(
+			$elm$time$Time$posixToMillis(time) - $elm$core$Basics$round(
+				$ianmackenzie$elm_units$Duration$inMilliseconds(duration)));
+	});
 var $author$project$Main$update = F2(
 	function (msg, model) {
 		switch (msg.$) {
@@ -9963,25 +9981,47 @@ var $author$project$Main$update = F2(
 									{formComment: comment}))
 						}),
 					$elm$core$Platform$Cmd$none);
+			case 'ClickUntilNow':
+				var insert = $author$project$Main$insertForm(model);
+				var newStartResult = A2(
+					$elm$core$Result$map,
+					function (duration) {
+						return A2($ianmackenzie$elm_units$Duration$subtractFrom, model.currentTime, duration);
+					},
+					$author$project$Main$stringToDuration(insert.formDuration));
+				var newFormInsert = function () {
+					if (newStartResult.$ === 'Ok') {
+						var time = newStartResult.a;
+						return _Utils_update(
+							insert,
+							{error: $elm$core$Maybe$Nothing, start: time});
+					} else {
+						var errMSG = newStartResult.a;
+						return _Utils_update(
+							insert,
+							{
+								error: $elm$core$Maybe$Just(errMSG)
+							});
+					}
+				}();
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{
+							formInsert: $elm$core$Maybe$Just(newFormInsert)
+						}),
+					$elm$core$Platform$Cmd$none);
 			case 'ClickInsert':
 				var insert = $author$project$Main$insertForm(model);
 				var insertCMD = A2(
 					$elm$core$Result$andThen,
 					A2(
 						$elm$core$Basics$composeR,
-						$elm$core$String$toFloat,
-						A2(
-							$elm$core$Basics$composeR,
-							$elm$core$Result$fromMaybe('Duration has to be a number'),
-							A2(
-								$elm$core$Basics$composeR,
-								$elm$core$Result$andThen(
-									A2($elm$core$Basics$composeR, $ianmackenzie$elm_units$Duration$minutes, $elm$core$Result$Ok)),
-								$elm$core$Result$andThen(
-									function (duration) {
-										return $elm$core$Result$Ok(
-											A4($author$project$Main$sendInsert, $author$project$Main$ReceiveEvent, insert.start, duration, insert.formComment));
-									})))),
+						$author$project$Main$stringToDuration,
+						$elm$core$Result$map(
+							function (duration) {
+								return A4($author$project$Main$sendInsert, $author$project$Main$ReceiveEvent, insert.start, duration, insert.formComment);
+							})),
 					A2($author$project$Main$resultFromEmptyString, 'No duration provided', insert.formDuration));
 				if (insertCMD.$ === 'Ok') {
 					var cmd = insertCMD.a;
@@ -10260,9 +10300,6 @@ var $author$project$Periode$sort = function (periodes) {
 var $elm$html$Html$table = _VirtualDom_node('table');
 var $elm$html$Html$th = _VirtualDom_node('th');
 var $elm$html$Html$tr = _VirtualDom_node('tr');
-var $ianmackenzie$elm_units$Duration$inMilliseconds = function (duration) {
-	return $ianmackenzie$elm_units$Duration$inSeconds(duration) * 1000;
-};
 var $ianmackenzie$elm_units$Duration$milliseconds = function (numMilliseconds) {
 	return $ianmackenzie$elm_units$Duration$seconds(0.001 * numMilliseconds);
 };
@@ -11404,6 +11441,7 @@ var $author$project$Main$viewFooter = A2(
 var $author$project$Main$ClickAdd = {$: 'ClickAdd'};
 var $author$project$Main$ClickDatePicker = {$: 'ClickDatePicker'};
 var $author$project$Main$ClickInsert = {$: 'ClickInsert'};
+var $author$project$Main$ClickUntilNow = {$: 'ClickUntilNow'};
 var $author$project$Main$InsertAddComment = function (a) {
 	return {$: 'InsertAddComment', a: a};
 };
@@ -11412,6 +11450,7 @@ var $author$project$Main$InsertAddDuration = function (a) {
 };
 var $elm$html$Html$Attributes$placeholder = $elm$html$Html$Attributes$stringProperty('placeholder');
 var $elm$html$Html$span = _VirtualDom_node('span');
+var $elm$html$Html$Attributes$title = $elm$html$Html$Attributes$stringProperty('title');
 var $justinmimbs$date$Date$Days = {$: 'Days'};
 var $justinmimbs$date$Date$Months = {$: 'Months'};
 var $elm$core$Basics$min = F2(
@@ -12879,6 +12918,18 @@ var $author$project$Main$viewInsert = function (maybeInsert) {
 							$elm$html$Html$Events$onInput($author$project$Main$InsertAddDuration)
 						]),
 					_List_Nil),
+					A2(
+					$elm$html$Html$button,
+					_List_fromArray(
+						[
+							$elm$html$Html$Attributes$class('btn btn-secondary'),
+							$elm$html$Html$Events$onClick($author$project$Main$ClickUntilNow),
+							$elm$html$Html$Attributes$title('Set start minutes before now')
+						]),
+					_List_fromArray(
+						[
+							$elm$html$Html$text('↺')
+						])),
 					A2(
 					$elm$html$Html$input,
 					_List_fromArray(
