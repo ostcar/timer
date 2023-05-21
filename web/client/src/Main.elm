@@ -73,14 +73,22 @@ type alias Insert =
 
 type alias Edit =
     { id : Periode.ID
+    , start : Time.Posix
+    , picker : SingleDatePicker.DatePicker
+    , minutes : String
     , comment : String
+    , error : Maybe String
     }
 
 
 emptyEdit : Periode.Periode -> Edit
 emptyEdit periode =
     { id = periode.id
+    , start = periode.start
+    , picker = SingleDatePicker.init
+    , minutes = periode.duration |> durationToString
     , comment = periode.comment
+    , error = Nothing
     }
 
 
@@ -117,6 +125,9 @@ type Msg
     | ClickActionAbort
     | ClickEditSubmit
     | InsertEditComment String
+    | InsertEditDuration String
+    | UpdateEditDatePicker ( SingleDatePicker.DatePicker, Maybe Time.Posix )
+    | ClickEditDatePicker
 
 
 init : String -> ( Model, Cmd Msg )
@@ -239,9 +250,20 @@ update msg model =
         ClickEditSubmit ->
             case model.periodeAction of
                 ActionEdit ep ->
-                    ( { model | periodeAction = ActionNone }
-                    , sendEdit ReceiveEvent ep
-                    )
+                    let
+                        mayDuration =
+                            stringToDuration ep.minutes
+                    in
+                    case mayDuration of
+                        Ok duration ->
+                            ( { model | periodeAction = ActionNone }
+                            , sendEdit ReceiveEvent ep.id (Just ep.start) (Just duration) (Just ep.comment)
+                            )
+
+                        Err err ->
+                            ( { model | periodeAction = ActionEdit { ep | error = Just err } }
+                            , Cmd.none
+                            )
 
                 _ ->
                     ( model
@@ -252,6 +274,54 @@ update msg model =
             case model.periodeAction of
                 ActionEdit ep ->
                     ( { model | periodeAction = ActionEdit { ep | comment = comment } }
+                    , Cmd.none
+                    )
+
+                _ ->
+                    ( model
+                    , Cmd.none
+                    )
+
+        InsertEditDuration minutes ->
+            case model.periodeAction of
+                ActionEdit ep ->
+                    ( { model | periodeAction = ActionEdit { ep | minutes = minutes } }
+                    , Cmd.none
+                    )
+
+                _ ->
+                    ( model
+                    , Cmd.none
+                    )
+
+        UpdateEditDatePicker ( updatedPicker, maybePickedTime ) ->
+            case model.periodeAction of
+                ActionEdit ep ->
+                    let
+                        pickedTime =
+                            Maybe.withDefault ep.start maybePickedTime
+                    in
+                    ( { model | periodeAction = ActionEdit { ep | picker = updatedPicker, start = pickedTime } }
+                    , Cmd.none
+                    )
+
+                _ ->
+                    ( model
+                    , Cmd.none
+                    )
+
+        ClickEditDatePicker ->
+            case model.periodeAction of
+                ActionEdit ep ->
+                    let
+                        picker =
+                            SingleDatePicker.openPicker
+                                (SingleDatePicker.defaultSettings timeZone UpdateEditDatePicker)
+                                model.currentTime
+                                (Just ep.start)
+                                ep.picker
+                    in
+                    ( { model | periodeAction = ActionEdit { ep | picker = picker } }
                     , Cmd.none
                     )
 
@@ -402,11 +472,16 @@ update msg model =
 
 
 stringToDuration : String -> Result String Duration.Duration
-stringToDuration s =
-    s
-        |> String.toFloat
-        |> Result.fromMaybe "Duration has to be a number"
-        |> Result.map Duration.minutes
+stringToDuration =
+    String.toFloat
+        >> Result.fromMaybe "Duration has to be a number"
+        >> Result.map Duration.minutes
+
+
+durationToString : Duration.Duration -> String
+durationToString =
+    Duration.inMinutes
+        >> String.fromFloat
 
 
 updateStateIfPermission : Permission -> Cmd Msg
@@ -538,13 +613,13 @@ sendInsert result start duration comment =
         }
 
 
-sendEdit : (Result Http.Error () -> Msg) -> Edit -> Cmd Msg
-sendEdit result edit =
+sendEdit : (Result Http.Error () -> Msg) -> Periode.ID -> Maybe Time.Posix -> Maybe Duration.Duration -> Maybe String -> Cmd Msg
+sendEdit result id start mayDuration mayComment =
     Http.request
         { method = "PUT"
         , headers = []
-        , url = "/api/periode/" ++ Periode.idToString edit.id
-        , body = Http.jsonBody (editEncoder Nothing Nothing (Just edit.comment))
+        , url = "/api/periode/" ++ Periode.idToString id
+        , body = Http.jsonBody (editEncoder start mayDuration mayComment)
         , expect = Http.expectWhatever result
         , timeout = Nothing
         , tracker = Nothing
@@ -937,7 +1012,7 @@ viewPeriodeLine action permission periode =
     case ( action, permission ) of
         ( ActionEdit edit, PermissionWrite ) ->
             if edit.id == periode.id then
-                viewPeriodeEditLine periode edit
+                viewPeriodeEditLine edit
 
             else
                 viewPeriodeShowLine permission periode
@@ -969,15 +1044,36 @@ viewPeriodeShowLine permission periode =
         ]
 
 
-viewPeriodeEditLine : Periode.Periode -> Edit -> Html Msg
-viewPeriodeEditLine periode edit =
+viewPeriodeEditLine : Edit -> Html Msg
+viewPeriodeEditLine edit =
+    let
+        monyString =
+            case stringToDuration edit.minutes of
+                Ok duration ->
+                    durationToMonyString duration
+
+                Err _ ->
+                    "-"
+    in
     tr []
-        [ td [] [ text <| posixToString periode.start ]
-        , td [] [ text <| durationToTimeString periode.duration ]
-        , td [] [ text <| durationToMonyString periode.duration ]
+        [ td []
+            [ span [ onClick ClickEditDatePicker ] [ text <| posixToString edit.start ]
+            , SingleDatePicker.view (SingleDatePicker.defaultSettings timeZone UpdateEditDatePicker) edit.picker
+            ]
         , td []
             [ input
-                [ id "comment"
+                [ id "edit-duration"
+                , type_ "text"
+                , placeholder "minutes"
+                , value edit.minutes
+                , onInput InsertEditDuration
+                ]
+                []
+            ]
+        , td [] [ text monyString ]
+        , td []
+            [ input
+                [ id "edit-comment"
                 , type_ "text"
                 , placeholder "comment"
                 , value edit.comment
@@ -1019,10 +1115,31 @@ viewFooter =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Sub.batch
-        [ SingleDatePicker.subscriptions
-            (SingleDatePicker.defaultSettings timeZone UpdateDatePicker)
-            UpdateDatePicker
-            (insertForm model).picker
-        , Time.every 1000 BrowserTick
-        ]
+    let
+        insertPicker =
+            SingleDatePicker.subscriptions
+                (SingleDatePicker.defaultSettings timeZone UpdateDatePicker)
+                UpdateDatePicker
+                (insertForm model).picker
+
+        editPicker =
+            case model.periodeAction of
+                ActionEdit edit ->
+                    SingleDatePicker.subscriptions
+                        (SingleDatePicker.defaultSettings timeZone UpdateEditDatePicker)
+                        UpdateEditDatePicker
+                        edit.picker
+                        |> Just
+
+                _ ->
+                    Nothing
+
+        browserTicker =
+            Time.every 1000 BrowserTick
+    in
+    [ Just insertPicker
+    , editPicker
+    , Just browserTicker
+    ]
+        |> List.filterMap identity
+        |> Sub.batch

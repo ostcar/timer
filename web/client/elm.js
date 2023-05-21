@@ -7275,6 +7275,9 @@ var $author$project$Main$BrowserTick = function (a) {
 var $author$project$Main$UpdateDatePicker = function (a) {
 	return {$: 'UpdateDatePicker', a: a};
 };
+var $author$project$Main$UpdateEditDatePicker = function (a) {
+	return {$: 'UpdateEditDatePicker', a: a};
+};
 var $elm$core$Platform$Sub$batch = _Platform_batch;
 var $mercurymedia$elm_datetime_picker$SingleDatePicker$AlwaysVisible = function (a) {
 	return {$: 'AlwaysVisible', a: a};
@@ -9062,16 +9065,36 @@ var $justinmimbs$timezone_data$TimeZone$europe__berlin = function (_v0) {
 };
 var $author$project$Main$timeZone = $justinmimbs$timezone_data$TimeZone$europe__berlin(_Utils_Tuple0);
 var $author$project$Main$subscriptions = function (model) {
-	return $elm$core$Platform$Sub$batch(
-		_List_fromArray(
-			[
+	var insertPicker = A3(
+		$mercurymedia$elm_datetime_picker$SingleDatePicker$subscriptions,
+		A2($mercurymedia$elm_datetime_picker$SingleDatePicker$defaultSettings, $author$project$Main$timeZone, $author$project$Main$UpdateDatePicker),
+		$author$project$Main$UpdateDatePicker,
+		$author$project$Main$insertForm(model).picker);
+	var editPicker = function () {
+		var _v0 = model.periodeAction;
+		if (_v0.$ === 'ActionEdit') {
+			var edit = _v0.a;
+			return $elm$core$Maybe$Just(
 				A3(
-				$mercurymedia$elm_datetime_picker$SingleDatePicker$subscriptions,
-				A2($mercurymedia$elm_datetime_picker$SingleDatePicker$defaultSettings, $author$project$Main$timeZone, $author$project$Main$UpdateDatePicker),
-				$author$project$Main$UpdateDatePicker,
-				$author$project$Main$insertForm(model).picker),
-				A2($elm$time$Time$every, 1000, $author$project$Main$BrowserTick)
-			]));
+					$mercurymedia$elm_datetime_picker$SingleDatePicker$subscriptions,
+					A2($mercurymedia$elm_datetime_picker$SingleDatePicker$defaultSettings, $author$project$Main$timeZone, $author$project$Main$UpdateEditDatePicker),
+					$author$project$Main$UpdateEditDatePicker,
+					edit.picker));
+		} else {
+			return $elm$core$Maybe$Nothing;
+		}
+	}();
+	var browserTicker = A2($elm$time$Time$every, 1000, $author$project$Main$BrowserTick);
+	return $elm$core$Platform$Sub$batch(
+		A2(
+			$elm$core$List$filterMap,
+			$elm$core$Basics$identity,
+			_List_fromArray(
+				[
+					$elm$core$Maybe$Just(insertPicker),
+					editPicker,
+					$elm$core$Maybe$Just(browserTicker)
+				])));
 };
 var $author$project$Main$ActionDelete = function (a) {
 	return {$: 'ActionDelete', a: a};
@@ -9111,8 +9134,24 @@ var $author$project$Main$buildErrorMessage = function (httpError) {
 			return message;
 	}
 };
+var $elm$core$String$fromFloat = _String_fromNumber;
+var $ianmackenzie$elm_units$Duration$inSeconds = function (_v0) {
+	var numSeconds = _v0.a;
+	return numSeconds;
+};
+var $ianmackenzie$elm_units$Duration$inMinutes = function (duration) {
+	return $ianmackenzie$elm_units$Duration$inSeconds(duration) / 60;
+};
+var $author$project$Main$durationToString = A2($elm$core$Basics$composeR, $ianmackenzie$elm_units$Duration$inMinutes, $elm$core$String$fromFloat);
 var $author$project$Main$emptyEdit = function (periode) {
-	return {comment: periode.comment, id: periode.id};
+	return {
+		comment: periode.comment,
+		error: $elm$core$Maybe$Nothing,
+		id: periode.id,
+		minutes: $author$project$Main$durationToString(periode.duration),
+		picker: $mercurymedia$elm_datetime_picker$SingleDatePicker$init,
+		start: periode.start
+	};
 };
 var $elm$http$Http$expectBytesResponse = F2(
 	function (toMsg, toResult) {
@@ -9692,10 +9731,6 @@ var $author$project$Main$sendDelete = F2(
 				url: '/api/periode/' + $author$project$Periode$idToString(id)
 			});
 	});
-var $ianmackenzie$elm_units$Duration$inSeconds = function (_v0) {
-	var numSeconds = _v0.a;
-	return numSeconds;
-};
 var $elm$json$Json$Encode$int = _Json_wrap;
 var $elm$json$Json$Encode$object = function (pairs) {
 	return _Json_wrap(
@@ -9754,22 +9789,18 @@ var $elm$http$Http$jsonBody = function (value) {
 		'application/json',
 		A2($elm$json$Json$Encode$encode, 0, value));
 };
-var $author$project$Main$sendEdit = F2(
-	function (result, edit) {
+var $author$project$Main$sendEdit = F5(
+	function (result, id, start, mayDuration, mayComment) {
 		return $elm$http$Http$request(
 			{
 				body: $elm$http$Http$jsonBody(
-					A3(
-						$author$project$Main$editEncoder,
-						$elm$core$Maybe$Nothing,
-						$elm$core$Maybe$Nothing,
-						$elm$core$Maybe$Just(edit.comment))),
+					A3($author$project$Main$editEncoder, start, mayDuration, mayComment)),
 				expect: $elm$http$Http$expectWhatever(result),
 				headers: _List_Nil,
 				method: 'PUT',
 				timeout: $elm$core$Maybe$Nothing,
 				tracker: $elm$core$Maybe$Nothing,
-				url: '/api/periode/' + $author$project$Periode$idToString(edit.id)
+				url: '/api/periode/' + $author$project$Periode$idToString(id)
 			});
 	});
 var $author$project$Main$insertEncoder = F3(
@@ -9862,15 +9893,13 @@ var $ianmackenzie$elm_units$Duration$minutes = function (numMinutes) {
 	return $ianmackenzie$elm_units$Duration$seconds(60 * numMinutes);
 };
 var $elm$core$String$toFloat = _String_toFloat;
-var $author$project$Main$stringToDuration = function (s) {
-	return A2(
-		$elm$core$Result$map,
-		$ianmackenzie$elm_units$Duration$minutes,
-		A2(
-			$elm$core$Result$fromMaybe,
-			'Duration has to be a number',
-			$elm$core$String$toFloat(s)));
-};
+var $author$project$Main$stringToDuration = A2(
+	$elm$core$Basics$composeR,
+	$elm$core$String$toFloat,
+	A2(
+		$elm$core$Basics$composeR,
+		$elm$core$Result$fromMaybe('Duration has to be a number'),
+		$elm$core$Result$map($ianmackenzie$elm_units$Duration$minutes)));
 var $ianmackenzie$elm_units$Duration$inMilliseconds = function (duration) {
 	return $ianmackenzie$elm_units$Duration$inSeconds(duration) * 1000;
 };
@@ -10006,19 +10035,43 @@ var $author$project$Main$update = F2(
 				var _v3 = model.periodeAction;
 				if (_v3.$ === 'ActionEdit') {
 					var ep = _v3.a;
-					return _Utils_Tuple2(
-						_Utils_update(
-							model,
-							{periodeAction: $author$project$Main$ActionNone}),
-						A2($author$project$Main$sendEdit, $author$project$Main$ReceiveEvent, ep));
+					var mayDuration = $author$project$Main$stringToDuration(ep.minutes);
+					if (mayDuration.$ === 'Ok') {
+						var duration = mayDuration.a;
+						return _Utils_Tuple2(
+							_Utils_update(
+								model,
+								{periodeAction: $author$project$Main$ActionNone}),
+							A5(
+								$author$project$Main$sendEdit,
+								$author$project$Main$ReceiveEvent,
+								ep.id,
+								$elm$core$Maybe$Just(ep.start),
+								$elm$core$Maybe$Just(duration),
+								$elm$core$Maybe$Just(ep.comment)));
+					} else {
+						var err = mayDuration.a;
+						return _Utils_Tuple2(
+							_Utils_update(
+								model,
+								{
+									periodeAction: $author$project$Main$ActionEdit(
+										_Utils_update(
+											ep,
+											{
+												error: $elm$core$Maybe$Just(err)
+											}))
+								}),
+							$elm$core$Platform$Cmd$none);
+					}
 				} else {
 					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 				}
 			case 'InsertEditComment':
 				var comment = msg.a;
-				var _v4 = model.periodeAction;
-				if (_v4.$ === 'ActionEdit') {
-					var ep = _v4.a;
+				var _v5 = model.periodeAction;
+				if (_v5.$ === 'ActionEdit') {
+					var ep = _v5.a;
 					return _Utils_Tuple2(
 						_Utils_update(
 							model,
@@ -10027,6 +10080,68 @@ var $author$project$Main$update = F2(
 									_Utils_update(
 										ep,
 										{comment: comment}))
+							}),
+						$elm$core$Platform$Cmd$none);
+				} else {
+					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+				}
+			case 'InsertEditDuration':
+				var minutes = msg.a;
+				var _v6 = model.periodeAction;
+				if (_v6.$ === 'ActionEdit') {
+					var ep = _v6.a;
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{
+								periodeAction: $author$project$Main$ActionEdit(
+									_Utils_update(
+										ep,
+										{minutes: minutes}))
+							}),
+						$elm$core$Platform$Cmd$none);
+				} else {
+					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+				}
+			case 'UpdateEditDatePicker':
+				var _v7 = msg.a;
+				var updatedPicker = _v7.a;
+				var maybePickedTime = _v7.b;
+				var _v8 = model.periodeAction;
+				if (_v8.$ === 'ActionEdit') {
+					var ep = _v8.a;
+					var pickedTime = A2($elm$core$Maybe$withDefault, ep.start, maybePickedTime);
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{
+								periodeAction: $author$project$Main$ActionEdit(
+									_Utils_update(
+										ep,
+										{picker: updatedPicker, start: pickedTime}))
+							}),
+						$elm$core$Platform$Cmd$none);
+				} else {
+					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+				}
+			case 'ClickEditDatePicker':
+				var _v9 = model.periodeAction;
+				if (_v9.$ === 'ActionEdit') {
+					var ep = _v9.a;
+					var picker = A4(
+						$mercurymedia$elm_datetime_picker$SingleDatePicker$openPicker,
+						A2($mercurymedia$elm_datetime_picker$SingleDatePicker$defaultSettings, $author$project$Main$timeZone, $author$project$Main$UpdateEditDatePicker),
+						model.currentTime,
+						$elm$core$Maybe$Just(ep.start),
+						ep.picker);
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{
+								periodeAction: $author$project$Main$ActionEdit(
+									_Utils_update(
+										ep,
+										{picker: picker}))
 							}),
 						$elm$core$Platform$Cmd$none);
 				} else {
@@ -10060,9 +10175,9 @@ var $author$project$Main$update = F2(
 						}),
 					$elm$core$Platform$Cmd$none);
 			case 'UpdateDatePicker':
-				var _v5 = msg.a;
-				var updatedPicker = _v5.a;
-				var maybePickedTime = _v5.b;
+				var _v10 = msg.a;
+				var updatedPicker = _v10.a;
+				var maybePickedTime = _v10.b;
 				var insert = $author$project$Main$insertForm(model);
 				var pickedTime = A2($elm$core$Maybe$withDefault, insert.start, maybePickedTime);
 				return _Utils_Tuple2(
@@ -10497,9 +10612,6 @@ var $ianmackenzie$elm_units$Constants$minute = 60 * $ianmackenzie$elm_units$Cons
 var $ianmackenzie$elm_units$Constants$hour = 60 * $ianmackenzie$elm_units$Constants$minute;
 var $ianmackenzie$elm_units$Duration$inHours = function (duration) {
 	return $ianmackenzie$elm_units$Duration$inSeconds(duration) / $ianmackenzie$elm_units$Constants$hour;
-};
-var $ianmackenzie$elm_units$Duration$inMinutes = function (duration) {
-	return $ianmackenzie$elm_units$Duration$inSeconds(duration) / 60;
 };
 var $author$project$Mony$durationInHourMinutes = function (duration) {
 	return _Utils_Tuple2(
@@ -11198,9 +11310,13 @@ var $author$project$Main$viewPeriodeDeleteLine = function (periode) {
 					]))
 			]));
 };
+var $author$project$Main$ClickEditDatePicker = {$: 'ClickEditDatePicker'};
 var $author$project$Main$ClickEditSubmit = {$: 'ClickEditSubmit'};
 var $author$project$Main$InsertEditComment = function (a) {
 	return {$: 'InsertEditComment', a: a};
+};
+var $author$project$Main$InsertEditDuration = function (a) {
+	return {$: 'InsertEditDuration', a: a};
 };
 var $elm$html$Html$Attributes$id = $elm$html$Html$Attributes$stringProperty('id');
 var $elm$html$Html$input = _VirtualDom_node('input');
@@ -11232,551 +11348,8 @@ var $elm$html$Html$Events$onInput = function (tagger) {
 			A2($elm$json$Json$Decode$map, tagger, $elm$html$Html$Events$targetValue)));
 };
 var $elm$html$Html$Attributes$placeholder = $elm$html$Html$Attributes$stringProperty('placeholder');
-var $elm$html$Html$Attributes$value = $elm$html$Html$Attributes$stringProperty('value');
-var $author$project$Main$viewPeriodeEditLine = F2(
-	function (periode, edit) {
-		return A2(
-			$elm$html$Html$tr,
-			_List_Nil,
-			_List_fromArray(
-				[
-					A2(
-					$elm$html$Html$td,
-					_List_Nil,
-					_List_fromArray(
-						[
-							$elm$html$Html$text(
-							$author$project$Main$posixToString(periode.start))
-						])),
-					A2(
-					$elm$html$Html$td,
-					_List_Nil,
-					_List_fromArray(
-						[
-							$elm$html$Html$text(
-							$author$project$Main$durationToTimeString(periode.duration))
-						])),
-					A2(
-					$elm$html$Html$td,
-					_List_Nil,
-					_List_fromArray(
-						[
-							$elm$html$Html$text(
-							$author$project$Main$durationToMonyString(periode.duration))
-						])),
-					A2(
-					$elm$html$Html$td,
-					_List_Nil,
-					_List_fromArray(
-						[
-							A2(
-							$elm$html$Html$input,
-							_List_fromArray(
-								[
-									$elm$html$Html$Attributes$id('comment'),
-									$elm$html$Html$Attributes$type_('text'),
-									$elm$html$Html$Attributes$placeholder('comment'),
-									$elm$html$Html$Attributes$value(edit.comment),
-									$elm$html$Html$Events$onInput($author$project$Main$InsertEditComment)
-								]),
-							_List_Nil)
-						])),
-					A2(
-					$elm$html$Html$td,
-					_List_fromArray(
-						[
-							$elm$html$Html$Attributes$class('buttons')
-						]),
-					_List_fromArray(
-						[
-							$elm$html$Html$text('Edit?'),
-							A2(
-							$elm$html$Html$button,
-							_List_fromArray(
-								[
-									$elm$html$Html$Attributes$type_('button'),
-									$elm$html$Html$Attributes$class('btn btn-danger'),
-									$elm$html$Html$Events$onClick($author$project$Main$ClickActionAbort)
-								]),
-							_List_fromArray(
-								[
-									$elm$html$Html$text('✖')
-								])),
-							A2(
-							$elm$html$Html$button,
-							_List_fromArray(
-								[
-									$elm$html$Html$Attributes$type_('button'),
-									$elm$html$Html$Attributes$class('btn btn-success'),
-									$elm$html$Html$Events$onClick($author$project$Main$ClickEditSubmit)
-								]),
-							_List_fromArray(
-								[
-									$elm$html$Html$text('⏎')
-								]))
-						]))
-				]));
-	});
-var $author$project$Main$ClickContinue = function (a) {
-	return {$: 'ClickContinue', a: a};
-};
-var $author$project$Main$ClickDelete = function (a) {
-	return {$: 'ClickDelete', a: a};
-};
-var $author$project$Main$ClickEdit = function (a) {
-	return {$: 'ClickEdit', a: a};
-};
-var $author$project$Main$viewPeriodeShowLine = F2(
-	function (permission, periode) {
-		return A2(
-			$elm$html$Html$tr,
-			_List_Nil,
-			_List_fromArray(
-				[
-					A2(
-					$elm$html$Html$td,
-					_List_Nil,
-					_List_fromArray(
-						[
-							$elm$html$Html$text(
-							$author$project$Main$posixToString(periode.start))
-						])),
-					A2(
-					$elm$html$Html$td,
-					_List_Nil,
-					_List_fromArray(
-						[
-							$elm$html$Html$text(
-							$author$project$Main$durationToTimeString(periode.duration))
-						])),
-					A2(
-					$elm$html$Html$td,
-					_List_Nil,
-					_List_fromArray(
-						[
-							$elm$html$Html$text(
-							$author$project$Main$durationToMonyString(periode.duration))
-						])),
-					A2(
-					$elm$html$Html$td,
-					_List_Nil,
-					_List_fromArray(
-						[
-							$elm$html$Html$text(periode.comment)
-						])),
-					A2(
-					$author$project$Main$canWrite,
-					permission,
-					A2(
-						$elm$html$Html$td,
-						_List_fromArray(
-							[
-								$elm$html$Html$Attributes$class('buttons')
-							]),
-						_List_fromArray(
-							[
-								A2(
-								$elm$html$Html$button,
-								_List_fromArray(
-									[
-										$elm$html$Html$Attributes$type_('button'),
-										$elm$html$Html$Attributes$class('btn btn-info'),
-										$elm$html$Html$Events$onClick(
-										$author$project$Main$ClickContinue(periode.id))
-									]),
-								_List_fromArray(
-									[
-										$elm$html$Html$text('→')
-									])),
-								A2(
-								$elm$html$Html$button,
-								_List_fromArray(
-									[
-										$elm$html$Html$Attributes$type_('button'),
-										$elm$html$Html$Attributes$class('btn btn-warning'),
-										$elm$html$Html$Events$onClick(
-										$author$project$Main$ClickEdit(periode))
-									]),
-								_List_fromArray(
-									[
-										$elm$html$Html$text('✎')
-									])),
-								A2(
-								$elm$html$Html$button,
-								_List_fromArray(
-									[
-										$elm$html$Html$Attributes$type_('button'),
-										$elm$html$Html$Attributes$class('btn btn-danger'),
-										$elm$html$Html$Events$onClick(
-										$author$project$Main$ClickDelete(periode.id))
-									]),
-								_List_fromArray(
-									[
-										$elm$html$Html$text('✖')
-									]))
-							])))
-				]));
-	});
-var $author$project$Main$viewPeriodeLine = F3(
-	function (action, permission, periode) {
-		var _v0 = _Utils_Tuple2(action, permission);
-		_v0$2:
-		while (true) {
-			if (_v0.b.$ === 'PermissionWrite') {
-				switch (_v0.a.$) {
-					case 'ActionEdit':
-						var edit = _v0.a.a;
-						var _v1 = _v0.b;
-						return _Utils_eq(edit.id, periode.id) ? A2($author$project$Main$viewPeriodeEditLine, periode, edit) : A2($author$project$Main$viewPeriodeShowLine, permission, periode);
-					case 'ActionDelete':
-						var id = _v0.a.a;
-						var _v2 = _v0.b;
-						return _Utils_eq(id, periode.id) ? $author$project$Main$viewPeriodeDeleteLine(periode) : A2($author$project$Main$viewPeriodeShowLine, permission, periode);
-					default:
-						break _v0$2;
-				}
-			} else {
-				break _v0$2;
-			}
-		}
-		return A2($author$project$Main$viewPeriodeShowLine, permission, periode);
-	});
-var $author$project$Main$viewPeriodeSummary = F2(
-	function (permission, periodes) {
-		var duration = $author$project$Main$combineDurations(
-			A2(
-				$elm$core$List$map,
-				function ($) {
-					return $.duration;
-				},
-				periodes));
-		return A2(
-			$elm$html$Html$tr,
-			_List_Nil,
-			_List_fromArray(
-				[
-					A2(
-					$elm$html$Html$td,
-					_List_Nil,
-					_List_fromArray(
-						[
-							$elm$html$Html$text('Gesamt')
-						])),
-					A2(
-					$elm$html$Html$td,
-					_List_Nil,
-					_List_fromArray(
-						[
-							$elm$html$Html$text(
-							$author$project$Main$durationToTimeString(duration))
-						])),
-					A2(
-					$elm$html$Html$td,
-					_List_Nil,
-					_List_fromArray(
-						[
-							$elm$html$Html$text(
-							$author$project$Main$durationToMonyString(duration))
-						])),
-					A2(
-					$elm$html$Html$td,
-					_List_Nil,
-					_List_fromArray(
-						[
-							$elm$html$Html$text('')
-						])),
-					A2(
-					$author$project$Main$canWrite,
-					permission,
-					A2(
-						$elm$html$Html$td,
-						_List_Nil,
-						_List_fromArray(
-							[
-								$elm$html$Html$text('')
-							])))
-				]));
-	});
-var $elm$html$Html$select = _VirtualDom_node('select');
-var $author$project$YearMonth$unique = function (list) {
-	unique:
-	while (true) {
-		if (list.b) {
-			if (list.b.b) {
-				var first = list.a;
-				var _v1 = list.b;
-				var second = _v1.a;
-				var tail = _v1.b;
-				if (_Utils_eq(first, second)) {
-					var $temp$list = A2($elm$core$List$cons, first, tail);
-					list = $temp$list;
-					continue unique;
-				} else {
-					return A2(
-						$elm$core$List$cons,
-						first,
-						$author$project$YearMonth$unique(
-							A2($elm$core$List$cons, second, tail)));
-				}
-			} else {
-				var first = list.a;
-				return _List_fromArray(
-					[first]);
-			}
-		} else {
-			return _List_Nil;
-		}
-	}
-};
-var $elm$html$Html$option = _VirtualDom_node('option');
-var $elm$json$Json$Encode$bool = _Json_wrap;
-var $elm$html$Html$Attributes$boolProperty = F2(
-	function (key, bool) {
-		return A2(
-			_VirtualDom_property,
-			key,
-			$elm$json$Json$Encode$bool(bool));
-	});
-var $elm$html$Html$Attributes$selected = $elm$html$Html$Attributes$boolProperty('selected');
-var $elm$core$String$toLower = _String_toLower;
-var $author$project$YearMonth$toAttr = function (yearMonth) {
-	if (yearMonth.$ === 'All') {
-		return 'alle';
-	} else {
-		var year = yearMonth.a;
-		var month = yearMonth.b;
-		return $elm$core$String$toLower(
-			$elm$core$String$fromInt(year) + ('_' + $author$project$YearMonth$monthToString(month)));
-	}
-};
-var $author$project$YearMonth$viewYearMonthOption = F2(
-	function (selectedYM, ym) {
-		return A2(
-			$elm$html$Html$option,
-			_List_fromArray(
-				[
-					$elm$html$Html$Attributes$value(
-					$author$project$YearMonth$toAttr(ym)),
-					$elm$html$Html$Attributes$selected(
-					_Utils_eq(selectedYM, ym))
-				]),
-			_List_fromArray(
-				[
-					$elm$html$Html$text(
-					$author$project$YearMonth$toString(ym))
-				]));
-	});
-var $author$project$YearMonth$yearMonthList = function (zone) {
-	return $elm$core$List$map(
-		$author$project$YearMonth$fromPosix(zone));
-};
-var $author$project$YearMonth$viewYearMonthSelect = F4(
-	function (zone, selected, event, times) {
-		return A2(
-			$elm$html$Html$select,
-			_List_fromArray(
-				[
-					$elm$html$Html$Events$onInput(event)
-				]),
-			A2(
-				$elm$core$List$map,
-				$author$project$YearMonth$viewYearMonthOption(selected),
-				A2(
-					$elm$core$List$cons,
-					$author$project$YearMonth$All,
-					$author$project$YearMonth$unique(
-						A2($author$project$YearMonth$yearMonthList, zone, times)))));
-	});
-var $author$project$Main$viewPeriodes = F5(
-	function (zone, selected, edit, permission, periodes) {
-		var sorted = $author$project$Periode$sort(periodes);
-		var filtered = A3($author$project$Periode$filterYearMonth, $author$project$Main$timeZone, selected, sorted);
-		var tableBody = A2(
-			$elm$core$List$cons,
-			A2($author$project$Main$viewPeriodeSummary, permission, filtered),
-			A2(
-				$elm$core$List$map,
-				A2($author$project$Main$viewPeriodeLine, edit, permission),
-				filtered));
-		return A2(
-			$elm$html$Html$div,
-			_List_Nil,
-			_List_fromArray(
-				[
-					A4(
-					$author$project$YearMonth$viewYearMonthSelect,
-					zone,
-					selected,
-					$author$project$Main$SelectYearMonth,
-					A2(
-						$elm$core$List$map,
-						function ($) {
-							return $.start;
-						},
-						sorted)),
-					A2(
-					$elm$html$Html$table,
-					_List_fromArray(
-						[
-							$elm$html$Html$Attributes$class('table')
-						]),
-					_List_fromArray(
-						[
-							$author$project$Main$viewPeriodeHeader(permission),
-							A2($elm$html$Html$tbody, _List_Nil, tableBody)
-						]))
-				]));
-	});
-var $author$project$Main$viewBody = function (model) {
-	return A2(
-		$elm$html$Html$div,
-		_List_Nil,
-		_List_fromArray(
-			[
-				A2(
-				$elm$html$Html$ul,
-				_List_fromArray(
-					[
-						$elm$html$Html$Attributes$class('nav nav-tabs')
-					]),
-				_List_fromArray(
-					[
-						A2($author$project$Main$navLink, $author$project$Main$ViewMonthly, model.viewBody),
-						A2($author$project$Main$navLink, $author$project$Main$ViewPeriodes, model.viewBody)
-					])),
-				function () {
-				var _v0 = model.viewBody;
-				if (_v0.$ === 'ViewMonthly') {
-					return A2($author$project$Main$viewMonthly, $author$project$Main$timeZone, model.periodes);
-				} else {
-					return A5($author$project$Main$viewPeriodes, $author$project$Main$timeZone, model.formYearMonth, model.periodeAction, model.permission, model.periodes);
-				}
-			}()
-			]));
-};
-var $author$project$Main$Start = {$: 'Start'};
-var $author$project$Main$Stop = {$: 'Stop'};
-var $ianmackenzie$elm_units$Duration$from = F2(
-	function (startTime, endTime) {
-		var numMilliseconds = $elm$time$Time$posixToMillis(endTime) - $elm$time$Time$posixToMillis(startTime);
-		return $ianmackenzie$elm_units$Duration$milliseconds(numMilliseconds);
-	});
-var $author$project$Main$ClickStart = {$: 'ClickStart'};
-var $author$project$Main$ClickStop = {$: 'ClickStop'};
-var $author$project$Main$InsertComment = function (a) {
-	return {$: 'InsertComment', a: a};
-};
-var $author$project$Main$viewStartStopForm = F2(
-	function (startStop, comment) {
-		var _v0 = function () {
-			if (startStop.$ === 'Start') {
-				return _Utils_Tuple2($author$project$Main$ClickStart, 'Start');
-			} else {
-				return _Utils_Tuple2($author$project$Main$ClickStop, 'Stop');
-			}
-		}();
-		var event = _v0.a;
-		var buttonText = _v0.b;
-		return A2(
-			$elm$html$Html$div,
-			_List_Nil,
-			_List_fromArray(
-				[
-					A2(
-					$elm$html$Html$button,
-					_List_fromArray(
-						[
-							$elm$html$Html$Attributes$class('btn btn-primary'),
-							$elm$html$Html$Events$onClick(event)
-						]),
-					_List_fromArray(
-						[
-							$elm$html$Html$text(buttonText)
-						])),
-					A2(
-					$elm$html$Html$input,
-					_List_fromArray(
-						[
-							$elm$html$Html$Attributes$id('comment'),
-							$elm$html$Html$Attributes$type_('text'),
-							$elm$html$Html$Attributes$value(comment),
-							$elm$html$Html$Events$onInput($author$project$Main$InsertComment)
-						]),
-					_List_Nil)
-				]));
-	});
-var $author$project$Main$viewCurrent = F3(
-	function (current, insertedComment, currentTime) {
-		if (current.$ === 'Stopped') {
-			return A2($author$project$Main$viewStartStopForm, $author$project$Main$Start, insertedComment);
-		} else {
-			var start = current.a;
-			var serverComment = current.b;
-			var mony = $author$project$Main$durationToMonyString(
-				A2($ianmackenzie$elm_units$Duration$from, start, currentTime));
-			return A2(
-				$elm$html$Html$div,
-				_List_Nil,
-				_List_fromArray(
-					[
-						A2($author$project$Main$viewStartStopForm, $author$project$Main$Stop, insertedComment),
-						A2(
-						$elm$html$Html$div,
-						_List_Nil,
-						_List_fromArray(
-							[
-								$elm$html$Html$text(
-								'running since ' + ($author$project$Main$posixToString(start) + (': ' + (serverComment + (': ' + mony)))))
-							]))
-					]));
-		}
-	});
-var $author$project$Main$ClickLogout = {$: 'ClickLogout'};
-var $elm$html$Html$footer = _VirtualDom_node('footer');
-var $author$project$Main$viewFooter = A2(
-	$elm$html$Html$footer,
-	_List_fromArray(
-		[
-			$elm$html$Html$Attributes$class('fixed-bottom container')
-		]),
-	_List_fromArray(
-		[
-			A2(
-			$elm$html$Html$a,
-			_List_fromArray(
-				[
-					$elm$html$Html$Attributes$href('https://github.com/ostcar/timer')
-				]),
-			_List_fromArray(
-				[
-					$elm$html$Html$text('github')
-				])),
-			$elm$html$Html$text(' · '),
-			A2(
-			$elm$html$Html$a,
-			_List_fromArray(
-				[
-					$elm$html$Html$Attributes$href('#'),
-					$elm$html$Html$Attributes$class('link-primary'),
-					$elm$html$Html$Events$onClick($author$project$Main$ClickLogout)
-				]),
-			_List_fromArray(
-				[
-					$elm$html$Html$text('logout')
-				]))
-		]));
-var $author$project$Main$ClickAdd = {$: 'ClickAdd'};
-var $author$project$Main$ClickDatePicker = {$: 'ClickDatePicker'};
-var $author$project$Main$ClickInsert = {$: 'ClickInsert'};
-var $author$project$Main$ClickUntilNow = {$: 'ClickUntilNow'};
-var $author$project$Main$InsertAddComment = function (a) {
-	return {$: 'InsertAddComment', a: a};
-};
-var $author$project$Main$InsertAddDuration = function (a) {
-	return {$: 'InsertAddDuration', a: a};
-};
 var $elm$html$Html$span = _VirtualDom_node('span');
-var $elm$html$Html$Attributes$title = $elm$html$Html$Attributes$stringProperty('title');
+var $elm$html$Html$Attributes$value = $elm$html$Html$Attributes$stringProperty('value');
 var $justinmimbs$date$Date$Days = {$: 'Days'};
 var $justinmimbs$date$Date$Months = {$: 'Months'};
 var $elm$core$Basics$min = F2(
@@ -12009,7 +11582,6 @@ var $mercurymedia$elm_datetime_picker$DatePicker$Icons$chevronsRight = A2(
 		]));
 var $elm$svg$Svg$Attributes$class = _VirtualDom_attribute('class');
 var $elm$svg$Svg$Attributes$fill = _VirtualDom_attribute('fill');
-var $elm$core$String$fromFloat = _String_fromNumber;
 var $elm$svg$Svg$Attributes$height = _VirtualDom_attribute('height');
 var $elm$virtual_dom$VirtualDom$map = _VirtualDom_map;
 var $elm$svg$Svg$map = $elm$virtual_dom$VirtualDom$map;
@@ -12458,6 +12030,16 @@ var $mercurymedia$elm_datetime_picker$DatePicker$Utilities$addLeadingZero = func
 	var string = $elm$core$String$fromInt(value);
 	return ($elm$core$String$length(string) === 1) ? ('0' + string) : string;
 };
+var $elm$html$Html$option = _VirtualDom_node('option');
+var $elm$json$Json$Encode$bool = _Json_wrap;
+var $elm$html$Html$Attributes$boolProperty = F2(
+	function (key, bool) {
+		return A2(
+			_VirtualDom_property,
+			key,
+			$elm$json$Json$Encode$bool(bool));
+	});
+var $elm$html$Html$Attributes$selected = $elm$html$Html$Attributes$boolProperty('selected');
 var $mercurymedia$elm_datetime_picker$DatePicker$Utilities$generateHourOptions = F3(
 	function (zone, selectionTuple, selectableHours) {
 		var isSelected = function (h) {
@@ -12530,6 +12112,7 @@ var $mercurymedia$elm_datetime_picker$DatePicker$Utilities$generateMinuteOptions
 			},
 			selectableMinutes);
 	});
+var $elm$html$Html$select = _VirtualDom_node('select');
 var $elm_community$html_extra$Html$Events$Extra$customDecoder = F2(
 	function (d, f) {
 		var resultDecoder = function (x) {
@@ -13198,6 +12781,567 @@ var $mercurymedia$elm_datetime_picker$SingleDatePicker$view = F2(
 			return $elm$html$Html$text('');
 		}
 	});
+var $author$project$Main$viewPeriodeEditLine = function (edit) {
+	var monyString = function () {
+		var _v0 = $author$project$Main$stringToDuration(edit.minutes);
+		if (_v0.$ === 'Ok') {
+			var duration = _v0.a;
+			return $author$project$Main$durationToMonyString(duration);
+		} else {
+			return '-';
+		}
+	}();
+	return A2(
+		$elm$html$Html$tr,
+		_List_Nil,
+		_List_fromArray(
+			[
+				A2(
+				$elm$html$Html$td,
+				_List_Nil,
+				_List_fromArray(
+					[
+						A2(
+						$elm$html$Html$span,
+						_List_fromArray(
+							[
+								$elm$html$Html$Events$onClick($author$project$Main$ClickEditDatePicker)
+							]),
+						_List_fromArray(
+							[
+								$elm$html$Html$text(
+								$author$project$Main$posixToString(edit.start))
+							])),
+						A2(
+						$mercurymedia$elm_datetime_picker$SingleDatePicker$view,
+						A2($mercurymedia$elm_datetime_picker$SingleDatePicker$defaultSettings, $author$project$Main$timeZone, $author$project$Main$UpdateEditDatePicker),
+						edit.picker)
+					])),
+				A2(
+				$elm$html$Html$td,
+				_List_Nil,
+				_List_fromArray(
+					[
+						A2(
+						$elm$html$Html$input,
+						_List_fromArray(
+							[
+								$elm$html$Html$Attributes$id('edit-duration'),
+								$elm$html$Html$Attributes$type_('text'),
+								$elm$html$Html$Attributes$placeholder('minutes'),
+								$elm$html$Html$Attributes$value(edit.minutes),
+								$elm$html$Html$Events$onInput($author$project$Main$InsertEditDuration)
+							]),
+						_List_Nil)
+					])),
+				A2(
+				$elm$html$Html$td,
+				_List_Nil,
+				_List_fromArray(
+					[
+						$elm$html$Html$text(monyString)
+					])),
+				A2(
+				$elm$html$Html$td,
+				_List_Nil,
+				_List_fromArray(
+					[
+						A2(
+						$elm$html$Html$input,
+						_List_fromArray(
+							[
+								$elm$html$Html$Attributes$id('edit-comment'),
+								$elm$html$Html$Attributes$type_('text'),
+								$elm$html$Html$Attributes$placeholder('comment'),
+								$elm$html$Html$Attributes$value(edit.comment),
+								$elm$html$Html$Events$onInput($author$project$Main$InsertEditComment)
+							]),
+						_List_Nil)
+					])),
+				A2(
+				$elm$html$Html$td,
+				_List_fromArray(
+					[
+						$elm$html$Html$Attributes$class('buttons')
+					]),
+				_List_fromArray(
+					[
+						$elm$html$Html$text('Edit?'),
+						A2(
+						$elm$html$Html$button,
+						_List_fromArray(
+							[
+								$elm$html$Html$Attributes$type_('button'),
+								$elm$html$Html$Attributes$class('btn btn-danger'),
+								$elm$html$Html$Events$onClick($author$project$Main$ClickActionAbort)
+							]),
+						_List_fromArray(
+							[
+								$elm$html$Html$text('✖')
+							])),
+						A2(
+						$elm$html$Html$button,
+						_List_fromArray(
+							[
+								$elm$html$Html$Attributes$type_('button'),
+								$elm$html$Html$Attributes$class('btn btn-success'),
+								$elm$html$Html$Events$onClick($author$project$Main$ClickEditSubmit)
+							]),
+						_List_fromArray(
+							[
+								$elm$html$Html$text('⏎')
+							]))
+					]))
+			]));
+};
+var $author$project$Main$ClickContinue = function (a) {
+	return {$: 'ClickContinue', a: a};
+};
+var $author$project$Main$ClickDelete = function (a) {
+	return {$: 'ClickDelete', a: a};
+};
+var $author$project$Main$ClickEdit = function (a) {
+	return {$: 'ClickEdit', a: a};
+};
+var $author$project$Main$viewPeriodeShowLine = F2(
+	function (permission, periode) {
+		return A2(
+			$elm$html$Html$tr,
+			_List_Nil,
+			_List_fromArray(
+				[
+					A2(
+					$elm$html$Html$td,
+					_List_Nil,
+					_List_fromArray(
+						[
+							$elm$html$Html$text(
+							$author$project$Main$posixToString(periode.start))
+						])),
+					A2(
+					$elm$html$Html$td,
+					_List_Nil,
+					_List_fromArray(
+						[
+							$elm$html$Html$text(
+							$author$project$Main$durationToTimeString(periode.duration))
+						])),
+					A2(
+					$elm$html$Html$td,
+					_List_Nil,
+					_List_fromArray(
+						[
+							$elm$html$Html$text(
+							$author$project$Main$durationToMonyString(periode.duration))
+						])),
+					A2(
+					$elm$html$Html$td,
+					_List_Nil,
+					_List_fromArray(
+						[
+							$elm$html$Html$text(periode.comment)
+						])),
+					A2(
+					$author$project$Main$canWrite,
+					permission,
+					A2(
+						$elm$html$Html$td,
+						_List_fromArray(
+							[
+								$elm$html$Html$Attributes$class('buttons')
+							]),
+						_List_fromArray(
+							[
+								A2(
+								$elm$html$Html$button,
+								_List_fromArray(
+									[
+										$elm$html$Html$Attributes$type_('button'),
+										$elm$html$Html$Attributes$class('btn btn-info'),
+										$elm$html$Html$Events$onClick(
+										$author$project$Main$ClickContinue(periode.id))
+									]),
+								_List_fromArray(
+									[
+										$elm$html$Html$text('→')
+									])),
+								A2(
+								$elm$html$Html$button,
+								_List_fromArray(
+									[
+										$elm$html$Html$Attributes$type_('button'),
+										$elm$html$Html$Attributes$class('btn btn-warning'),
+										$elm$html$Html$Events$onClick(
+										$author$project$Main$ClickEdit(periode))
+									]),
+								_List_fromArray(
+									[
+										$elm$html$Html$text('✎')
+									])),
+								A2(
+								$elm$html$Html$button,
+								_List_fromArray(
+									[
+										$elm$html$Html$Attributes$type_('button'),
+										$elm$html$Html$Attributes$class('btn btn-danger'),
+										$elm$html$Html$Events$onClick(
+										$author$project$Main$ClickDelete(periode.id))
+									]),
+								_List_fromArray(
+									[
+										$elm$html$Html$text('✖')
+									]))
+							])))
+				]));
+	});
+var $author$project$Main$viewPeriodeLine = F3(
+	function (action, permission, periode) {
+		var _v0 = _Utils_Tuple2(action, permission);
+		_v0$2:
+		while (true) {
+			if (_v0.b.$ === 'PermissionWrite') {
+				switch (_v0.a.$) {
+					case 'ActionEdit':
+						var edit = _v0.a.a;
+						var _v1 = _v0.b;
+						return _Utils_eq(edit.id, periode.id) ? $author$project$Main$viewPeriodeEditLine(edit) : A2($author$project$Main$viewPeriodeShowLine, permission, periode);
+					case 'ActionDelete':
+						var id = _v0.a.a;
+						var _v2 = _v0.b;
+						return _Utils_eq(id, periode.id) ? $author$project$Main$viewPeriodeDeleteLine(periode) : A2($author$project$Main$viewPeriodeShowLine, permission, periode);
+					default:
+						break _v0$2;
+				}
+			} else {
+				break _v0$2;
+			}
+		}
+		return A2($author$project$Main$viewPeriodeShowLine, permission, periode);
+	});
+var $author$project$Main$viewPeriodeSummary = F2(
+	function (permission, periodes) {
+		var duration = $author$project$Main$combineDurations(
+			A2(
+				$elm$core$List$map,
+				function ($) {
+					return $.duration;
+				},
+				periodes));
+		return A2(
+			$elm$html$Html$tr,
+			_List_Nil,
+			_List_fromArray(
+				[
+					A2(
+					$elm$html$Html$td,
+					_List_Nil,
+					_List_fromArray(
+						[
+							$elm$html$Html$text('Gesamt')
+						])),
+					A2(
+					$elm$html$Html$td,
+					_List_Nil,
+					_List_fromArray(
+						[
+							$elm$html$Html$text(
+							$author$project$Main$durationToTimeString(duration))
+						])),
+					A2(
+					$elm$html$Html$td,
+					_List_Nil,
+					_List_fromArray(
+						[
+							$elm$html$Html$text(
+							$author$project$Main$durationToMonyString(duration))
+						])),
+					A2(
+					$elm$html$Html$td,
+					_List_Nil,
+					_List_fromArray(
+						[
+							$elm$html$Html$text('')
+						])),
+					A2(
+					$author$project$Main$canWrite,
+					permission,
+					A2(
+						$elm$html$Html$td,
+						_List_Nil,
+						_List_fromArray(
+							[
+								$elm$html$Html$text('')
+							])))
+				]));
+	});
+var $author$project$YearMonth$unique = function (list) {
+	unique:
+	while (true) {
+		if (list.b) {
+			if (list.b.b) {
+				var first = list.a;
+				var _v1 = list.b;
+				var second = _v1.a;
+				var tail = _v1.b;
+				if (_Utils_eq(first, second)) {
+					var $temp$list = A2($elm$core$List$cons, first, tail);
+					list = $temp$list;
+					continue unique;
+				} else {
+					return A2(
+						$elm$core$List$cons,
+						first,
+						$author$project$YearMonth$unique(
+							A2($elm$core$List$cons, second, tail)));
+				}
+			} else {
+				var first = list.a;
+				return _List_fromArray(
+					[first]);
+			}
+		} else {
+			return _List_Nil;
+		}
+	}
+};
+var $elm$core$String$toLower = _String_toLower;
+var $author$project$YearMonth$toAttr = function (yearMonth) {
+	if (yearMonth.$ === 'All') {
+		return 'alle';
+	} else {
+		var year = yearMonth.a;
+		var month = yearMonth.b;
+		return $elm$core$String$toLower(
+			$elm$core$String$fromInt(year) + ('_' + $author$project$YearMonth$monthToString(month)));
+	}
+};
+var $author$project$YearMonth$viewYearMonthOption = F2(
+	function (selectedYM, ym) {
+		return A2(
+			$elm$html$Html$option,
+			_List_fromArray(
+				[
+					$elm$html$Html$Attributes$value(
+					$author$project$YearMonth$toAttr(ym)),
+					$elm$html$Html$Attributes$selected(
+					_Utils_eq(selectedYM, ym))
+				]),
+			_List_fromArray(
+				[
+					$elm$html$Html$text(
+					$author$project$YearMonth$toString(ym))
+				]));
+	});
+var $author$project$YearMonth$yearMonthList = function (zone) {
+	return $elm$core$List$map(
+		$author$project$YearMonth$fromPosix(zone));
+};
+var $author$project$YearMonth$viewYearMonthSelect = F4(
+	function (zone, selected, event, times) {
+		return A2(
+			$elm$html$Html$select,
+			_List_fromArray(
+				[
+					$elm$html$Html$Events$onInput(event)
+				]),
+			A2(
+				$elm$core$List$map,
+				$author$project$YearMonth$viewYearMonthOption(selected),
+				A2(
+					$elm$core$List$cons,
+					$author$project$YearMonth$All,
+					$author$project$YearMonth$unique(
+						A2($author$project$YearMonth$yearMonthList, zone, times)))));
+	});
+var $author$project$Main$viewPeriodes = F5(
+	function (zone, selected, edit, permission, periodes) {
+		var sorted = $author$project$Periode$sort(periodes);
+		var filtered = A3($author$project$Periode$filterYearMonth, $author$project$Main$timeZone, selected, sorted);
+		var tableBody = A2(
+			$elm$core$List$cons,
+			A2($author$project$Main$viewPeriodeSummary, permission, filtered),
+			A2(
+				$elm$core$List$map,
+				A2($author$project$Main$viewPeriodeLine, edit, permission),
+				filtered));
+		return A2(
+			$elm$html$Html$div,
+			_List_Nil,
+			_List_fromArray(
+				[
+					A4(
+					$author$project$YearMonth$viewYearMonthSelect,
+					zone,
+					selected,
+					$author$project$Main$SelectYearMonth,
+					A2(
+						$elm$core$List$map,
+						function ($) {
+							return $.start;
+						},
+						sorted)),
+					A2(
+					$elm$html$Html$table,
+					_List_fromArray(
+						[
+							$elm$html$Html$Attributes$class('table')
+						]),
+					_List_fromArray(
+						[
+							$author$project$Main$viewPeriodeHeader(permission),
+							A2($elm$html$Html$tbody, _List_Nil, tableBody)
+						]))
+				]));
+	});
+var $author$project$Main$viewBody = function (model) {
+	return A2(
+		$elm$html$Html$div,
+		_List_Nil,
+		_List_fromArray(
+			[
+				A2(
+				$elm$html$Html$ul,
+				_List_fromArray(
+					[
+						$elm$html$Html$Attributes$class('nav nav-tabs')
+					]),
+				_List_fromArray(
+					[
+						A2($author$project$Main$navLink, $author$project$Main$ViewMonthly, model.viewBody),
+						A2($author$project$Main$navLink, $author$project$Main$ViewPeriodes, model.viewBody)
+					])),
+				function () {
+				var _v0 = model.viewBody;
+				if (_v0.$ === 'ViewMonthly') {
+					return A2($author$project$Main$viewMonthly, $author$project$Main$timeZone, model.periodes);
+				} else {
+					return A5($author$project$Main$viewPeriodes, $author$project$Main$timeZone, model.formYearMonth, model.periodeAction, model.permission, model.periodes);
+				}
+			}()
+			]));
+};
+var $author$project$Main$Start = {$: 'Start'};
+var $author$project$Main$Stop = {$: 'Stop'};
+var $ianmackenzie$elm_units$Duration$from = F2(
+	function (startTime, endTime) {
+		var numMilliseconds = $elm$time$Time$posixToMillis(endTime) - $elm$time$Time$posixToMillis(startTime);
+		return $ianmackenzie$elm_units$Duration$milliseconds(numMilliseconds);
+	});
+var $author$project$Main$ClickStart = {$: 'ClickStart'};
+var $author$project$Main$ClickStop = {$: 'ClickStop'};
+var $author$project$Main$InsertComment = function (a) {
+	return {$: 'InsertComment', a: a};
+};
+var $author$project$Main$viewStartStopForm = F2(
+	function (startStop, comment) {
+		var _v0 = function () {
+			if (startStop.$ === 'Start') {
+				return _Utils_Tuple2($author$project$Main$ClickStart, 'Start');
+			} else {
+				return _Utils_Tuple2($author$project$Main$ClickStop, 'Stop');
+			}
+		}();
+		var event = _v0.a;
+		var buttonText = _v0.b;
+		return A2(
+			$elm$html$Html$div,
+			_List_Nil,
+			_List_fromArray(
+				[
+					A2(
+					$elm$html$Html$button,
+					_List_fromArray(
+						[
+							$elm$html$Html$Attributes$class('btn btn-primary'),
+							$elm$html$Html$Events$onClick(event)
+						]),
+					_List_fromArray(
+						[
+							$elm$html$Html$text(buttonText)
+						])),
+					A2(
+					$elm$html$Html$input,
+					_List_fromArray(
+						[
+							$elm$html$Html$Attributes$id('comment'),
+							$elm$html$Html$Attributes$type_('text'),
+							$elm$html$Html$Attributes$value(comment),
+							$elm$html$Html$Events$onInput($author$project$Main$InsertComment)
+						]),
+					_List_Nil)
+				]));
+	});
+var $author$project$Main$viewCurrent = F3(
+	function (current, insertedComment, currentTime) {
+		if (current.$ === 'Stopped') {
+			return A2($author$project$Main$viewStartStopForm, $author$project$Main$Start, insertedComment);
+		} else {
+			var start = current.a;
+			var serverComment = current.b;
+			var mony = $author$project$Main$durationToMonyString(
+				A2($ianmackenzie$elm_units$Duration$from, start, currentTime));
+			return A2(
+				$elm$html$Html$div,
+				_List_Nil,
+				_List_fromArray(
+					[
+						A2($author$project$Main$viewStartStopForm, $author$project$Main$Stop, insertedComment),
+						A2(
+						$elm$html$Html$div,
+						_List_Nil,
+						_List_fromArray(
+							[
+								$elm$html$Html$text(
+								'running since ' + ($author$project$Main$posixToString(start) + (': ' + (serverComment + (': ' + mony)))))
+							]))
+					]));
+		}
+	});
+var $author$project$Main$ClickLogout = {$: 'ClickLogout'};
+var $elm$html$Html$footer = _VirtualDom_node('footer');
+var $author$project$Main$viewFooter = A2(
+	$elm$html$Html$footer,
+	_List_fromArray(
+		[
+			$elm$html$Html$Attributes$class('fixed-bottom container')
+		]),
+	_List_fromArray(
+		[
+			A2(
+			$elm$html$Html$a,
+			_List_fromArray(
+				[
+					$elm$html$Html$Attributes$href('https://github.com/ostcar/timer')
+				]),
+			_List_fromArray(
+				[
+					$elm$html$Html$text('github')
+				])),
+			$elm$html$Html$text(' · '),
+			A2(
+			$elm$html$Html$a,
+			_List_fromArray(
+				[
+					$elm$html$Html$Attributes$href('#'),
+					$elm$html$Html$Attributes$class('link-primary'),
+					$elm$html$Html$Events$onClick($author$project$Main$ClickLogout)
+				]),
+			_List_fromArray(
+				[
+					$elm$html$Html$text('logout')
+				]))
+		]));
+var $author$project$Main$ClickAdd = {$: 'ClickAdd'};
+var $author$project$Main$ClickDatePicker = {$: 'ClickDatePicker'};
+var $author$project$Main$ClickInsert = {$: 'ClickInsert'};
+var $author$project$Main$ClickUntilNow = {$: 'ClickUntilNow'};
+var $author$project$Main$InsertAddComment = function (a) {
+	return {$: 'InsertAddComment', a: a};
+};
+var $author$project$Main$InsertAddDuration = function (a) {
+	return {$: 'InsertAddDuration', a: a};
+};
+var $elm$html$Html$Attributes$title = $elm$html$Html$Attributes$stringProperty('title');
 var $author$project$Main$viewInsert = function (maybeInsert) {
 	if (maybeInsert.$ === 'Nothing') {
 		return A2(
