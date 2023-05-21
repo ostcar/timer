@@ -6,6 +6,7 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import Http
+import Iso8601
 import Json.Decode as Decode
 import Json.Encode as Encode
 import Jwt
@@ -63,9 +64,9 @@ insertForm model =
 
 
 type alias Insert =
-    { start : Time.Posix
-    , formDuration : String
+    { formDuration : String
     , formComment : String
+    , formStart : String
     , picker : SingleDatePicker.DatePicker
     , error : Maybe String
     }
@@ -115,10 +116,9 @@ type Msg
     | ClickDeleteSubmit Periode.ID
       -- Add Periode
     | ClickAdd
-    | ClickDatePicker
-    | UpdateDatePicker ( SingleDatePicker.DatePicker, Maybe Time.Posix )
     | InsertAddDuration String
     | InsertAddComment String
+    | InsertNewStart String
     | ClickInsert
     | ClickUntilNow
       -- Edit Periode
@@ -335,31 +335,12 @@ update msg model =
             , Cmd.none
             )
 
-        ClickDatePicker ->
+        InsertNewStart startStr ->
             let
                 insert =
                     insertForm model
-
-                picker =
-                    SingleDatePicker.openPicker
-                        (SingleDatePicker.defaultSettings timeZone UpdateDatePicker)
-                        model.currentTime
-                        (Just insert.start)
-                        insert.picker
             in
-            ( { model | formInsert = Just { insert | picker = picker } }
-            , Cmd.none
-            )
-
-        UpdateDatePicker ( updatedPicker, maybePickedTime ) ->
-            let
-                insert =
-                    insertForm model
-
-                pickedTime =
-                    Maybe.withDefault insert.start maybePickedTime
-            in
-            ( { model | formInsert = Just { insert | picker = updatedPicker, start = pickedTime } }
+            ( { model | formInsert = Just { insert | formStart = startStr } }
             , Cmd.none
             )
 
@@ -394,7 +375,7 @@ update msg model =
                 newFormInsert =
                     case newStartResult of
                         Ok time ->
-                            { insert | start = time, error = Nothing }
+                            { insert | formStart = posix2timevalue time, error = Nothing }
 
                         Err errMSG ->
                             { insert | error = Just errMSG }
@@ -409,10 +390,15 @@ update msg model =
                     insertForm model
 
                 insertCMD =
-                    resultFromEmptyString "No duration provided" insert.formDuration
+                    Iso8601.toTime insert.formStart
+                        |> Result.mapError (\_ -> "Start is wrong")
                         |> Result.andThen
-                            (stringToDuration
-                                >> Result.map (\duration -> sendInsert ReceiveEvent insert.start duration insert.formComment)
+                            (\start ->
+                                resultFromEmptyString "No duration provided" insert.formDuration
+                                    |> Result.andThen
+                                        (stringToDuration
+                                            >> Result.map (\duration -> sendInsert ReceiveEvent start duration insert.formComment)
+                                        )
                             )
             in
             case insertCMD of
@@ -596,9 +582,9 @@ commentEncoder comment =
 
 emptyInsert : Time.Posix -> Insert
 emptyInsert currentTime =
-    { start = currentTime
-    , formDuration = ""
+    { formDuration = ""
     , formComment = ""
+    , formStart = posix2timevalue currentTime
     , picker = SingleDatePicker.init
     , error = Nothing
     }
@@ -859,8 +845,7 @@ viewInsert maybeInsert =
 
         Just insert ->
             div []
-                [ span [ onClick ClickDatePicker ] [ text <| posixToString insert.start ]
-                , SingleDatePicker.view (SingleDatePicker.defaultSettings timeZone UpdateDatePicker) insert.picker
+                [ input [ type_ "datetime-local", value insert.formStart, onInput InsertNewStart ] []
                 , input
                     [ id "duration"
                     , type_ "text"
@@ -1116,12 +1101,6 @@ viewFooter =
 subscriptions : Model -> Sub Msg
 subscriptions model =
     let
-        insertPicker =
-            SingleDatePicker.subscriptions
-                (SingleDatePicker.defaultSettings timeZone UpdateDatePicker)
-                UpdateDatePicker
-                (insertForm model).picker
-
         editPicker =
             case model.periodeAction of
                 ActionEdit edit ->
@@ -1137,9 +1116,71 @@ subscriptions model =
         browserTicker =
             Time.every 1000 BrowserTick
     in
-    [ Just insertPicker
-    , editPicker
+    [ editPicker
     , Just browserTicker
     ]
         |> List.filterMap identity
         |> Sub.batch
+
+
+posix2timevalue : Time.Posix -> String
+posix2timevalue time =
+    ---- YYYY
+    toPaddedString 4 (Time.toYear timeZone time)
+        ++ "-"
+        -- MM
+        ++ toPaddedString 2 (fromMonth (Time.toMonth timeZone time))
+        ++ "-"
+        -- DD
+        ++ toPaddedString 2 (Time.toDay timeZone time)
+        ++ "T"
+        -- HH
+        ++ toPaddedString 2 (Time.toHour timeZone time)
+        ++ ":"
+        -- mm
+        ++ toPaddedString 2 (Time.toMinute timeZone time)
+
+
+toPaddedString : Int -> Int -> String
+toPaddedString digits time =
+    String.padLeft digits '0' (String.fromInt time)
+
+
+fromMonth : Time.Month -> Int
+fromMonth month =
+    case month of
+        Time.Jan ->
+            1
+
+        Time.Feb ->
+            2
+
+        Time.Mar ->
+            3
+
+        Time.Apr ->
+            4
+
+        Time.May ->
+            5
+
+        Time.Jun ->
+            6
+
+        Time.Jul ->
+            7
+
+        Time.Aug ->
+            8
+
+        Time.Sep ->
+            9
+
+        Time.Oct ->
+            10
+
+        Time.Nov ->
+            11
+
+        Time.Dec ->
+            12

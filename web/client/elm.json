@@ -17,6 +17,7 @@
             "ianmackenzie/elm-units": "2.9.0",
             "justinmimbs/timezone-data": "5.1.2",
             "mercurymedia/elm-datetime-picker": "5.0.1",
+            "rtfeldman/elm-iso8601-date-strings": "1.1.4",
             "simonh1000/elm-jwt": "7.1.1"
         },
         "indirect": {
