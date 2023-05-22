@@ -13,7 +13,6 @@ import Jwt
 import Mony
 import Periode
 import Platform.Cmd as Cmd
-import SingleDatePicker
 import String
 import Time
 import Time.Format
@@ -67,15 +66,13 @@ type alias Insert =
     { formDuration : String
     , formComment : String
     , formStart : String
-    , picker : SingleDatePicker.DatePicker
     , error : Maybe String
     }
 
 
 type alias Edit =
     { id : Periode.ID
-    , start : Time.Posix
-    , picker : SingleDatePicker.DatePicker
+    , start : String
     , minutes : String
     , comment : String
     , error : Maybe String
@@ -85,8 +82,7 @@ type alias Edit =
 emptyEdit : Periode.Periode -> Edit
 emptyEdit periode =
     { id = periode.id
-    , start = periode.start
-    , picker = SingleDatePicker.init
+    , start = posix2timevalue periode.start
     , minutes = periode.duration |> durationToString
     , comment = periode.comment
     , error = Nothing
@@ -118,7 +114,7 @@ type Msg
     | ClickAdd
     | InsertAddDuration String
     | InsertAddComment String
-    | InsertNewStart String
+    | InsertStart String
     | ClickInsert
     | ClickUntilNow
       -- Edit Periode
@@ -126,8 +122,7 @@ type Msg
     | ClickEditSubmit
     | InsertEditComment String
     | InsertEditDuration String
-    | UpdateEditDatePicker ( SingleDatePicker.DatePicker, Maybe Time.Posix )
-    | ClickEditDatePicker
+    | InsertStartEdit String
 
 
 init : String -> ( Model, Cmd Msg )
@@ -253,15 +248,18 @@ update msg model =
                     let
                         mayDuration =
                             stringToDuration ep.minutes
+
+                        mayStart =
+                            Iso8601.toTime ep.start
                     in
-                    case mayDuration of
-                        Ok duration ->
+                    case ( mayDuration, mayStart ) of
+                        ( Ok duration, Ok start ) ->
                             ( { model | periodeAction = ActionNone }
-                            , sendEdit ReceiveEvent ep.id (Just ep.start) (Just duration) (Just ep.comment)
+                            , sendEdit ReceiveEvent ep.id (Just start) (Just duration) (Just ep.comment)
                             )
 
-                        Err err ->
-                            ( { model | periodeAction = ActionEdit { ep | error = Just err } }
+                        _ ->
+                            ( model
                             , Cmd.none
                             )
 
@@ -294,34 +292,10 @@ update msg model =
                     , Cmd.none
                     )
 
-        UpdateEditDatePicker ( updatedPicker, maybePickedTime ) ->
+        InsertStartEdit start ->
             case model.periodeAction of
                 ActionEdit ep ->
-                    let
-                        pickedTime =
-                            Maybe.withDefault ep.start maybePickedTime
-                    in
-                    ( { model | periodeAction = ActionEdit { ep | picker = updatedPicker, start = pickedTime } }
-                    , Cmd.none
-                    )
-
-                _ ->
-                    ( model
-                    , Cmd.none
-                    )
-
-        ClickEditDatePicker ->
-            case model.periodeAction of
-                ActionEdit ep ->
-                    let
-                        picker =
-                            SingleDatePicker.openPicker
-                                (SingleDatePicker.defaultSettings timeZone UpdateEditDatePicker)
-                                model.currentTime
-                                (Just ep.start)
-                                ep.picker
-                    in
-                    ( { model | periodeAction = ActionEdit { ep | picker = picker } }
+                    ( { model | periodeAction = ActionEdit { ep | start = start } }
                     , Cmd.none
                     )
 
@@ -335,7 +309,7 @@ update msg model =
             , Cmd.none
             )
 
-        InsertNewStart startStr ->
+        InsertStart startStr ->
             let
                 insert =
                     insertForm model
@@ -585,7 +559,6 @@ emptyInsert currentTime =
     { formDuration = ""
     , formComment = ""
     , formStart = posix2timevalue currentTime
-    , picker = SingleDatePicker.init
     , error = Nothing
     }
 
@@ -845,7 +818,7 @@ viewInsert maybeInsert =
 
         Just insert ->
             div []
-                [ input [ type_ "datetime-local", value insert.formStart, onInput InsertNewStart ] []
+                [ input [ type_ "datetime-local", value insert.formStart, onInput InsertStart ] []
                 , input
                     [ id "duration"
                     , type_ "text"
@@ -1042,8 +1015,7 @@ viewPeriodeEditLine edit =
     in
     tr []
         [ td []
-            [ span [ onClick ClickEditDatePicker ] [ text <| posixToString edit.start ]
-            , SingleDatePicker.view (SingleDatePicker.defaultSettings timeZone UpdateEditDatePicker) edit.picker
+            [ input [ type_ "datetime-local", value edit.start, onInput InsertStartEdit ] []
             ]
         , td []
             [ input
@@ -1099,28 +1071,8 @@ viewFooter =
 
 
 subscriptions : Model -> Sub Msg
-subscriptions model =
-    let
-        editPicker =
-            case model.periodeAction of
-                ActionEdit edit ->
-                    SingleDatePicker.subscriptions
-                        (SingleDatePicker.defaultSettings timeZone UpdateEditDatePicker)
-                        UpdateEditDatePicker
-                        edit.picker
-                        |> Just
-
-                _ ->
-                    Nothing
-
-        browserTicker =
-            Time.every 1000 BrowserTick
-    in
-    [ editPicker
-    , Just browserTicker
-    ]
-        |> List.filterMap identity
-        |> Sub.batch
+subscriptions _ =
+    Time.every 1000 BrowserTick
 
 
 posix2timevalue : Time.Posix -> String
