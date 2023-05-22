@@ -6,7 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <link href="/static/css/bootstrap.css" rel="stylesheet">
-    <link href="/static/css/datetimepicker.css" rel="stylesheet">
     <link href="/static/css/style.css" rel="stylesheet">
 
     <title>Timer</title>
@@ -32,7 +31,6 @@
     function readCookie(name) {
       var nameEQ = name + "=";
       var ca = document.cookie.split(';');
-      console.log(ca);
       for(var i=0;i < ca.length;i++) {
         var c = ca[i];
         while (c.charAt(0)==' ') c = c.substring(1,c.length);
