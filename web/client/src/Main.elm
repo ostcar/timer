@@ -619,7 +619,7 @@ formatTimeForInputDateTimeLocal time =
     toPaddedString 4 (Time.toYear timeZone time)
         ++ "-"
         -- MM
-        ++ toPaddedString 2 (fromMonth (Time.toMonth timeZone time))
+        ++ toPaddedString 2 (YearMonth.monthToInt (Time.toMonth timeZone time))
         ++ "-"
         -- DD
         ++ toPaddedString 2 (Time.toDay timeZone time)
@@ -637,7 +637,7 @@ formatTimeForUser time =
     toPaddedString 4 (Time.toYear timeZone time)
         ++ "-"
         -- MM
-        ++ toPaddedString 2 (fromMonth (Time.toMonth timeZone time))
+        ++ toPaddedString 2 (YearMonth.monthToInt (Time.toMonth timeZone time))
         ++ "-"
         -- DD
         ++ toPaddedString 2 (Time.toDay timeZone time)
@@ -647,46 +647,6 @@ formatTimeForUser time =
         ++ ":"
         -- mm
         ++ toPaddedString 2 (Time.toMinute timeZone time)
-
-
-fromMonth : Time.Month -> Int
-fromMonth month =
-    case month of
-        Time.Jan ->
-            1
-
-        Time.Feb ->
-            2
-
-        Time.Mar ->
-            3
-
-        Time.Apr ->
-            4
-
-        Time.May ->
-            5
-
-        Time.Jun ->
-            6
-
-        Time.Jul ->
-            7
-
-        Time.Aug ->
-            8
-
-        Time.Sep ->
-            9
-
-        Time.Oct ->
-            10
-
-        Time.Nov ->
-            11
-
-        Time.Dec ->
-            12
 
 
 toPaddedString : Int -> Int -> String

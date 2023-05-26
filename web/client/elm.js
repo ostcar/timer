@@ -7754,7 +7754,7 @@ var $author$project$Main$editPeriodeRequest = F5(
 				url: '/api/periode/' + $author$project$Periode$idToString(id)
 			});
 	});
-var $author$project$Main$fromMonth = function (month) {
+var $author$project$YearMonth$monthToInt = function (month) {
 	switch (month.$) {
 		case 'Jan':
 			return 1;
@@ -8492,7 +8492,7 @@ var $author$project$Main$formatTimeForInputDateTimeLocal = function (time) {
 		A2($elm$time$Time$toYear, $author$project$Main$timeZone, time)) + ('-' + (A2(
 		$author$project$Main$toPaddedString,
 		2,
-		$author$project$Main$fromMonth(
+		$author$project$YearMonth$monthToInt(
 			A2($elm$time$Time$toMonth, $author$project$Main$timeZone, time))) + ('-' + (A2(
 		$author$project$Main$toPaddedString,
 		2,
@@ -9921,29 +9921,50 @@ var $author$project$Main$canWrite = F2(
 			return $elm$html$Html$text('');
 		}
 	});
-var $author$project$Periode$anyIndex = F2(
-	function (comparer, list) {
-		return A3(
-			$elm$core$List$foldl,
-			F2(
-				function (element, found) {
-					return (element >= 0) ? element : found;
-				}),
-			-1,
-			A2(
-				$elm$core$List$indexedMap,
-				F2(
-					function (index, element) {
-						return comparer(element) ? index : (-1);
-					}),
-				list));
-	});
 var $author$project$YearMonth$fromPosix = F2(
 	function (zone, time) {
 		return A2(
 			$author$project$YearMonth$YearMonth,
 			A2($elm$time$Time$toYear, zone, time),
 			A2($elm$time$Time$toMonth, zone, time));
+	});
+var $author$project$Periode$toIndexedList = F2(
+	function (_v0, elements) {
+		var myIdx = _v0.a;
+		var myElement = _v0.b;
+		var _v1 = A3(
+			$elm$core$List$foldl,
+			F2(
+				function (_v2, _v3) {
+					var idx = _v2.a;
+					var filteredElements = _v2.b;
+					var acc = _v3.a;
+					var found = _v3.b;
+					return _Utils_eq(idx, myIdx) ? _Utils_Tuple2(
+						A2(
+							$elm$core$List$cons,
+							_Utils_Tuple2(
+								idx,
+								A2($elm$core$List$cons, myElement, filteredElements)),
+							acc),
+						true) : _Utils_Tuple2(
+						A2(
+							$elm$core$List$cons,
+							_Utils_Tuple2(idx, filteredElements),
+							acc),
+						found);
+				}),
+			_Utils_Tuple2(_List_Nil, false),
+			elements);
+		var createdList = _v1.a;
+		var contains = _v1.b;
+		return contains ? createdList : A2(
+			$elm$core$List$cons,
+			_Utils_Tuple2(
+				myIdx,
+				_List_fromArray(
+					[myElement])),
+			elements);
 	});
 var $author$project$YearMonth$monthToString = function (month) {
 	switch (month.$) {
@@ -9987,32 +10008,13 @@ var $author$project$Periode$byYearMonth = F2(
 		return A3(
 			$elm$core$List$foldl,
 			F2(
-				function (p, list) {
-					var index = $author$project$YearMonth$toString(
-						A2($author$project$YearMonth$fromPosix, zone, p.start));
-					var foundIndex = A2(
-						$author$project$Periode$anyIndex,
-						function (e) {
-							return _Utils_eq(e.a, index);
-						},
-						list);
-					return _Utils_eq(foundIndex, -1) ? A2(
-						$elm$core$List$cons,
-						_Utils_Tuple2(
-							index,
-							_List_fromArray(
-								[p])),
-						list) : A2(
-						$elm$core$List$indexedMap,
-						F2(
-							function (idx, _v0) {
-								var ym = _v0.a;
-								var l = _v0.b;
-								return _Utils_eq(idx, foundIndex) ? _Utils_Tuple2(
-									ym,
-									A2($elm$core$List$cons, p, l)) : _Utils_Tuple2(ym, l);
-							}),
-						list);
+				function (periode, acc) {
+					var myIdx = $author$project$YearMonth$toString(
+						A2($author$project$YearMonth$fromPosix, zone, periode.start));
+					return A2(
+						$author$project$Periode$toIndexedList,
+						_Utils_Tuple2(myIdx, periode),
+						acc);
 				}),
 			_List_Nil,
 			periodes);
@@ -10356,7 +10358,7 @@ var $author$project$Main$formatTimeForUser = function (time) {
 		A2($elm$time$Time$toYear, $author$project$Main$timeZone, time)) + ('-' + (A2(
 		$author$project$Main$toPaddedString,
 		2,
-		$author$project$Main$fromMonth(
+		$author$project$YearMonth$monthToInt(
 			A2($elm$time$Time$toMonth, $author$project$Main$timeZone, time))) + ('-' + (A2(
 		$author$project$Main$toPaddedString,
 		2,
@@ -10772,16 +10774,21 @@ var $elm$html$Html$Attributes$boolProperty = F2(
 			$elm$json$Json$Encode$bool(bool));
 	});
 var $elm$html$Html$Attributes$selected = $elm$html$Html$Attributes$boolProperty('selected');
+var $elm$core$String$replace = F3(
+	function (before, after, string) {
+		return A2(
+			$elm$core$String$join,
+			after,
+			A2($elm$core$String$split, before, string));
+	});
 var $elm$core$String$toLower = _String_toLower;
-var $author$project$YearMonth$toAttr = function (yearMonth) {
-	if (yearMonth.$ === 'All') {
-		return 'alle';
-	} else {
-		var year = yearMonth.a;
-		var month = yearMonth.b;
-		return $elm$core$String$toLower(
-			$elm$core$String$fromInt(year) + ('_' + $author$project$YearMonth$monthToString(month)));
-	}
+var $author$project$YearMonth$toSelectAttr = function (yearMonth) {
+	return $elm$core$String$toLower(
+		A3(
+			$elm$core$String$replace,
+			' ',
+			'_',
+			$author$project$YearMonth$toString(yearMonth)));
 };
 var $author$project$YearMonth$viewYearMonthOption = F2(
 	function (selectedYM, ym) {
@@ -10790,7 +10797,7 @@ var $author$project$YearMonth$viewYearMonthOption = F2(
 			_List_fromArray(
 				[
 					$elm$html$Html$Attributes$value(
-					$author$project$YearMonth$toAttr(ym)),
+					$author$project$YearMonth$toSelectAttr(ym)),
 					$elm$html$Html$Attributes$selected(
 					_Utils_eq(selectedYM, ym))
 				]),
@@ -10800,10 +10807,13 @@ var $author$project$YearMonth$viewYearMonthOption = F2(
 					$author$project$YearMonth$toString(ym))
 				]));
 	});
-var $author$project$YearMonth$yearMonthList = function (zone) {
-	return $elm$core$List$map(
-		$author$project$YearMonth$fromPosix(zone));
-};
+var $author$project$YearMonth$yearMonthList = F2(
+	function (zone, times) {
+		return A2(
+			$elm$core$List$map,
+			$author$project$YearMonth$fromPosix(zone),
+			times);
+	});
 var $author$project$YearMonth$viewYearMonthSelect = F4(
 	function (zone, selected, event, times) {
 		return A2(
