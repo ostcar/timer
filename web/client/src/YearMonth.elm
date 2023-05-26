@@ -1,4 +1,4 @@
-module YearMonth exposing (YearMonthSelect(..), fromAttr, fromPosix, toString, viewYearMonthSelect, yearMonthList)
+module YearMonth exposing (YearMonthSelect(..), fromSelectAttr, fromPosix, toString, viewYearMonthSelect, yearMonthList)
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -46,8 +46,8 @@ toAttr yearMonth =
                 |> String.toLower
 
 
-fromAttr : String -> YearMonthSelect
-fromAttr value =
+fromSelectAttr : String -> YearMonthSelect
+fromSelectAttr value =
     case String.split "_" value of
         [ strYear, strMonth ] ->
             let

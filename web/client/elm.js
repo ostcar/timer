@@ -5832,6 +5832,10 @@ var $author$project$Main$ActionNone = {$: 'ActionNone'};
 var $author$project$YearMonth$All = {$: 'All'};
 var $author$project$Periode$Stopped = {$: 'Stopped'};
 var $author$project$Main$ViewPeriodes = {$: 'ViewPeriodes'};
+var $author$project$Main$emptyModel = F2(
+	function (permission, time) {
+		return {current: $author$project$Periode$Stopped, currentTime: time, errMsg: $elm$core$Maybe$Nothing, formComment: '', formLoginPassword: '', formYearMonth: $author$project$YearMonth$All, insert: $elm$core$Maybe$Nothing, periodeAction: $author$project$Main$ActionNone, periodes: _List_Nil, permission: permission, viewBody: $author$project$Main$ViewPeriodes};
+	});
 var $elm$time$Time$Posix = function (a) {
 	return {$: 'Posix', a: a};
 };
@@ -6464,8 +6468,8 @@ var $author$project$Main$permissionFromJWT = function (token) {
 			A2($elm$core$Basics$composeR, $author$project$Main$permissionFromString, $elm$core$Result$Ok),
 			A2($simonh1000$elm_jwt$Jwt$decodeToken, decoder, token)));
 };
-var $author$project$Main$ReceivedState = function (a) {
-	return {$: 'ReceivedState', a: a};
+var $author$project$Main$ReceivedData = function (a) {
+	return {$: 'ReceivedData', a: a};
 };
 var $elm$http$Http$BadStatus_ = F2(
 	function (a, b) {
@@ -7390,11 +7394,11 @@ var $author$project$Periode$fetch = function (result) {
 };
 var $elm$core$Platform$Cmd$batch = _Platform_batch;
 var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
-var $author$project$Main$updateStateIfPermission = function (perm) {
+var $author$project$Main$updateDataCommand = function (perm) {
 	if (perm.$ === 'PermissionNone') {
 		return $elm$core$Platform$Cmd$none;
 	} else {
-		return $author$project$Periode$fetch($author$project$Main$ReceivedState);
+		return $author$project$Periode$fetch($author$project$Main$ReceivedData);
 	}
 };
 var $author$project$Main$init = function (_v0) {
@@ -7402,20 +7406,11 @@ var $author$project$Main$init = function (_v0) {
 	var millis = _v0.b;
 	var permission = $author$project$Main$permissionFromJWT(jwt);
 	return _Utils_Tuple2(
-		{
-			current: $author$project$Periode$Stopped,
-			currentTime: $elm$time$Time$millisToPosix(millis),
-			errMsg: $elm$core$Maybe$Nothing,
-			formComment: '',
-			formLoginPassword: '',
-			formYearMonth: $author$project$YearMonth$All,
-			insert: $elm$core$Maybe$Nothing,
-			periodeAction: $author$project$Main$ActionNone,
-			periodes: _List_Nil,
-			permission: permission,
-			viewBody: $author$project$Main$ViewPeriodes
-		},
-		$author$project$Main$updateStateIfPermission(permission));
+		A2(
+			$author$project$Main$emptyModel,
+			permission,
+			$elm$time$Time$millisToPosix(millis)),
+		$author$project$Main$updateDataCommand(permission));
 };
 var $author$project$Main$CurrentTime = function (a) {
 	return {$: 'CurrentTime', a: a};
@@ -7695,22 +7690,13 @@ var $author$project$Main$ActionDelete = function (a) {
 var $author$project$Main$ActionEdit = function (a) {
 	return {$: 'ActionEdit', a: a};
 };
-var $author$project$Main$ReceivedAuth = function (a) {
-	return {$: 'ReceivedAuth', a: a};
+var $author$project$Main$ReceivedActionResponse = function (a) {
+	return {$: 'ReceivedActionResponse', a: a};
 };
-var $author$project$Main$ReceivedEvent = function (a) {
-	return {$: 'ReceivedEvent', a: a};
+var $author$project$Main$ReceivedAuthResponse = function (a) {
+	return {$: 'ReceivedAuthResponse', a: a};
 };
-var $elm$core$Maybe$andThen = F2(
-	function (callback, maybeValue) {
-		if (maybeValue.$ === 'Just') {
-			var value = maybeValue.a;
-			return callback(value);
-		} else {
-			return $elm$core$Maybe$Nothing;
-		}
-	});
-var $author$project$Main$buildErrorMessage = function (httpError) {
+var $author$project$Main$buildHTTPResponseErrorMessage = function (httpError) {
 	switch (httpError.$) {
 		case 'BadUrl':
 			var message = httpError.a;
@@ -7727,6 +7713,33 @@ var $author$project$Main$buildErrorMessage = function (httpError) {
 			return message;
 	}
 };
+var $author$project$Main$cleanModelWithError = F2(
+	function (model, err) {
+		var cleanModel = A2($author$project$Main$emptyModel, model.permission, model.currentTime);
+		return _Utils_update(
+			cleanModel,
+			{
+				errMsg: $elm$core$Maybe$Just(err)
+			});
+	});
+var $author$project$Main$combineResult = F3(
+	function (fnGood, r1, r2) {
+		var _v0 = _Utils_Tuple2(r1, r2);
+		if (_v0.a.$ === 'Ok') {
+			if (_v0.b.$ === 'Ok') {
+				var a = _v0.a.a;
+				var b = _v0.b.a;
+				return $elm$core$Result$Ok(
+					A2(fnGood, a, b));
+			} else {
+				var b = _v0.b.a;
+				return $elm$core$Result$Err(b);
+			}
+		} else {
+			var a = _v0.a.a;
+			return $elm$core$Result$Err(a);
+		}
+	});
 var $elm$core$String$fromFloat = _String_fromNumber;
 var $ianmackenzie$elm_units$Duration$inSeconds = function (_v0) {
 	var numSeconds = _v0.a;
@@ -8490,21 +8503,21 @@ var $author$project$Main$posix2timevalue = function (time) {
 		2,
 		A2($elm$time$Time$toMinute, $author$project$Main$timeZone, time)))))))));
 };
-var $author$project$Main$emptyEdit = function (periode) {
+var $author$project$Main$emptyActionEdit = function (periode) {
 	return {
 		comment: periode.comment,
+		duration: $author$project$Main$durationToString(periode.duration),
 		error: $elm$core$Maybe$Nothing,
 		id: periode.id,
-		minutes: $author$project$Main$durationToString(periode.duration),
 		start: $author$project$Main$posix2timevalue(periode.start)
 	};
 };
-var $author$project$Main$emptyInsert = function (currentTime) {
+var $author$project$Main$emptyAddPeriode = function (currentTime) {
 	return {
+		comment: '',
+		duration: '',
 		error: $elm$core$Maybe$Nothing,
-		formComment: '',
-		formDuration: '',
-		formStart: $author$project$Main$posix2timevalue(currentTime)
+		start: $author$project$Main$posix2timevalue(currentTime)
 	};
 };
 var $elm$http$Http$expectBytesResponse = F2(
@@ -8582,7 +8595,7 @@ var $elm$core$Maybe$withDefault = F2(
 			return _default;
 		}
 	});
-var $author$project$YearMonth$fromAttr = function (value) {
+var $author$project$YearMonth$fromSelectAttr = function (value) {
 	var _v0 = A2($elm$core$String$split, '_', value);
 	if ((_v0.b && _v0.b.b) && (!_v0.b.b.b)) {
 		var strYear = _v0.a;
@@ -8598,25 +8611,22 @@ var $author$project$YearMonth$fromAttr = function (value) {
 		return $author$project$YearMonth$All;
 	}
 };
-var $elm$core$List$head = function (list) {
-	if (list.b) {
-		var x = list.a;
-		var xs = list.b;
-		return $elm$core$Maybe$Just(x);
-	} else {
-		return $elm$core$Maybe$Nothing;
-	}
-};
-var $author$project$Main$insertForm = function (model) {
+var $author$project$Main$handleError = F2(
+	function (fn, result) {
+		if (result.$ === 'Ok') {
+			var v = result.a;
+			return v;
+		} else {
+			var err = result.a;
+			return fn(err);
+		}
+	});
+var $author$project$Main$modelInsert = function (model) {
 	return A2(
 		$elm$core$Maybe$withDefault,
-		$author$project$Main$emptyInsert(model.currentTime),
+		$author$project$Main$emptyAddPeriode(model.currentTime),
 		model.insert);
 };
-var $author$project$Main$resultFromEmptyString = F2(
-	function (error, str) {
-		return (str === '') ? $elm$core$Result$Err(error) : $elm$core$Result$Ok(str);
-	});
 var $author$project$Periode$idToString = function (_v0) {
 	var id = _v0.a;
 	return $elm$core$String$fromInt(id);
@@ -9572,7 +9582,14 @@ var $rtfeldman$elm_iso8601_date_strings$Iso8601$toTime = function (str) {
 var $author$project$Main$update = F2(
 	function (msg, model) {
 		switch (msg.$) {
-			case 'ReceivedState':
+			case 'CurrentTime':
+				var newTime = msg.a;
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{currentTime: newTime}),
+					$elm$core$Platform$Cmd$none);
+			case 'ReceivedData':
 				var response = msg.a;
 				if (response.$ === 'Ok') {
 					var state = response.a;
@@ -9589,312 +9606,25 @@ var $author$project$Main$update = F2(
 				} else {
 					var e = response.a;
 					return _Utils_Tuple2(
-						_Utils_update(
+						A2(
+							$author$project$Main$cleanModelWithError,
 							model,
-							{
-								current: $author$project$Periode$Stopped,
-								errMsg: $elm$core$Maybe$Just(
-									$author$project$Main$buildErrorMessage(e)),
-								periodes: _List_Nil
-							}),
+							$author$project$Main$buildHTTPResponseErrorMessage(e)),
 						$elm$core$Platform$Cmd$none);
 				}
-			case 'ReceivedEvent':
+			case 'ReceivedActionResponse':
 				var response = msg.a;
 				if (response.$ === 'Ok') {
 					return _Utils_Tuple2(
 						model,
-						$author$project$Main$updateStateIfPermission(model.permission));
+						$author$project$Main$updateDataCommand(model.permission));
 				} else {
 					var e = response.a;
 					return _Utils_Tuple2(
-						_Utils_update(
-							model,
-							{
-								current: $author$project$Periode$Stopped,
-								errMsg: $elm$core$Maybe$Just(
-									$author$project$Main$buildErrorMessage(e)),
-								periodes: _List_Nil,
-								permission: $author$project$Main$PermissionNone
-							}),
-						$elm$core$Platform$Cmd$none);
-				}
-			case 'CurrentTime':
-				var newTime = msg.a;
-				return _Utils_Tuple2(
-					_Utils_update(
-						model,
-						{currentTime: newTime}),
-					$elm$core$Platform$Cmd$none);
-			case 'InsertedCurrentComment':
-				var comment = msg.a;
-				return _Utils_Tuple2(
-					_Utils_update(
-						model,
-						{formComment: comment}),
-					$elm$core$Platform$Cmd$none);
-			case 'ClickedStart':
-				return _Utils_Tuple2(
-					model,
-					A3($author$project$Main$sendStartStop, 'start', $author$project$Main$ReceivedEvent, model.formComment));
-			case 'ClickedStop':
-				return _Utils_Tuple2(
-					model,
-					A3($author$project$Main$sendStartStop, 'stop', $author$project$Main$ReceivedEvent, model.formComment));
-			case 'ClickedActionContinue':
-				var id = msg.a;
-				return _Utils_Tuple2(
-					model,
-					A2(
-						$elm$core$Maybe$withDefault,
-						$elm$core$Platform$Cmd$none,
 						A2(
-							$elm$core$Maybe$andThen,
-							function (p) {
-								return $elm$core$Maybe$Just(
-									A3($author$project$Main$sendStartStop, 'start', $author$project$Main$ReceivedEvent, p.comment));
-							},
-							$elm$core$List$head(
-								A2(
-									$elm$core$List$filter,
-									function (p) {
-										return _Utils_eq(p.id, id);
-									},
-									model.periodes)))));
-			case 'ClickedActionEdit':
-				var periode = msg.a;
-				return _Utils_Tuple2(
-					_Utils_update(
-						model,
-						{
-							periodeAction: $author$project$Main$ActionEdit(
-								$author$project$Main$emptyEdit(periode))
-						}),
-					$elm$core$Platform$Cmd$none);
-			case 'ClickedActionDelete':
-				var id = msg.a;
-				return _Utils_Tuple2(
-					_Utils_update(
-						model,
-						{
-							periodeAction: $author$project$Main$ActionDelete(id)
-						}),
-					$elm$core$Platform$Cmd$none);
-			case 'ClickedActionSubmit':
-				var id = msg.a;
-				return _Utils_Tuple2(
-					model,
-					A2($author$project$Main$sendDelete, $author$project$Main$ReceivedEvent, id));
-			case 'ClickedActionAbort':
-				return _Utils_Tuple2(
-					_Utils_update(
-						model,
-						{periodeAction: $author$project$Main$ActionNone}),
-					$elm$core$Platform$Cmd$none);
-			case 'ClickedActionSubmit2':
-				var _v3 = model.periodeAction;
-				if (_v3.$ === 'ActionEdit') {
-					var ep = _v3.a;
-					var mayStart = $rtfeldman$elm_iso8601_date_strings$Iso8601$toTime(ep.start);
-					var mayDuration = $author$project$Main$stringToDuration(ep.minutes);
-					var _v4 = _Utils_Tuple2(mayDuration, mayStart);
-					if ((_v4.a.$ === 'Ok') && (_v4.b.$ === 'Ok')) {
-						var duration = _v4.a.a;
-						var start = _v4.b.a;
-						return _Utils_Tuple2(
-							_Utils_update(
-								model,
-								{periodeAction: $author$project$Main$ActionNone}),
-							A5(
-								$author$project$Main$sendEdit,
-								$author$project$Main$ReceivedEvent,
-								ep.id,
-								$elm$core$Maybe$Just(start),
-								$elm$core$Maybe$Just(duration),
-								$elm$core$Maybe$Just(ep.comment)));
-					} else {
-						return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
-					}
-				} else {
-					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
-				}
-			case 'InsertedActionEditComment':
-				var comment = msg.a;
-				var _v5 = model.periodeAction;
-				if (_v5.$ === 'ActionEdit') {
-					var ep = _v5.a;
-					return _Utils_Tuple2(
-						_Utils_update(
+							$author$project$Main$cleanModelWithError,
 							model,
-							{
-								periodeAction: $author$project$Main$ActionEdit(
-									_Utils_update(
-										ep,
-										{comment: comment}))
-							}),
-						$elm$core$Platform$Cmd$none);
-				} else {
-					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
-				}
-			case 'InsertedActionEditDuration':
-				var minutes = msg.a;
-				var _v6 = model.periodeAction;
-				if (_v6.$ === 'ActionEdit') {
-					var ep = _v6.a;
-					return _Utils_Tuple2(
-						_Utils_update(
-							model,
-							{
-								periodeAction: $author$project$Main$ActionEdit(
-									_Utils_update(
-										ep,
-										{minutes: minutes}))
-							}),
-						$elm$core$Platform$Cmd$none);
-				} else {
-					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
-				}
-			case 'InsertedActionEditStartTime':
-				var start = msg.a;
-				var _v7 = model.periodeAction;
-				if (_v7.$ === 'ActionEdit') {
-					var ep = _v7.a;
-					return _Utils_Tuple2(
-						_Utils_update(
-							model,
-							{
-								periodeAction: $author$project$Main$ActionEdit(
-									_Utils_update(
-										ep,
-										{start: start}))
-							}),
-						$elm$core$Platform$Cmd$none);
-				} else {
-					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
-				}
-			case 'ClickAddPeriode':
-				return _Utils_Tuple2(
-					_Utils_update(
-						model,
-						{
-							insert: $elm$core$Maybe$Just(
-								$author$project$Main$emptyInsert(model.currentTime))
-						}),
-					$elm$core$Platform$Cmd$none);
-			case 'InsertedAddPeriodeStartTime':
-				var startStr = msg.a;
-				var insert = $author$project$Main$insertForm(model);
-				return _Utils_Tuple2(
-					_Utils_update(
-						model,
-						{
-							insert: $elm$core$Maybe$Just(
-								_Utils_update(
-									insert,
-									{formStart: startStr}))
-						}),
-					$elm$core$Platform$Cmd$none);
-			case 'InsertedAddPeriodeDuration':
-				var durationStr = msg.a;
-				var insert = $author$project$Main$insertForm(model);
-				return _Utils_Tuple2(
-					_Utils_update(
-						model,
-						{
-							insert: $elm$core$Maybe$Just(
-								_Utils_update(
-									insert,
-									{formDuration: durationStr}))
-						}),
-					$elm$core$Platform$Cmd$none);
-			case 'InsertedAddPeriodeComment':
-				var comment = msg.a;
-				var insert = $author$project$Main$insertForm(model);
-				return _Utils_Tuple2(
-					_Utils_update(
-						model,
-						{
-							insert: $elm$core$Maybe$Just(
-								_Utils_update(
-									insert,
-									{formComment: comment}))
-						}),
-					$elm$core$Platform$Cmd$none);
-			case 'ClickedAddPeriodeUntilNow':
-				var insert = $author$project$Main$insertForm(model);
-				var newStartResult = A2(
-					$elm$core$Result$map,
-					function (duration) {
-						return A2($ianmackenzie$elm_units$Duration$subtractFrom, model.currentTime, duration);
-					},
-					$author$project$Main$stringToDuration(insert.formDuration));
-				var newFormInsert = function () {
-					if (newStartResult.$ === 'Ok') {
-						var time = newStartResult.a;
-						return _Utils_update(
-							insert,
-							{
-								error: $elm$core$Maybe$Nothing,
-								formStart: $author$project$Main$posix2timevalue(time)
-							});
-					} else {
-						var errMSG = newStartResult.a;
-						return _Utils_update(
-							insert,
-							{
-								error: $elm$core$Maybe$Just(errMSG)
-							});
-					}
-				}();
-				return _Utils_Tuple2(
-					_Utils_update(
-						model,
-						{
-							insert: $elm$core$Maybe$Just(newFormInsert)
-						}),
-					$elm$core$Platform$Cmd$none);
-			case 'ClickedAddPeriodeSubmit':
-				var insert = $author$project$Main$insertForm(model);
-				var insertCMD = A2(
-					$elm$core$Result$andThen,
-					function (start) {
-						return A2(
-							$elm$core$Result$andThen,
-							A2(
-								$elm$core$Basics$composeR,
-								$author$project$Main$stringToDuration,
-								$elm$core$Result$map(
-									function (duration) {
-										return A4($author$project$Main$sendInsert, $author$project$Main$ReceivedEvent, start, duration, insert.formComment);
-									})),
-							A2($author$project$Main$resultFromEmptyString, 'No duration provided', insert.formDuration));
-					},
-					A2(
-						$elm$core$Result$mapError,
-						function (_v10) {
-							return 'Start is wrong';
-						},
-						$rtfeldman$elm_iso8601_date_strings$Iso8601$toTime(insert.formStart)));
-				if (insertCMD.$ === 'Ok') {
-					var cmd = insertCMD.a;
-					return _Utils_Tuple2(
-						_Utils_update(
-							model,
-							{insert: $elm$core$Maybe$Nothing}),
-						cmd);
-				} else {
-					var errMSG = insertCMD.a;
-					return _Utils_Tuple2(
-						_Utils_update(
-							model,
-							{
-								insert: $elm$core$Maybe$Just(
-									_Utils_update(
-										insert,
-										{
-											error: $elm$core$Maybe$Just(errMSG)
-										}))
-							}),
+							$author$project$Main$buildHTTPResponseErrorMessage(e)),
 						$elm$core$Platform$Cmd$none);
 				}
 			case 'InsertedLoginPassword':
@@ -9909,8 +9639,8 @@ var $author$project$Main$update = F2(
 					_Utils_update(
 						model,
 						{formLoginPassword: ''}),
-					A2($author$project$Main$sendPassword, $author$project$Main$ReceivedAuth, model.formLoginPassword));
-			case 'ReceivedAuth':
+					A2($author$project$Main$sendPassword, $author$project$Main$ReceivedAuthResponse, model.formLoginPassword));
+			case 'ReceivedAuthResponse':
 				var response = msg.a;
 				if (response.$ === 'Ok') {
 					var permissionLevel = response.a;
@@ -9920,18 +9650,14 @@ var $author$project$Main$update = F2(
 							{
 								permission: $author$project$Main$permissionFromString(permissionLevel)
 							}),
-						$author$project$Periode$fetch($author$project$Main$ReceivedState));
+						$author$project$Periode$fetch($author$project$Main$ReceivedData));
 				} else {
 					var e = response.a;
 					return _Utils_Tuple2(
-						_Utils_update(
+						A2(
+							$author$project$Main$cleanModelWithError,
 							model,
-							{
-								current: $author$project$Periode$Stopped,
-								errMsg: $elm$core$Maybe$Just(
-									$author$project$Main$buildErrorMessage(e)),
-								periodes: _List_Nil
-							}),
+							$author$project$Main$buildHTTPResponseErrorMessage(e)),
 						$elm$core$Platform$Cmd$none);
 				}
 			case 'ClickedLogout':
@@ -9941,25 +9667,311 @@ var $author$project$Main$update = F2(
 						{permission: $author$project$Main$PermissionNone}),
 					$elm$http$Http$get(
 						{
-							expect: $elm$http$Http$expectWhatever($author$project$Main$ReceivedEvent),
+							expect: $elm$http$Http$expectWhatever($author$project$Main$ReceivedActionResponse),
 							url: '/api/auth/logout'
 						}));
 			case 'SelectedYearMonthFilter':
-				var value = msg.a;
+				var selectAttr = msg.a;
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
 						{
-							formYearMonth: $author$project$YearMonth$fromAttr(value)
+							formYearMonth: $author$project$YearMonth$fromSelectAttr(selectAttr)
 						}),
 					$elm$core$Platform$Cmd$none);
-			default:
+			case 'ClickedBodyNav':
 				var value = msg.a;
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
 						{viewBody: value}),
 					$elm$core$Platform$Cmd$none);
+			case 'ClickedStart':
+				return _Utils_Tuple2(
+					model,
+					A3($author$project$Main$sendStartStop, 'start', $author$project$Main$ReceivedActionResponse, model.formComment));
+			case 'ClickedStop':
+				return _Utils_Tuple2(
+					model,
+					A3($author$project$Main$sendStartStop, 'stop', $author$project$Main$ReceivedActionResponse, model.formComment));
+			case 'InsertedCurrentComment':
+				var comment = msg.a;
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{formComment: comment}),
+					$elm$core$Platform$Cmd$none);
+			case 'ClickedAddPeriode':
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{
+							insert: $elm$core$Maybe$Just(
+								$author$project$Main$emptyAddPeriode(model.currentTime))
+						}),
+					$elm$core$Platform$Cmd$none);
+			case 'InsertedAddPeriodeStartTime':
+				var startStr = msg.a;
+				var insert = $author$project$Main$modelInsert(model);
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{
+							insert: $elm$core$Maybe$Just(
+								_Utils_update(
+									insert,
+									{start: startStr}))
+						}),
+					$elm$core$Platform$Cmd$none);
+			case 'InsertedAddPeriodeDuration':
+				var duration = msg.a;
+				var insert = $author$project$Main$modelInsert(model);
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{
+							insert: $elm$core$Maybe$Just(
+								_Utils_update(
+									insert,
+									{duration: duration}))
+						}),
+					$elm$core$Platform$Cmd$none);
+			case 'InsertedAddPeriodeComment':
+				var comment = msg.a;
+				var insert = $author$project$Main$modelInsert(model);
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{
+							insert: $elm$core$Maybe$Just(
+								_Utils_update(
+									insert,
+									{comment: comment}))
+						}),
+					$elm$core$Platform$Cmd$none);
+			case 'ClickedAddPeriodeSubmit':
+				var insert = $author$project$Main$modelInsert(model);
+				var mayDuration = A2(
+					$elm$core$Result$mapError,
+					function (_v6) {
+						return 'Duration is wrong';
+					},
+					$author$project$Main$stringToDuration(insert.duration));
+				var mayStart = A2(
+					$elm$core$Result$mapError,
+					function (_v5) {
+						return 'Start is wrong';
+					},
+					$rtfeldman$elm_iso8601_date_strings$Iso8601$toTime(insert.start));
+				var insertCmd = A3(
+					$author$project$Main$combineResult,
+					F2(
+						function (duration, start) {
+							return A4($author$project$Main$sendInsert, $author$project$Main$ReceivedActionResponse, start, duration, insert.comment);
+						}),
+					mayDuration,
+					mayStart);
+				if (insertCmd.$ === 'Ok') {
+					var cmd = insertCmd.a;
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{insert: $elm$core$Maybe$Nothing}),
+						cmd);
+				} else {
+					var errMSG = insertCmd.a;
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{
+								insert: $elm$core$Maybe$Just(
+									_Utils_update(
+										insert,
+										{
+											error: $elm$core$Maybe$Just(errMSG)
+										}))
+							}),
+						$elm$core$Platform$Cmd$none);
+				}
+			case 'ClickedAddPeriodeUntilNow':
+				var insert = $author$project$Main$modelInsert(model);
+				var newInsert = A2(
+					$author$project$Main$handleError,
+					function (errMSG) {
+						return _Utils_update(
+							insert,
+							{
+								error: $elm$core$Maybe$Just(errMSG)
+							});
+					},
+					A2(
+						$elm$core$Result$map,
+						function (time) {
+							return _Utils_update(
+								insert,
+								{
+									error: $elm$core$Maybe$Nothing,
+									start: $author$project$Main$posix2timevalue(time)
+								});
+						},
+						A2(
+							$elm$core$Result$map,
+							function (duration) {
+								return A2($ianmackenzie$elm_units$Duration$subtractFrom, model.currentTime, duration);
+							},
+							$author$project$Main$stringToDuration(insert.duration))));
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{
+							insert: $elm$core$Maybe$Just(newInsert)
+						}),
+					$elm$core$Platform$Cmd$none);
+			case 'ClickedActionContinue':
+				var periode = msg.a;
+				return _Utils_Tuple2(
+					model,
+					A3($author$project$Main$sendStartStop, 'start', $author$project$Main$ReceivedActionResponse, periode.comment));
+			case 'ClickedActionEdit':
+				var periode = msg.a;
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{
+							periodeAction: $author$project$Main$ActionEdit(
+								$author$project$Main$emptyActionEdit(periode))
+						}),
+					$elm$core$Platform$Cmd$none);
+			case 'ClickedActionDelete':
+				var periode = msg.a;
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{
+							periodeAction: $author$project$Main$ActionDelete(periode)
+						}),
+					$elm$core$Platform$Cmd$none);
+			case 'ClickedActionSubmit':
+				var _v7 = model.periodeAction;
+				switch (_v7.$) {
+					case 'ActionEdit':
+						var ep = _v7.a;
+						var mayStart = A2(
+							$elm$core$Result$mapError,
+							function (_v10) {
+								return 'Start is wrong';
+							},
+							$rtfeldman$elm_iso8601_date_strings$Iso8601$toTime(ep.start));
+						var mayDuration = A2(
+							$elm$core$Result$mapError,
+							function (_v9) {
+								return 'Duration is wrong';
+							},
+							$author$project$Main$stringToDuration(ep.duration));
+						var editCmd = A3(
+							$author$project$Main$combineResult,
+							F2(
+								function (duration, start) {
+									return A5(
+										$author$project$Main$sendEdit,
+										$author$project$Main$ReceivedActionResponse,
+										ep.id,
+										$elm$core$Maybe$Just(start),
+										$elm$core$Maybe$Just(duration),
+										$elm$core$Maybe$Just(ep.comment));
+								}),
+							mayDuration,
+							mayStart);
+						if (editCmd.$ === 'Ok') {
+							var cmd = editCmd.a;
+							return _Utils_Tuple2(
+								_Utils_update(
+									model,
+									{periodeAction: $author$project$Main$ActionNone}),
+								cmd);
+						} else {
+							var err = editCmd.a;
+							return _Utils_Tuple2(
+								_Utils_update(
+									model,
+									{
+										periodeAction: $author$project$Main$ActionEdit(
+											_Utils_update(
+												ep,
+												{
+													error: $elm$core$Maybe$Just(err)
+												}))
+									}),
+								$elm$core$Platform$Cmd$none);
+						}
+					case 'ActionDelete':
+						var periode = _v7.a;
+						return _Utils_Tuple2(
+							model,
+							A2($author$project$Main$sendDelete, $author$project$Main$ReceivedActionResponse, periode.id));
+					default:
+						return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+				}
+			case 'ClickedActionAbort':
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{periodeAction: $author$project$Main$ActionNone}),
+					$elm$core$Platform$Cmd$none);
+			case 'InsertedActionEditComment':
+				var comment = msg.a;
+				var _v11 = model.periodeAction;
+				if (_v11.$ === 'ActionEdit') {
+					var ep = _v11.a;
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{
+								periodeAction: $author$project$Main$ActionEdit(
+									_Utils_update(
+										ep,
+										{comment: comment}))
+							}),
+						$elm$core$Platform$Cmd$none);
+				} else {
+					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+				}
+			case 'InsertedActionEditStartTime':
+				var start = msg.a;
+				var _v12 = model.periodeAction;
+				if (_v12.$ === 'ActionEdit') {
+					var ep = _v12.a;
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{
+								periodeAction: $author$project$Main$ActionEdit(
+									_Utils_update(
+										ep,
+										{start: start}))
+							}),
+						$elm$core$Platform$Cmd$none);
+				} else {
+					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+				}
+			default:
+				var duration = msg.a;
+				var _v13 = model.periodeAction;
+				if (_v13.$ === 'ActionEdit') {
+					var ep = _v13.a;
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{
+								periodeAction: $author$project$Main$ActionEdit(
+									_Utils_update(
+										ep,
+										{duration: duration}))
+							}),
+						$elm$core$Platform$Cmd$none);
+				} else {
+					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+				}
 		}
 	});
 var $elm$virtual_dom$VirtualDom$text = _VirtualDom_text;
@@ -10184,6 +10196,15 @@ var $elm$core$List$drop = F2(
 			}
 		}
 	});
+var $elm$core$List$head = function (list) {
+	if (list.b) {
+		var x = list.a;
+		var xs = list.b;
+		return $elm$core$Maybe$Just(x);
+	} else {
+		return $elm$core$Maybe$Nothing;
+	}
+};
 var $author$project$Main$intToFormattedString = function (_int) {
 	return A2(
 		$elm$core$String$join,
@@ -10451,9 +10472,7 @@ var $author$project$Main$viewPeriodeHeader = function (permission) {
 			]));
 };
 var $author$project$Main$ClickedActionAbort = {$: 'ClickedActionAbort'};
-var $author$project$Main$ClickedActionSubmit = function (a) {
-	return {$: 'ClickedActionSubmit', a: a};
-};
+var $author$project$Main$ClickedActionSubmit = {$: 'ClickedActionSubmit'};
 var $elm$html$Html$button = _VirtualDom_node('button');
 var $elm$time$Time$Mon = {$: 'Mon'};
 var $CoderDennis$elm_time_format$Time$Format$I18n$I_de_de$dayName = function (day) {
@@ -10579,6 +10598,15 @@ var $CoderDennis$elm_time_format$Time$Format$formatRegex = A2(
 	$elm$core$Maybe$withDefault,
 	$elm$regex$Regex$never,
 	$elm$regex$Regex$fromString('%(y|Y|m|_m|-m|B|^B|b|^b|d|-d|-@d|e|@e|A|^A|a|^a|H|-H|k|I|-I|l|p|P|M|S|%|L)'));
+var $elm$core$Maybe$andThen = F2(
+	function (callback, maybeValue) {
+		if (maybeValue.$ === 'Just') {
+			var value = maybeValue.a;
+			return callback(value);
+		} else {
+			return $elm$core$Maybe$Nothing;
+		}
+	});
 var $CoderDennis$elm_time_format$Time$Format$collapse = function (m) {
 	return A2($elm$core$Maybe$andThen, $elm$core$Basics$identity, m);
 };
@@ -10914,8 +10942,7 @@ var $author$project$Main$viewPeriodeDeleteLine = function (periode) {
 							[
 								$elm$html$Html$Attributes$type_('button'),
 								$elm$html$Html$Attributes$class('btn btn-success'),
-								$elm$html$Html$Events$onClick(
-								$author$project$Main$ClickedActionSubmit(periode.id))
+								$elm$html$Html$Events$onClick($author$project$Main$ClickedActionSubmit)
 							]),
 						_List_fromArray(
 							[
@@ -10924,7 +10951,6 @@ var $author$project$Main$viewPeriodeDeleteLine = function (periode) {
 					]))
 			]));
 };
-var $author$project$Main$ClickedActionSubmit2 = {$: 'ClickedActionSubmit2'};
 var $author$project$Main$InsertedActionEditComment = function (a) {
 	return {$: 'InsertedActionEditComment', a: a};
 };
@@ -10967,7 +10993,7 @@ var $elm$html$Html$Attributes$placeholder = $elm$html$Html$Attributes$stringProp
 var $elm$html$Html$Attributes$value = $elm$html$Html$Attributes$stringProperty('value');
 var $author$project$Main$viewPeriodeEditLine = function (edit) {
 	var monyString = function () {
-		var _v0 = $author$project$Main$stringToDuration(edit.minutes);
+		var _v0 = $author$project$Main$stringToDuration(edit.duration);
 		if (_v0.$ === 'Ok') {
 			var duration = _v0.a;
 			return $author$project$Main$durationToMonyString(duration);
@@ -11007,7 +11033,7 @@ var $author$project$Main$viewPeriodeEditLine = function (edit) {
 								$elm$html$Html$Attributes$id('edit-duration'),
 								$elm$html$Html$Attributes$type_('text'),
 								$elm$html$Html$Attributes$placeholder('minutes'),
-								$elm$html$Html$Attributes$value(edit.minutes),
+								$elm$html$Html$Attributes$value(edit.duration),
 								$elm$html$Html$Events$onInput($author$project$Main$InsertedActionEditDuration)
 							]),
 						_List_Nil)
@@ -11063,7 +11089,7 @@ var $author$project$Main$viewPeriodeEditLine = function (edit) {
 							[
 								$elm$html$Html$Attributes$type_('button'),
 								$elm$html$Html$Attributes$class('btn btn-success'),
-								$elm$html$Html$Events$onClick($author$project$Main$ClickedActionSubmit2)
+								$elm$html$Html$Events$onClick($author$project$Main$ClickedActionSubmit)
 							]),
 						_List_fromArray(
 							[
@@ -11137,7 +11163,7 @@ var $author$project$Main$viewPeriodeShowLine = F2(
 										$elm$html$Html$Attributes$type_('button'),
 										$elm$html$Html$Attributes$class('btn btn-info'),
 										$elm$html$Html$Events$onClick(
-										$author$project$Main$ClickedActionContinue(periode.id))
+										$author$project$Main$ClickedActionContinue(periode))
 									]),
 								_List_fromArray(
 									[
@@ -11163,7 +11189,7 @@ var $author$project$Main$viewPeriodeShowLine = F2(
 										$elm$html$Html$Attributes$type_('button'),
 										$elm$html$Html$Attributes$class('btn btn-danger'),
 										$elm$html$Html$Events$onClick(
-										$author$project$Main$ClickedActionDelete(periode.id))
+										$author$project$Main$ClickedActionDelete(periode))
 									]),
 								_List_fromArray(
 									[
@@ -11184,9 +11210,9 @@ var $author$project$Main$viewPeriodeLine = F3(
 						var _v1 = _v0.b;
 						return _Utils_eq(edit.id, periode.id) ? $author$project$Main$viewPeriodeEditLine(edit) : A2($author$project$Main$viewPeriodeShowLine, permission, periode);
 					case 'ActionDelete':
-						var id = _v0.a.a;
+						var p = _v0.a.a;
 						var _v2 = _v0.b;
-						return _Utils_eq(id, periode.id) ? $author$project$Main$viewPeriodeDeleteLine(periode) : A2($author$project$Main$viewPeriodeShowLine, permission, periode);
+						return _Utils_eq(periode, p) ? $author$project$Main$viewPeriodeDeleteLine(periode) : A2($author$project$Main$viewPeriodeShowLine, permission, periode);
 					default:
 						break _v0$2;
 				}
@@ -11520,7 +11546,7 @@ var $author$project$Main$viewFooter = A2(
 					$elm$html$Html$text('logout')
 				]))
 		]));
-var $author$project$Main$ClickAddPeriode = {$: 'ClickAddPeriode'};
+var $author$project$Main$ClickedAddPeriode = {$: 'ClickedAddPeriode'};
 var $author$project$Main$ClickedAddPeriodeSubmit = {$: 'ClickedAddPeriodeSubmit'};
 var $author$project$Main$ClickedAddPeriodeUntilNow = {$: 'ClickedAddPeriodeUntilNow'};
 var $author$project$Main$InsertedAddPeriodeComment = function (a) {
@@ -11540,7 +11566,7 @@ var $author$project$Main$viewInsert = function (maybeInsert) {
 			_List_fromArray(
 				[
 					$elm$html$Html$Attributes$class('btn btn-secondary'),
-					$elm$html$Html$Events$onClick($author$project$Main$ClickAddPeriode)
+					$elm$html$Html$Events$onClick($author$project$Main$ClickedAddPeriode)
 				]),
 			_List_fromArray(
 				[
@@ -11558,7 +11584,7 @@ var $author$project$Main$viewInsert = function (maybeInsert) {
 					_List_fromArray(
 						[
 							$elm$html$Html$Attributes$type_('datetime-local'),
-							$elm$html$Html$Attributes$value(insert.formStart),
+							$elm$html$Html$Attributes$value(insert.start),
 							$elm$html$Html$Events$onInput($author$project$Main$InsertedAddPeriodeStartTime)
 						]),
 					_List_Nil),
@@ -11569,7 +11595,7 @@ var $author$project$Main$viewInsert = function (maybeInsert) {
 							$elm$html$Html$Attributes$id('duration'),
 							$elm$html$Html$Attributes$type_('text'),
 							$elm$html$Html$Attributes$placeholder('minutes'),
-							$elm$html$Html$Attributes$value(insert.formDuration),
+							$elm$html$Html$Attributes$value(insert.duration),
 							$elm$html$Html$Events$onInput($author$project$Main$InsertedAddPeriodeDuration)
 						]),
 					_List_Nil),
@@ -11592,7 +11618,7 @@ var $author$project$Main$viewInsert = function (maybeInsert) {
 							$elm$html$Html$Attributes$id('comment'),
 							$elm$html$Html$Attributes$type_('text'),
 							$elm$html$Html$Attributes$placeholder('comment'),
-							$elm$html$Html$Attributes$value(insert.formComment),
+							$elm$html$Html$Attributes$value(insert.comment),
 							$elm$html$Html$Events$onInput($author$project$Main$InsertedAddPeriodeComment)
 						]),
 					_List_Nil),
