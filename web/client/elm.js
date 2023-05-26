@@ -6462,8 +6462,8 @@ var $author$project$Main$permissionFromJWT = function (token) {
 			A2($elm$core$Basics$composeR, $author$project$Main$permissionFromString, $elm$core$Result$Ok),
 			A2($simonh1000$elm_jwt$Jwt$decodeToken, decoder, token)));
 };
-var $author$project$Main$ReceiveState = function (a) {
-	return {$: 'ReceiveState', a: a};
+var $author$project$Main$ReceivedState = function (a) {
+	return {$: 'ReceivedState', a: a};
 };
 var $elm$http$Http$BadStatus_ = F2(
 	function (a, b) {
@@ -7393,7 +7393,7 @@ var $author$project$Main$updateStateIfPermission = function (perm) {
 	if (perm.$ === 'PermissionNone') {
 		return $elm$core$Platform$Cmd$none;
 	} else {
-		return $author$project$Periode$fetch($author$project$Main$ReceiveState);
+		return $author$project$Periode$fetch($author$project$Main$ReceivedState);
 	}
 };
 var $author$project$Main$init = function (token) {
@@ -7404,9 +7404,9 @@ var $author$project$Main$init = function (token) {
 			currentTime: $elm$time$Time$millisToPosix(0),
 			errMsg: $elm$core$Maybe$Nothing,
 			formComment: '',
-			formInsert: $elm$core$Maybe$Nothing,
-			formPassword: '',
+			formLoginPassword: '',
 			formYearMonth: $author$project$YearMonth$All,
+			insert: $elm$core$Maybe$Nothing,
 			periodeAction: $author$project$Main$ActionNone,
 			periodes: _List_Nil,
 			permission: permission,
@@ -7414,8 +7414,8 @@ var $author$project$Main$init = function (token) {
 		},
 		$author$project$Main$updateStateIfPermission(permission));
 };
-var $author$project$Main$BrowserTick = function (a) {
-	return {$: 'BrowserTick', a: a};
+var $author$project$Main$CurrentTime = function (a) {
+	return {$: 'CurrentTime', a: a};
 };
 var $elm$time$Time$Every = F2(
 	function (a, b) {
@@ -7684,7 +7684,7 @@ var $elm$time$Time$every = F2(
 			A2($elm$time$Time$Every, interval, tagger));
 	});
 var $author$project$Main$subscriptions = function (_v0) {
-	return A2($elm$time$Time$every, 1000, $author$project$Main$BrowserTick);
+	return A2($elm$time$Time$every, 1000, $author$project$Main$CurrentTime);
 };
 var $author$project$Main$ActionDelete = function (a) {
 	return {$: 'ActionDelete', a: a};
@@ -7692,11 +7692,11 @@ var $author$project$Main$ActionDelete = function (a) {
 var $author$project$Main$ActionEdit = function (a) {
 	return {$: 'ActionEdit', a: a};
 };
-var $author$project$Main$ReceiveAuth = function (a) {
-	return {$: 'ReceiveAuth', a: a};
+var $author$project$Main$ReceivedAuth = function (a) {
+	return {$: 'ReceivedAuth', a: a};
 };
-var $author$project$Main$ReceiveEvent = function (a) {
-	return {$: 'ReceiveEvent', a: a};
+var $author$project$Main$ReceivedEvent = function (a) {
+	return {$: 'ReceivedEvent', a: a};
 };
 var $elm$core$Maybe$andThen = F2(
 	function (callback, maybeValue) {
@@ -8608,7 +8608,7 @@ var $author$project$Main$insertForm = function (model) {
 	return A2(
 		$elm$core$Maybe$withDefault,
 		$author$project$Main$emptyInsert(model.currentTime),
-		model.formInsert);
+		model.insert);
 };
 var $author$project$Main$resultFromEmptyString = F2(
 	function (error, str) {
@@ -9569,7 +9569,7 @@ var $rtfeldman$elm_iso8601_date_strings$Iso8601$toTime = function (str) {
 var $author$project$Main$update = F2(
 	function (msg, model) {
 		switch (msg.$) {
-			case 'ReceiveState':
+			case 'ReceivedState':
 				var response = msg.a;
 				if (response.$ === 'Ok') {
 					var state = response.a;
@@ -9596,7 +9596,7 @@ var $author$project$Main$update = F2(
 							}),
 						$elm$core$Platform$Cmd$none);
 				}
-			case 'ReceiveEvent':
+			case 'ReceivedEvent':
 				var response = msg.a;
 				if (response.$ === 'Ok') {
 					return _Utils_Tuple2(
@@ -9616,29 +9616,29 @@ var $author$project$Main$update = F2(
 							}),
 						$elm$core$Platform$Cmd$none);
 				}
-			case 'BrowserTick':
+			case 'CurrentTime':
 				var newTime = msg.a;
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
 						{currentTime: newTime}),
 					$elm$core$Platform$Cmd$none);
-			case 'InsertComment':
+			case 'InsertedCurrentComment':
 				var comment = msg.a;
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
 						{formComment: comment}),
 					$elm$core$Platform$Cmd$none);
-			case 'ClickStart':
+			case 'ClickedStart':
 				return _Utils_Tuple2(
 					model,
-					A3($author$project$Main$sendStartStop, 'start', $author$project$Main$ReceiveEvent, model.formComment));
-			case 'ClickStop':
+					A3($author$project$Main$sendStartStop, 'start', $author$project$Main$ReceivedEvent, model.formComment));
+			case 'ClickedStop':
 				return _Utils_Tuple2(
 					model,
-					A3($author$project$Main$sendStartStop, 'stop', $author$project$Main$ReceiveEvent, model.formComment));
-			case 'ClickContinue':
+					A3($author$project$Main$sendStartStop, 'stop', $author$project$Main$ReceivedEvent, model.formComment));
+			case 'ClickedActionContinue':
 				var id = msg.a;
 				return _Utils_Tuple2(
 					model,
@@ -9649,7 +9649,7 @@ var $author$project$Main$update = F2(
 							$elm$core$Maybe$andThen,
 							function (p) {
 								return $elm$core$Maybe$Just(
-									A3($author$project$Main$sendStartStop, 'start', $author$project$Main$ReceiveEvent, p.comment));
+									A3($author$project$Main$sendStartStop, 'start', $author$project$Main$ReceivedEvent, p.comment));
 							},
 							$elm$core$List$head(
 								A2(
@@ -9658,7 +9658,7 @@ var $author$project$Main$update = F2(
 										return _Utils_eq(p.id, id);
 									},
 									model.periodes)))));
-			case 'ClickEdit':
+			case 'ClickedActionEdit':
 				var periode = msg.a;
 				return _Utils_Tuple2(
 					_Utils_update(
@@ -9668,7 +9668,7 @@ var $author$project$Main$update = F2(
 								$author$project$Main$emptyEdit(periode))
 						}),
 					$elm$core$Platform$Cmd$none);
-			case 'ClickDelete':
+			case 'ClickedActionDelete':
 				var id = msg.a;
 				return _Utils_Tuple2(
 					_Utils_update(
@@ -9677,18 +9677,18 @@ var $author$project$Main$update = F2(
 							periodeAction: $author$project$Main$ActionDelete(id)
 						}),
 					$elm$core$Platform$Cmd$none);
-			case 'ClickDeleteSubmit':
+			case 'ClickedActionSubmit':
 				var id = msg.a;
 				return _Utils_Tuple2(
 					model,
-					A2($author$project$Main$sendDelete, $author$project$Main$ReceiveEvent, id));
-			case 'ClickActionAbort':
+					A2($author$project$Main$sendDelete, $author$project$Main$ReceivedEvent, id));
+			case 'ClickedActionAbort':
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
 						{periodeAction: $author$project$Main$ActionNone}),
 					$elm$core$Platform$Cmd$none);
-			case 'ClickEditSubmit':
+			case 'ClickedActionSubmit2':
 				var _v3 = model.periodeAction;
 				if (_v3.$ === 'ActionEdit') {
 					var ep = _v3.a;
@@ -9704,7 +9704,7 @@ var $author$project$Main$update = F2(
 								{periodeAction: $author$project$Main$ActionNone}),
 							A5(
 								$author$project$Main$sendEdit,
-								$author$project$Main$ReceiveEvent,
+								$author$project$Main$ReceivedEvent,
 								ep.id,
 								$elm$core$Maybe$Just(start),
 								$elm$core$Maybe$Just(duration),
@@ -9715,7 +9715,7 @@ var $author$project$Main$update = F2(
 				} else {
 					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 				}
-			case 'InsertEditComment':
+			case 'InsertedActionEditComment':
 				var comment = msg.a;
 				var _v5 = model.periodeAction;
 				if (_v5.$ === 'ActionEdit') {
@@ -9733,7 +9733,7 @@ var $author$project$Main$update = F2(
 				} else {
 					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 				}
-			case 'InsertEditDuration':
+			case 'InsertedActionEditDuration':
 				var minutes = msg.a;
 				var _v6 = model.periodeAction;
 				if (_v6.$ === 'ActionEdit') {
@@ -9751,7 +9751,7 @@ var $author$project$Main$update = F2(
 				} else {
 					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 				}
-			case 'InsertStartEdit':
+			case 'InsertedActionEditStartTime':
 				var start = msg.a;
 				var _v7 = model.periodeAction;
 				if (_v7.$ === 'ActionEdit') {
@@ -9769,55 +9769,55 @@ var $author$project$Main$update = F2(
 				} else {
 					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 				}
-			case 'ClickAdd':
+			case 'ClickAddPeriode':
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
 						{
-							formInsert: $elm$core$Maybe$Just(
+							insert: $elm$core$Maybe$Just(
 								$author$project$Main$emptyInsert(model.currentTime))
 						}),
 					$elm$core$Platform$Cmd$none);
-			case 'InsertStart':
+			case 'InsertedAddPeriodeStartTime':
 				var startStr = msg.a;
 				var insert = $author$project$Main$insertForm(model);
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
 						{
-							formInsert: $elm$core$Maybe$Just(
+							insert: $elm$core$Maybe$Just(
 								_Utils_update(
 									insert,
 									{formStart: startStr}))
 						}),
 					$elm$core$Platform$Cmd$none);
-			case 'InsertAddDuration':
+			case 'InsertedAddPeriodeDuration':
 				var durationStr = msg.a;
 				var insert = $author$project$Main$insertForm(model);
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
 						{
-							formInsert: $elm$core$Maybe$Just(
+							insert: $elm$core$Maybe$Just(
 								_Utils_update(
 									insert,
 									{formDuration: durationStr}))
 						}),
 					$elm$core$Platform$Cmd$none);
-			case 'InsertAddComment':
+			case 'InsertedAddPeriodeComment':
 				var comment = msg.a;
 				var insert = $author$project$Main$insertForm(model);
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
 						{
-							formInsert: $elm$core$Maybe$Just(
+							insert: $elm$core$Maybe$Just(
 								_Utils_update(
 									insert,
 									{formComment: comment}))
 						}),
 					$elm$core$Platform$Cmd$none);
-			case 'ClickUntilNow':
+			case 'ClickedAddPeriodeUntilNow':
 				var insert = $author$project$Main$insertForm(model);
 				var newStartResult = A2(
 					$elm$core$Result$map,
@@ -9847,10 +9847,10 @@ var $author$project$Main$update = F2(
 					_Utils_update(
 						model,
 						{
-							formInsert: $elm$core$Maybe$Just(newFormInsert)
+							insert: $elm$core$Maybe$Just(newFormInsert)
 						}),
 					$elm$core$Platform$Cmd$none);
-			case 'ClickInsert':
+			case 'ClickedAddPeriodeSubmit':
 				var insert = $author$project$Main$insertForm(model);
 				var insertCMD = A2(
 					$elm$core$Result$andThen,
@@ -9862,7 +9862,7 @@ var $author$project$Main$update = F2(
 								$author$project$Main$stringToDuration,
 								$elm$core$Result$map(
 									function (duration) {
-										return A4($author$project$Main$sendInsert, $author$project$Main$ReceiveEvent, start, duration, insert.formComment);
+										return A4($author$project$Main$sendInsert, $author$project$Main$ReceivedEvent, start, duration, insert.formComment);
 									})),
 							A2($author$project$Main$resultFromEmptyString, 'No duration provided', insert.formDuration));
 					},
@@ -9877,7 +9877,7 @@ var $author$project$Main$update = F2(
 					return _Utils_Tuple2(
 						_Utils_update(
 							model,
-							{formInsert: $elm$core$Maybe$Nothing}),
+							{insert: $elm$core$Maybe$Nothing}),
 						cmd);
 				} else {
 					var errMSG = insertCMD.a;
@@ -9885,7 +9885,7 @@ var $author$project$Main$update = F2(
 						_Utils_update(
 							model,
 							{
-								formInsert: $elm$core$Maybe$Just(
+								insert: $elm$core$Maybe$Just(
 									_Utils_update(
 										insert,
 										{
@@ -9894,20 +9894,20 @@ var $author$project$Main$update = F2(
 							}),
 						$elm$core$Platform$Cmd$none);
 				}
-			case 'InsertLoginPassword':
+			case 'InsertedLoginPassword':
 				var password = msg.a;
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
-						{formPassword: password}),
+						{formLoginPassword: password}),
 					$elm$core$Platform$Cmd$none);
-			case 'ClickLogin':
+			case 'ClickedLogin':
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
-						{formPassword: ''}),
-					A2($author$project$Main$sendPassword, $author$project$Main$ReceiveAuth, model.formPassword));
-			case 'ReceiveAuth':
+						{formLoginPassword: ''}),
+					A2($author$project$Main$sendPassword, $author$project$Main$ReceivedAuth, model.formLoginPassword));
+			case 'ReceivedAuth':
 				var response = msg.a;
 				if (response.$ === 'Ok') {
 					var permissionLevel = response.a;
@@ -9917,7 +9917,7 @@ var $author$project$Main$update = F2(
 							{
 								permission: $author$project$Main$permissionFromString(permissionLevel)
 							}),
-						$author$project$Periode$fetch($author$project$Main$ReceiveState));
+						$author$project$Periode$fetch($author$project$Main$ReceivedState));
 				} else {
 					var e = response.a;
 					return _Utils_Tuple2(
@@ -9931,17 +9931,17 @@ var $author$project$Main$update = F2(
 							}),
 						$elm$core$Platform$Cmd$none);
 				}
-			case 'ClickLogout':
+			case 'ClickedLogout':
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
 						{permission: $author$project$Main$PermissionNone}),
 					$elm$http$Http$get(
 						{
-							expect: $elm$http$Http$expectWhatever($author$project$Main$ReceiveEvent),
+							expect: $elm$http$Http$expectWhatever($author$project$Main$ReceivedEvent),
 							url: '/api/auth/logout'
 						}));
-			case 'SelectYearMonth':
+			case 'SelectedYearMonthFilter':
 				var value = msg.a;
 				return _Utils_Tuple2(
 					_Utils_update(
@@ -9979,8 +9979,8 @@ var $elm$html$Html$Attributes$stringProperty = F2(
 			$elm$json$Json$Encode$string(string));
 	});
 var $elm$html$Html$Attributes$class = $elm$html$Html$Attributes$stringProperty('className');
-var $author$project$Main$ClickBodyNav = function (a) {
-	return {$: 'ClickBodyNav', a: a};
+var $author$project$Main$ClickedBodyNav = function (a) {
+	return {$: 'ClickedBodyNav', a: a};
 };
 var $elm$html$Html$a = _VirtualDom_node('a');
 var $elm$html$Html$Attributes$href = function (url) {
@@ -10032,7 +10032,7 @@ var $author$project$Main$navLink = F2(
 							$elm$html$Html$Attributes$class(linkClass),
 							$elm$html$Html$Attributes$href('#'),
 							$elm$html$Html$Events$onClick(
-							$author$project$Main$ClickBodyNav(myViewBody))
+							$author$project$Main$ClickedBodyNav(myViewBody))
 						]),
 					_List_fromArray(
 						[
@@ -10356,8 +10356,8 @@ var $author$project$Main$viewMonthly = F2(
 								$author$project$Periode$sort(periodes)))))
 				]));
 	});
-var $author$project$Main$SelectYearMonth = function (a) {
-	return {$: 'SelectYearMonth', a: a};
+var $author$project$Main$SelectedYearMonthFilter = function (a) {
+	return {$: 'SelectedYearMonthFilter', a: a};
 };
 var $author$project$Periode$filterYearMonth = F3(
 	function (zone, ym, periodes) {
@@ -10447,9 +10447,9 @@ var $author$project$Main$viewPeriodeHeader = function (permission) {
 					]))
 			]));
 };
-var $author$project$Main$ClickActionAbort = {$: 'ClickActionAbort'};
-var $author$project$Main$ClickDeleteSubmit = function (a) {
-	return {$: 'ClickDeleteSubmit', a: a};
+var $author$project$Main$ClickedActionAbort = {$: 'ClickedActionAbort'};
+var $author$project$Main$ClickedActionSubmit = function (a) {
+	return {$: 'ClickedActionSubmit', a: a};
 };
 var $elm$html$Html$button = _VirtualDom_node('button');
 var $elm$time$Time$Mon = {$: 'Mon'};
@@ -10899,7 +10899,7 @@ var $author$project$Main$viewPeriodeDeleteLine = function (periode) {
 							[
 								$elm$html$Html$Attributes$type_('button'),
 								$elm$html$Html$Attributes$class('btn btn-danger'),
-								$elm$html$Html$Events$onClick($author$project$Main$ClickActionAbort)
+								$elm$html$Html$Events$onClick($author$project$Main$ClickedActionAbort)
 							]),
 						_List_fromArray(
 							[
@@ -10912,7 +10912,7 @@ var $author$project$Main$viewPeriodeDeleteLine = function (periode) {
 								$elm$html$Html$Attributes$type_('button'),
 								$elm$html$Html$Attributes$class('btn btn-success'),
 								$elm$html$Html$Events$onClick(
-								$author$project$Main$ClickDeleteSubmit(periode.id))
+								$author$project$Main$ClickedActionSubmit(periode.id))
 							]),
 						_List_fromArray(
 							[
@@ -10921,15 +10921,15 @@ var $author$project$Main$viewPeriodeDeleteLine = function (periode) {
 					]))
 			]));
 };
-var $author$project$Main$ClickEditSubmit = {$: 'ClickEditSubmit'};
-var $author$project$Main$InsertEditComment = function (a) {
-	return {$: 'InsertEditComment', a: a};
+var $author$project$Main$ClickedActionSubmit2 = {$: 'ClickedActionSubmit2'};
+var $author$project$Main$InsertedActionEditComment = function (a) {
+	return {$: 'InsertedActionEditComment', a: a};
 };
-var $author$project$Main$InsertEditDuration = function (a) {
-	return {$: 'InsertEditDuration', a: a};
+var $author$project$Main$InsertedActionEditDuration = function (a) {
+	return {$: 'InsertedActionEditDuration', a: a};
 };
-var $author$project$Main$InsertStartEdit = function (a) {
-	return {$: 'InsertStartEdit', a: a};
+var $author$project$Main$InsertedActionEditStartTime = function (a) {
+	return {$: 'InsertedActionEditStartTime', a: a};
 };
 var $elm$html$Html$Attributes$id = $elm$html$Html$Attributes$stringProperty('id');
 var $elm$html$Html$input = _VirtualDom_node('input');
@@ -10988,7 +10988,7 @@ var $author$project$Main$viewPeriodeEditLine = function (edit) {
 							[
 								$elm$html$Html$Attributes$type_('datetime-local'),
 								$elm$html$Html$Attributes$value(edit.start),
-								$elm$html$Html$Events$onInput($author$project$Main$InsertStartEdit)
+								$elm$html$Html$Events$onInput($author$project$Main$InsertedActionEditStartTime)
 							]),
 						_List_Nil)
 					])),
@@ -11005,7 +11005,7 @@ var $author$project$Main$viewPeriodeEditLine = function (edit) {
 								$elm$html$Html$Attributes$type_('text'),
 								$elm$html$Html$Attributes$placeholder('minutes'),
 								$elm$html$Html$Attributes$value(edit.minutes),
-								$elm$html$Html$Events$onInput($author$project$Main$InsertEditDuration)
+								$elm$html$Html$Events$onInput($author$project$Main$InsertedActionEditDuration)
 							]),
 						_List_Nil)
 					])),
@@ -11029,7 +11029,7 @@ var $author$project$Main$viewPeriodeEditLine = function (edit) {
 								$elm$html$Html$Attributes$type_('text'),
 								$elm$html$Html$Attributes$placeholder('comment'),
 								$elm$html$Html$Attributes$value(edit.comment),
-								$elm$html$Html$Events$onInput($author$project$Main$InsertEditComment)
+								$elm$html$Html$Events$onInput($author$project$Main$InsertedActionEditComment)
 							]),
 						_List_Nil)
 					])),
@@ -11048,7 +11048,7 @@ var $author$project$Main$viewPeriodeEditLine = function (edit) {
 							[
 								$elm$html$Html$Attributes$type_('button'),
 								$elm$html$Html$Attributes$class('btn btn-danger'),
-								$elm$html$Html$Events$onClick($author$project$Main$ClickActionAbort)
+								$elm$html$Html$Events$onClick($author$project$Main$ClickedActionAbort)
 							]),
 						_List_fromArray(
 							[
@@ -11060,7 +11060,7 @@ var $author$project$Main$viewPeriodeEditLine = function (edit) {
 							[
 								$elm$html$Html$Attributes$type_('button'),
 								$elm$html$Html$Attributes$class('btn btn-success'),
-								$elm$html$Html$Events$onClick($author$project$Main$ClickEditSubmit)
+								$elm$html$Html$Events$onClick($author$project$Main$ClickedActionSubmit2)
 							]),
 						_List_fromArray(
 							[
@@ -11069,14 +11069,14 @@ var $author$project$Main$viewPeriodeEditLine = function (edit) {
 					]))
 			]));
 };
-var $author$project$Main$ClickContinue = function (a) {
-	return {$: 'ClickContinue', a: a};
+var $author$project$Main$ClickedActionContinue = function (a) {
+	return {$: 'ClickedActionContinue', a: a};
 };
-var $author$project$Main$ClickDelete = function (a) {
-	return {$: 'ClickDelete', a: a};
+var $author$project$Main$ClickedActionDelete = function (a) {
+	return {$: 'ClickedActionDelete', a: a};
 };
-var $author$project$Main$ClickEdit = function (a) {
-	return {$: 'ClickEdit', a: a};
+var $author$project$Main$ClickedActionEdit = function (a) {
+	return {$: 'ClickedActionEdit', a: a};
 };
 var $author$project$Main$viewPeriodeShowLine = F2(
 	function (permission, periode) {
@@ -11134,7 +11134,7 @@ var $author$project$Main$viewPeriodeShowLine = F2(
 										$elm$html$Html$Attributes$type_('button'),
 										$elm$html$Html$Attributes$class('btn btn-info'),
 										$elm$html$Html$Events$onClick(
-										$author$project$Main$ClickContinue(periode.id))
+										$author$project$Main$ClickedActionContinue(periode.id))
 									]),
 								_List_fromArray(
 									[
@@ -11147,7 +11147,7 @@ var $author$project$Main$viewPeriodeShowLine = F2(
 										$elm$html$Html$Attributes$type_('button'),
 										$elm$html$Html$Attributes$class('btn btn-warning'),
 										$elm$html$Html$Events$onClick(
-										$author$project$Main$ClickEdit(periode))
+										$author$project$Main$ClickedActionEdit(periode))
 									]),
 								_List_fromArray(
 									[
@@ -11160,7 +11160,7 @@ var $author$project$Main$viewPeriodeShowLine = F2(
 										$elm$html$Html$Attributes$type_('button'),
 										$elm$html$Html$Attributes$class('btn btn-danger'),
 										$elm$html$Html$Events$onClick(
-										$author$project$Main$ClickDelete(periode.id))
+										$author$project$Main$ClickedActionDelete(periode.id))
 									]),
 								_List_fromArray(
 									[
@@ -11359,7 +11359,7 @@ var $author$project$Main$viewPeriodes = F5(
 					$author$project$YearMonth$viewYearMonthSelect,
 					zone,
 					selected,
-					$author$project$Main$SelectYearMonth,
+					$author$project$Main$SelectedYearMonthFilter,
 					A2(
 						$elm$core$List$map,
 						function ($) {
@@ -11413,18 +11413,18 @@ var $ianmackenzie$elm_units$Duration$from = F2(
 		var numMilliseconds = $elm$time$Time$posixToMillis(endTime) - $elm$time$Time$posixToMillis(startTime);
 		return $ianmackenzie$elm_units$Duration$milliseconds(numMilliseconds);
 	});
-var $author$project$Main$ClickStart = {$: 'ClickStart'};
-var $author$project$Main$ClickStop = {$: 'ClickStop'};
-var $author$project$Main$InsertComment = function (a) {
-	return {$: 'InsertComment', a: a};
+var $author$project$Main$ClickedStart = {$: 'ClickedStart'};
+var $author$project$Main$ClickedStop = {$: 'ClickedStop'};
+var $author$project$Main$InsertedCurrentComment = function (a) {
+	return {$: 'InsertedCurrentComment', a: a};
 };
 var $author$project$Main$viewStartStopForm = F2(
 	function (startStop, comment) {
 		var _v0 = function () {
 			if (startStop.$ === 'Start') {
-				return _Utils_Tuple2($author$project$Main$ClickStart, 'Start');
+				return _Utils_Tuple2($author$project$Main$ClickedStart, 'Start');
 			} else {
-				return _Utils_Tuple2($author$project$Main$ClickStop, 'Stop');
+				return _Utils_Tuple2($author$project$Main$ClickedStop, 'Stop');
 			}
 		}();
 		var event = _v0.a;
@@ -11452,7 +11452,7 @@ var $author$project$Main$viewStartStopForm = F2(
 							$elm$html$Html$Attributes$id('comment'),
 							$elm$html$Html$Attributes$type_('text'),
 							$elm$html$Html$Attributes$value(comment),
-							$elm$html$Html$Events$onInput($author$project$Main$InsertComment)
+							$elm$html$Html$Events$onInput($author$project$Main$InsertedCurrentComment)
 						]),
 					_List_Nil)
 				]));
@@ -11483,7 +11483,7 @@ var $author$project$Main$viewCurrent = F3(
 					]));
 		}
 	});
-var $author$project$Main$ClickLogout = {$: 'ClickLogout'};
+var $author$project$Main$ClickedLogout = {$: 'ClickedLogout'};
 var $elm$html$Html$footer = _VirtualDom_node('footer');
 var $author$project$Main$viewFooter = A2(
 	$elm$html$Html$footer,
@@ -11510,24 +11510,24 @@ var $author$project$Main$viewFooter = A2(
 				[
 					$elm$html$Html$Attributes$href('#'),
 					$elm$html$Html$Attributes$class('link-primary'),
-					$elm$html$Html$Events$onClick($author$project$Main$ClickLogout)
+					$elm$html$Html$Events$onClick($author$project$Main$ClickedLogout)
 				]),
 			_List_fromArray(
 				[
 					$elm$html$Html$text('logout')
 				]))
 		]));
-var $author$project$Main$ClickAdd = {$: 'ClickAdd'};
-var $author$project$Main$ClickInsert = {$: 'ClickInsert'};
-var $author$project$Main$ClickUntilNow = {$: 'ClickUntilNow'};
-var $author$project$Main$InsertAddComment = function (a) {
-	return {$: 'InsertAddComment', a: a};
+var $author$project$Main$ClickAddPeriode = {$: 'ClickAddPeriode'};
+var $author$project$Main$ClickedAddPeriodeSubmit = {$: 'ClickedAddPeriodeSubmit'};
+var $author$project$Main$ClickedAddPeriodeUntilNow = {$: 'ClickedAddPeriodeUntilNow'};
+var $author$project$Main$InsertedAddPeriodeComment = function (a) {
+	return {$: 'InsertedAddPeriodeComment', a: a};
 };
-var $author$project$Main$InsertAddDuration = function (a) {
-	return {$: 'InsertAddDuration', a: a};
+var $author$project$Main$InsertedAddPeriodeDuration = function (a) {
+	return {$: 'InsertedAddPeriodeDuration', a: a};
 };
-var $author$project$Main$InsertStart = function (a) {
-	return {$: 'InsertStart', a: a};
+var $author$project$Main$InsertedAddPeriodeStartTime = function (a) {
+	return {$: 'InsertedAddPeriodeStartTime', a: a};
 };
 var $elm$html$Html$Attributes$title = $elm$html$Html$Attributes$stringProperty('title');
 var $author$project$Main$viewInsert = function (maybeInsert) {
@@ -11537,7 +11537,7 @@ var $author$project$Main$viewInsert = function (maybeInsert) {
 			_List_fromArray(
 				[
 					$elm$html$Html$Attributes$class('btn btn-secondary'),
-					$elm$html$Html$Events$onClick($author$project$Main$ClickAdd)
+					$elm$html$Html$Events$onClick($author$project$Main$ClickAddPeriode)
 				]),
 			_List_fromArray(
 				[
@@ -11556,7 +11556,7 @@ var $author$project$Main$viewInsert = function (maybeInsert) {
 						[
 							$elm$html$Html$Attributes$type_('datetime-local'),
 							$elm$html$Html$Attributes$value(insert.formStart),
-							$elm$html$Html$Events$onInput($author$project$Main$InsertStart)
+							$elm$html$Html$Events$onInput($author$project$Main$InsertedAddPeriodeStartTime)
 						]),
 					_List_Nil),
 					A2(
@@ -11567,7 +11567,7 @@ var $author$project$Main$viewInsert = function (maybeInsert) {
 							$elm$html$Html$Attributes$type_('text'),
 							$elm$html$Html$Attributes$placeholder('minutes'),
 							$elm$html$Html$Attributes$value(insert.formDuration),
-							$elm$html$Html$Events$onInput($author$project$Main$InsertAddDuration)
+							$elm$html$Html$Events$onInput($author$project$Main$InsertedAddPeriodeDuration)
 						]),
 					_List_Nil),
 					A2(
@@ -11575,7 +11575,7 @@ var $author$project$Main$viewInsert = function (maybeInsert) {
 					_List_fromArray(
 						[
 							$elm$html$Html$Attributes$class('btn btn-secondary'),
-							$elm$html$Html$Events$onClick($author$project$Main$ClickUntilNow),
+							$elm$html$Html$Events$onClick($author$project$Main$ClickedAddPeriodeUntilNow),
 							$elm$html$Html$Attributes$title('Set start minutes before now')
 						]),
 					_List_fromArray(
@@ -11590,7 +11590,7 @@ var $author$project$Main$viewInsert = function (maybeInsert) {
 							$elm$html$Html$Attributes$type_('text'),
 							$elm$html$Html$Attributes$placeholder('comment'),
 							$elm$html$Html$Attributes$value(insert.formComment),
-							$elm$html$Html$Events$onInput($author$project$Main$InsertAddComment)
+							$elm$html$Html$Events$onInput($author$project$Main$InsertedAddPeriodeComment)
 						]),
 					_List_Nil),
 					A2(
@@ -11598,7 +11598,7 @@ var $author$project$Main$viewInsert = function (maybeInsert) {
 					_List_fromArray(
 						[
 							$elm$html$Html$Attributes$class('btn btn-primary'),
-							$elm$html$Html$Events$onClick($author$project$Main$ClickInsert)
+							$elm$html$Html$Events$onClick($author$project$Main$ClickedAddPeriodeSubmit)
 						]),
 					_List_fromArray(
 						[
@@ -11615,9 +11615,9 @@ var $author$project$Main$viewInsert = function (maybeInsert) {
 				]));
 	}
 };
-var $author$project$Main$ClickLogin = {$: 'ClickLogin'};
-var $author$project$Main$InsertLoginPassword = function (a) {
-	return {$: 'InsertLoginPassword', a: a};
+var $author$project$Main$ClickedLogin = {$: 'ClickedLogin'};
+var $author$project$Main$InsertedLoginPassword = function (a) {
+	return {$: 'InsertedLoginPassword', a: a};
 };
 var $elm$html$Html$h5 = _VirtualDom_node('h5');
 var $author$project$Main$viewLogin = function (pass) {
@@ -11639,7 +11639,7 @@ var $author$project$Main$viewLogin = function (pass) {
 					[
 						$elm$html$Html$Attributes$type_('password'),
 						$elm$html$Html$Attributes$value(pass),
-						$elm$html$Html$Events$onInput($author$project$Main$InsertLoginPassword)
+						$elm$html$Html$Events$onInput($author$project$Main$InsertedLoginPassword)
 					]),
 				_List_Nil),
 				A2(
@@ -11647,7 +11647,7 @@ var $author$project$Main$viewLogin = function (pass) {
 				_List_fromArray(
 					[
 						$elm$html$Html$Attributes$class('btn btn-primary'),
-						$elm$html$Html$Events$onClick($author$project$Main$ClickLogin)
+						$elm$html$Html$Events$onClick($author$project$Main$ClickedLogin)
 					]),
 				_List_fromArray(
 					[
@@ -11669,7 +11669,7 @@ var $author$project$Main$view = function (model) {
 	} else {
 		var _v1 = model.permission;
 		if (_v1.$ === 'PermissionNone') {
-			return $author$project$Main$viewLogin(model.formPassword);
+			return $author$project$Main$viewLogin(model.formLoginPassword);
 		} else {
 			return A2(
 				$elm$html$Html$div,
@@ -11683,7 +11683,7 @@ var $author$project$Main$view = function (model) {
 						A2(
 						$author$project$Main$canWrite,
 						model.permission,
-						$author$project$Main$viewInsert(model.formInsert)),
+						$author$project$Main$viewInsert(model.insert)),
 						$author$project$Main$viewBody(model),
 						$author$project$Main$viewFooter
 					]));
