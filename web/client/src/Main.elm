@@ -26,7 +26,7 @@ timeZone =
     TimeZone.europe__berlin ()
 
 
-main : Program String Model Msg
+main : Program ( String, Int ) Model Msg
 main =
     Browser.element
         { init = init
@@ -110,17 +110,17 @@ type Msg
     | InsertedActionEditComment String
 
 
-init : String -> ( Model, Cmd Msg )
-init token =
+init : ( String, Int ) -> ( Model, Cmd Msg )
+init ( jwt, millis ) =
     let
         permission =
-            permissionFromJWT token
+            permissionFromJWT jwt
     in
     ( { periodes = []
       , periodeAction = ActionNone
       , current = Periode.Stopped
       , permission = permission
-      , currentTime = Time.millisToPosix 0
+      , currentTime = Time.millisToPosix millis
       , viewBody = ViewPeriodes
       , errMsg = Nothing
       , formComment = ""
