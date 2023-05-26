@@ -1,4 +1,4 @@
-module YearMonth exposing (YearMonthSelect(..), fromAttr, fromPosix, toString, viewYearMonthSelect, yearMonthList)
+module YearMonth exposing (YearMonthSelect(..), fromSelectAttr, monthToInt,fromPosix, toString, viewYearMonthSelect)
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -12,8 +12,8 @@ type YearMonthSelect
 
 
 yearMonthList : Time.Zone -> List Time.Posix -> List YearMonthSelect
-yearMonthList zone =
-    List.map (fromPosix zone)
+yearMonthList zone times =
+    List.map (fromPosix zone) times
 
 
 fromPosix : Time.Zone -> Time.Posix -> YearMonthSelect
@@ -33,21 +33,15 @@ toString yearMonth =
             String.fromInt year ++ " " ++ monthToString month
 
 
-toAttr : YearMonthSelect -> String
-toAttr yearMonth =
-    case yearMonth of
-        All ->
-            "alle"
-
-        YearMonth year month ->
-            String.fromInt year
-                ++ "_"
-                ++ monthToString month
-                |> String.toLower
+toSelectAttr : YearMonthSelect -> String
+toSelectAttr yearMonth =
+    toString yearMonth
+        |> String.replace " " "_"
+        |> String.toLower
 
 
-fromAttr : String -> YearMonthSelect
-fromAttr value =
+fromSelectAttr : String -> YearMonthSelect
+fromSelectAttr value =
     case String.split "_" value of
         [ strYear, strMonth ] ->
             let
@@ -103,6 +97,44 @@ monthToString month =
         Time.Dec ->
             "Dezember"
 
+monthToInt : Time.Month -> Int
+monthToInt month =
+    case month of
+        Time.Jan ->
+            1
+
+        Time.Feb ->
+            2
+
+        Time.Mar ->
+            3
+
+        Time.Apr ->
+            4
+
+        Time.May ->
+            5
+
+        Time.Jun ->
+            6
+
+        Time.Jul ->
+            7
+
+        Time.Aug ->
+            8
+
+        Time.Sep ->
+            9
+
+        Time.Oct ->
+            10
+
+        Time.Nov ->
+            11
+
+        Time.Dec ->
+            12
 
 stringToMonth : String -> Maybe Time.Month
 stringToMonth month =
@@ -155,7 +187,7 @@ viewYearMonthSelect zone selected event times =
 
 viewYearMonthOption : YearMonthSelect -> YearMonthSelect -> Html msg
 viewYearMonthOption selectedYM ym =
-    option [ value (toAttr ym), selected (selectedYM == ym) ] [ text (toString ym) ]
+    option [ value (toSelectAttr ym), selected (selectedYM == ym) ] [ text (toString ym) ]
 
 
 unique : List a -> List a

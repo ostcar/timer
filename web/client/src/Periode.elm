@@ -139,57 +139,35 @@ filterYearMonth zone ym periodes =
 byYearMonth : Time.Zone -> List Periode -> List ( String, List Periode )
 byYearMonth zone periodes =
     List.foldl
-        (\p list ->
+        (\periode acc ->
             let
-                index =
-                    YearMonth.fromPosix zone p.start |> YearMonth.toString
-
-                foundIndex =
-                    anyIndex (\e -> Tuple.first e == index) list
+                myIdx =
+                    YearMonth.fromPosix zone periode.start
+                        |> YearMonth.toString
             in
-            if foundIndex == -1 then
-                ( index, [ p ] ) :: list
-
-            else
-                List.indexedMap
-                    (\idx ( ym, l ) ->
-                        if idx == foundIndex then
-                            ( ym, p :: l )
-
-                        else
-                            ( ym, l )
-                    )
-                    list
+            toIndexedList ( myIdx, periode ) acc
         )
         []
         periodes
 
 
-{-| Like List.any but returns the index of the first found element. Returns -1
-if the list does not contain the required element
+toIndexedList : ( comparable, a ) -> List ( comparable, List a ) -> List ( comparable, List a )
+toIndexedList ( myIdx, myElement ) elements =
+    let
+        ( createdList, contains ) =
+            List.foldl
+                (\( idx, filteredElements ) ( acc, found ) ->
+                    if idx == myIdx then
+                        ( ( idx, myElement :: filteredElements ) :: acc, True )
 
-    anyIndex isEven [ 2, 3 ] == 0
+                    else
+                        ( ( idx, filteredElements ) :: acc, found )
+                )
+                ( [], False )
+                elements
+    in
+    if contains then
+        createdList
 
-    anyIndex isEven [ 1, 3 ] == -1
-
--}
-anyIndex : (a -> Bool) -> List a -> Int
-anyIndex comparer list =
-    List.indexedMap
-        (\index element ->
-            if comparer element then
-                index
-
-            else
-                -1
-        )
-        list
-        |> List.foldl
-            (\element found ->
-                if element >= 0 then
-                    element
-
-                else
-                    found
-            )
-            -1
+    else
+        ( myIdx, [ myElement ] ) :: elements

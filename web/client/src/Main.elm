@@ -15,8 +15,6 @@ import Periode
 import Platform.Cmd as Cmd
 import String
 import Time
-import Time.Format
-import Time.Format.Config.Config_de_de
 import TimeZone
 import YearMonth exposing (YearMonthSelect(..))
 
@@ -26,7 +24,7 @@ timeZone =
     TimeZone.europe__berlin ()
 
 
-main : Program String Model Msg
+main : Program ( String, Int ) Model Msg
 main =
     Browser.element
         { init = init
@@ -38,237 +36,350 @@ main =
 
 type alias Model =
     { periodes : List Periode.Periode
-    , periodeAction : Action
+    , periodeAction : ModelPeriodeAction
     , current : Periode.Current
+    , insert : Maybe ModelInsert
     , permission : Permission
     , currentTime : Time.Posix
     , viewBody : ViewBody
-    , errMsg : Maybe String
+    , error : Maybe String
     , formComment : String
-    , formInsert : Maybe Insert
-    , formPassword : String
+    , formLoginPassword : String
     , formYearMonth : YearMonth.YearMonthSelect
     }
 
 
-type Action
+type ModelPeriodeAction
     = ActionNone
-    | ActionEdit Edit
-    | ActionDelete Periode.ID
+    | ActionEdit ModelEdit
+    | ActionDelete Periode.Periode
 
 
-insertForm : Model -> Insert
-insertForm model =
-    model.formInsert |> Maybe.withDefault (emptyInsert model.currentTime)
-
-
-type alias Insert =
-    { formDuration : String
-    , formComment : String
-    , formStart : String
-    , error : Maybe String
-    }
-
-
-type alias Edit =
-    { id : Periode.ID
-    , start : String
-    , minutes : String
+type alias ModelInsert =
+    { start : String
+    , duration : String
     , comment : String
     , error : Maybe String
     }
 
 
-emptyEdit : Periode.Periode -> Edit
-emptyEdit periode =
-    { id = periode.id
-    , start = posix2timevalue periode.start
-    , minutes = periode.duration |> durationToString
-    , comment = periode.comment
-    , error = Nothing
+type alias ModelEdit =
+    { id : Periode.ID
+    , start : String
+    , duration : String
+    , comment : String
+    , error : Maybe String
     }
 
 
 type Msg
-    = ReceiveState (Result Http.Error Periode.State)
-    | ReceiveEvent (Result Http.Error ()) -- Response for every action
-    | BrowserTick Time.Posix
-      -- Login
-    | InsertLoginPassword String
-    | ClickLogin
-    | ReceiveAuth (Result Http.Error String)
-    | ClickLogout
+    = CurrentTime Time.Posix
+      -- Network responses
+    | ReceivedData (Result Http.Error Periode.State)
+    | ReceivedActionResponse (Result Http.Error ())
+      -- Authentication
+    | InsertedLoginPassword String
+    | ClickedLogin
+    | ReceivedAuthResponse (Result Http.Error String)
+    | ClickedLogout
       -- Navigation
-    | SelectYearMonth String
-    | ClickBodyNav ViewBody
-      -- Start Stop
-    | InsertComment String
-    | ClickStart
-    | ClickStop
-      -- Periode Actions
-    | ClickContinue Periode.ID
-    | ClickEdit Periode.Periode
-    | ClickDelete Periode.ID
-    | ClickDeleteSubmit Periode.ID
+    | SelectedYearMonthFilter String
+    | ClickedBodyNav ViewBody
+      -- Current Periode
+    | ClickedStart
+    | ClickedStop
+    | InsertedCurrentComment String
       -- Add Periode
-    | ClickAdd
-    | InsertAddDuration String
-    | InsertAddComment String
-    | InsertStart String
-    | ClickInsert
-    | ClickUntilNow
-      -- Edit Periode
-    | ClickActionAbort
-    | ClickEditSubmit
-    | InsertEditComment String
-    | InsertEditDuration String
-    | InsertStartEdit String
+    | ClickedAddPeriode
+    | InsertedAddPeriodeStartTime String
+    | InsertedAddPeriodeDuration String
+    | InsertedAddPeriodeComment String
+    | ClickedAddPeriodeUntilNow
+    | ClickedAddPeriodeSubmit
+    | ClickedAddPeriodeAbort
+      -- Periode Actions
+    | ClickedActionContinue Periode.Periode
+    | ClickedActionEdit Periode.Periode
+    | ClickedActionDelete Periode.Periode
+    | ClickedActionSubmit
+    | ClickedActionAbort
+    | InsertedActionEditStartTime String
+    | InsertedActionEditDuration String
+    | InsertedActionEditComment String
 
 
-init : String -> ( Model, Cmd Msg )
-init token =
+init : ( String, Int ) -> ( Model, Cmd Msg )
+init ( jwt, millis ) =
     let
         permission =
-            permissionFromJWT token
+            permissionFromJWT jwt
     in
-    ( { periodes = []
-      , periodeAction = ActionNone
-      , current = Periode.Stopped
-      , permission = permission
-      , currentTime = Time.millisToPosix 0
-      , viewBody = ViewPeriodes
-      , errMsg = Nothing
-      , formComment = ""
-      , formInsert = Nothing
-      , formPassword = ""
-      , formYearMonth = YearMonth.All
-      }
-    , updateStateIfPermission permission
+    ( emptyModel permission (Time.millisToPosix millis)
+    , fetchDataCommand permission
     )
+
+
+emptyModel : Permission -> Time.Posix -> Model
+emptyModel permission time =
+    { periodes = []
+    , periodeAction = ActionNone
+    , current = Periode.Stopped
+    , permission = permission
+    , currentTime = time
+    , viewBody = ViewPeriodes
+    , error = Nothing
+    , formComment = ""
+    , insert = Nothing
+    , formLoginPassword = ""
+    , formYearMonth = YearMonth.All
+    }
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        ReceiveState response ->
+        CurrentTime newTime ->
+            ( { model | currentTime = newTime }
+            , Cmd.none
+            )
+
+        -- Network responses
+        ReceivedData response ->
             case response of
                 Ok state ->
                     ( { model
                         | periodes = state.periodes
                         , current = state.current
                         , formComment = Periode.stateComment state
-                        , errMsg = Nothing
+                        , error = Nothing
                       }
                     , Cmd.none
                     )
 
                 Err e ->
-                    ( { model
-                        | periodes = []
-                        , current = Periode.Stopped
-                        , errMsg = Just (buildErrorMessage e)
-                      }
+                    ( cleanModelWithError model (buildHTTPResponseErrorMessage e)
                     , Cmd.none
                     )
 
-        -- If an action returns 200, then reload all data.
-        ReceiveEvent response ->
+        ReceivedActionResponse response ->
             case response of
                 Ok _ ->
+                    -- If an action returns 200, then reload all data.
                     ( model
-                    , updateStateIfPermission model.permission
+                    , fetchDataCommand model.permission
                     )
 
                 Err e ->
-                    ( { model
-                        | periodes = []
-                        , current = Periode.Stopped
-                        , errMsg = Just (buildErrorMessage e)
-                        , permission = PermissionNone
-                      }
+                    ( cleanModelWithError model (buildHTTPResponseErrorMessage e)
                     , Cmd.none
                     )
 
-        BrowserTick newTime ->
-            ( { model | currentTime = newTime }
+        -- Authentication
+        InsertedLoginPassword password ->
+            ( { model | formLoginPassword = password }
             , Cmd.none
             )
 
-        InsertComment comment ->
+        ClickedLogin ->
+            ( { model | formLoginPassword = "" }
+            , authRequest ReceivedAuthResponse model.formLoginPassword
+            )
+
+        ReceivedAuthResponse response ->
+            case response of
+                Ok permissionLevel ->
+                    ( { model | permission = permissionFromString permissionLevel }
+                    , Periode.fetch ReceivedData
+                    )
+
+                Err e ->
+                    ( cleanModelWithError model (buildHTTPResponseErrorMessage e)
+                    , Cmd.none
+                    )
+
+        ClickedLogout ->
+            ( { model | permission = PermissionNone }
+            , Http.get
+                { url = "/api/auth/logout"
+                , expect = Http.expectWhatever ReceivedActionResponse
+                }
+            )
+
+        -- Navigation
+        SelectedYearMonthFilter selectAttr ->
+            ( { model | formYearMonth = YearMonth.fromSelectAttr selectAttr }
+            , Cmd.none
+            )
+
+        ClickedBodyNav value ->
+            ( { model | viewBody = value }
+            , Cmd.none
+            )
+
+        -- Current Periode
+        ClickedStart ->
+            ( model
+            , startStopRequest "start" ReceivedActionResponse model.formComment
+            )
+
+        ClickedStop ->
+            ( model
+            , startStopRequest "stop" ReceivedActionResponse model.formComment
+            )
+
+        InsertedCurrentComment comment ->
             ( { model | formComment = comment }
             , Cmd.none
             )
 
-        ClickStart ->
-            ( model
-            , sendStartStop "start" ReceiveEvent model.formComment
+        -- Add Periode
+        ClickedAddPeriode ->
+            ( { model | insert = Just <| emptyModelInsert model.currentTime }
+            , Cmd.none
             )
 
-        ClickStop ->
-            ( model
-            , sendStartStop "stop" ReceiveEvent model.formComment
+        InsertedAddPeriodeStartTime startStr ->
+            let
+                insert =
+                    modelInsert model
+            in
+            ( { model | insert = Just { insert | start = startStr } }
+            , Cmd.none
             )
 
-        ClickContinue id ->
-            ( model
-            , List.filter (\p -> p.id == id) model.periodes
-                |> List.head
-                |> Maybe.andThen
-                    (\p ->
-                        p.comment
-                            |> sendStartStop "start" ReceiveEvent
-                            |> Just
+        InsertedAddPeriodeDuration duration ->
+            let
+                insert =
+                    modelInsert model
+            in
+            ( { model | insert = Just { insert | duration = duration } }
+            , Cmd.none
+            )
+
+        InsertedAddPeriodeComment comment ->
+            let
+                insert =
+                    modelInsert model
+            in
+            ( { model | insert = Just { insert | comment = comment } }
+            , Cmd.none
+            )
+
+        ClickedAddPeriodeUntilNow ->
+            let
+                insert =
+                    modelInsert model
+
+                newInsert =
+                    insert.duration
+                        |> stringToDuration
+                        |> Result.map
+                            (\duration -> Duration.subtractFrom model.currentTime duration)
+                        |> Result.map
+                            (\time -> { insert | start = formatTimeForInputDateTimeLocal time, error = Nothing })
+                        |> handleError
+                            (\errMSG -> { insert | error = Just errMSG })
+            in
+            ( { model | insert = Just newInsert }
+            , Cmd.none
+            )
+
+        ClickedAddPeriodeSubmit ->
+            let
+                insert =
+                    modelInsert model
+
+                mayDuration =
+                    stringToDuration insert.duration
+                        |> Result.mapError (\_ -> "Duration is wrong")
+
+                mayStart =
+                    Iso8601.toTime insert.start
+                        |> Result.mapError (\_ -> "Start is wrong")
+
+                insertCmd =
+                    Result.map2
+                        (\duration start -> addPeriodeRequest ReceivedActionResponse start duration insert.comment)
+                        mayDuration
+                        mayStart
+            in
+            case insertCmd of
+                Ok cmd ->
+                    ( { model | insert = Nothing }
+                    , cmd
                     )
-                |> Maybe.withDefault Cmd.none
-            )
 
-        ClickEdit periode ->
-            ( { model | periodeAction = ActionEdit (emptyEdit periode) }
+                Err errMSG ->
+                    ( { model | insert = Just { insert | error = Just errMSG } }
+                    , Cmd.none
+                    )
+
+        ClickedAddPeriodeAbort ->
+            ( { model | insert = Nothing }
             , Cmd.none
             )
 
-        ClickDelete id ->
-            ( { model | periodeAction = ActionDelete id }
-            , Cmd.none
-            )
-
-        ClickDeleteSubmit id ->
+        --Periode Actions
+        ClickedActionContinue periode ->
             ( model
-            , sendDelete ReceiveEvent id
+            , startStopRequest "start" ReceivedActionResponse periode.comment
             )
 
-        ClickActionAbort ->
-            ( { model | periodeAction = ActionNone }
+        ClickedActionEdit periode ->
+            ( { model | periodeAction = ActionEdit <| modelEdit periode }
             , Cmd.none
             )
 
-        ClickEditSubmit ->
+        ClickedActionDelete periode ->
+            ( { model | periodeAction = ActionDelete periode }
+            , Cmd.none
+            )
+
+        ClickedActionSubmit ->
             case model.periodeAction of
                 ActionEdit ep ->
                     let
                         mayDuration =
-                            stringToDuration ep.minutes
+                            stringToDuration ep.duration
+                                |> Result.mapError (\_ -> "Duration is wrong")
 
                         mayStart =
                             Iso8601.toTime ep.start
+                                |> Result.mapError (\_ -> "Start is wrong")
+
+                        editCmd =
+                            Result.map2
+                                (\duration start -> editPeriodeRequest ReceivedActionResponse ep.id start duration ep.comment)
+                                mayDuration
+                                mayStart
                     in
-                    case ( mayDuration, mayStart ) of
-                        ( Ok duration, Ok start ) ->
+                    case editCmd of
+                        Ok cmd ->
                             ( { model | periodeAction = ActionNone }
-                            , sendEdit ReceiveEvent ep.id (Just start) (Just duration) (Just ep.comment)
+                            , cmd
                             )
 
-                        _ ->
-                            ( model
+                        Err err ->
+                            ( { model | periodeAction = ActionEdit { ep | error = Just err } }
                             , Cmd.none
                             )
+
+                ActionDelete periode ->
+                    ( model
+                    , deletePeriodeRequest ReceivedActionResponse periode.id
+                    )
 
                 _ ->
                     ( model
                     , Cmd.none
                     )
 
-        InsertEditComment comment ->
+        ClickedActionAbort ->
+            ( { model | periodeAction = ActionNone }
+            , Cmd.none
+            )
+
+        InsertedActionEditComment comment ->
             case model.periodeAction of
                 ActionEdit ep ->
                     ( { model | periodeAction = ActionEdit { ep | comment = comment } }
@@ -280,19 +391,7 @@ update msg model =
                     , Cmd.none
                     )
 
-        InsertEditDuration minutes ->
-            case model.periodeAction of
-                ActionEdit ep ->
-                    ( { model | periodeAction = ActionEdit { ep | minutes = minutes } }
-                    , Cmd.none
-                    )
-
-                _ ->
-                    ( model
-                    , Cmd.none
-                    )
-
-        InsertStartEdit start ->
+        InsertedActionEditStartTime start ->
             case model.periodeAction of
                 ActionEdit ep ->
                     ( { model | periodeAction = ActionEdit { ep | start = start } }
@@ -304,167 +403,31 @@ update msg model =
                     , Cmd.none
                     )
 
-        ClickAdd ->
-            ( { model | formInsert = emptyInsert model.currentTime |> Just }
-            , Cmd.none
-            )
-
-        InsertStart startStr ->
-            let
-                insert =
-                    insertForm model
-            in
-            ( { model | formInsert = Just { insert | formStart = startStr } }
-            , Cmd.none
-            )
-
-        InsertAddDuration durationStr ->
-            let
-                insert =
-                    insertForm model
-            in
-            ( { model | formInsert = Just { insert | formDuration = durationStr } }
-            , Cmd.none
-            )
-
-        InsertAddComment comment ->
-            let
-                insert =
-                    insertForm model
-            in
-            ( { model | formInsert = Just { insert | formComment = comment } }
-            , Cmd.none
-            )
-
-        ClickUntilNow ->
-            let
-                insert =
-                    insertForm model
-
-                newStartResult =
-                    insert.formDuration
-                        |> stringToDuration
-                        |> Result.map (\duration -> Duration.subtractFrom model.currentTime duration)
-
-                newFormInsert =
-                    case newStartResult of
-                        Ok time ->
-                            { insert | formStart = posix2timevalue time, error = Nothing }
-
-                        Err errMSG ->
-                            { insert | error = Just errMSG }
-            in
-            ( { model | formInsert = Just newFormInsert }
-            , Cmd.none
-            )
-
-        ClickInsert ->
-            let
-                insert =
-                    insertForm model
-
-                insertCMD =
-                    Iso8601.toTime insert.formStart
-                        |> Result.mapError (\_ -> "Start is wrong")
-                        |> Result.andThen
-                            (\start ->
-                                resultFromEmptyString "No duration provided" insert.formDuration
-                                    |> Result.andThen
-                                        (stringToDuration
-                                            >> Result.map (\duration -> sendInsert ReceiveEvent start duration insert.formComment)
-                                        )
-                            )
-            in
-            case insertCMD of
-                Ok cmd ->
-                    ( { model | formInsert = Nothing }
-                    , cmd
-                    )
-
-                Err errMSG ->
-                    ( { model | formInsert = Just { insert | error = Just errMSG } }
+        InsertedActionEditDuration duration ->
+            case model.periodeAction of
+                ActionEdit ep ->
+                    ( { model | periodeAction = ActionEdit { ep | duration = duration } }
                     , Cmd.none
                     )
 
-        InsertLoginPassword password ->
-            ( { model | formPassword = password }
-            , Cmd.none
-            )
-
-        ClickLogin ->
-            ( { model | formPassword = "" }
-            , sendPassword ReceiveAuth model.formPassword
-            )
-
-        ReceiveAuth response ->
-            case response of
-                Ok permissionLevel ->
-                    ( { model | permission = permissionFromString permissionLevel }
-                    , Periode.fetch ReceiveState
-                    )
-
-                Err e ->
-                    ( { model
-                        | periodes = []
-                        , current = Periode.Stopped
-                        , errMsg = Just (buildErrorMessage e)
-                      }
+                _ ->
+                    ( model
                     , Cmd.none
                     )
 
-        ClickLogout ->
-            ( { model | permission = PermissionNone }
-            , Http.get
-                { url = "/api/auth/logout"
-                , expect = Http.expectWhatever ReceiveEvent
-                }
-            )
 
-        SelectYearMonth value ->
-            ( { model | formYearMonth = YearMonth.fromAttr value }
-            , Cmd.none
-            )
+handleError : (x -> a) -> Result x a -> a
+handleError fn result =
+    case result of
+        Ok v ->
+            v
 
-        ClickBodyNav value ->
-            ( { model | viewBody = value }
-            , Cmd.none
-            )
+        Err err ->
+            fn err
 
 
-stringToDuration : String -> Result String Duration.Duration
-stringToDuration =
-    String.toFloat
-        >> Result.fromMaybe "Duration has to be a number"
-        >> Result.map Duration.minutes
-
-
-durationToString : Duration.Duration -> String
-durationToString =
-    Duration.inMinutes
-        >> String.fromFloat
-
-
-updateStateIfPermission : Permission -> Cmd Msg
-updateStateIfPermission perm =
-    case perm of
-        PermissionNone ->
-            Cmd.none
-
-        _ ->
-            Periode.fetch ReceiveState
-
-
-resultFromEmptyString : x -> String -> Result x String
-resultFromEmptyString error str =
-    if str == "" then
-        Result.Err error
-
-    else
-        Result.Ok str
-
-
-buildErrorMessage : Http.Error -> String
-buildErrorMessage httpError =
+buildHTTPResponseErrorMessage : Http.Error -> String
+buildHTTPResponseErrorMessage httpError =
     case httpError of
         Http.BadUrl message ->
             message
@@ -480,6 +443,65 @@ buildErrorMessage httpError =
 
         Http.BadBody message ->
             message
+
+
+cleanModelWithError : Model -> String -> Model
+cleanModelWithError model err =
+    let
+        cleanModel =
+            emptyModel model.permission model.currentTime
+    in
+    { cleanModel
+        | error = Just err
+    }
+
+
+emptyModelInsert : Time.Posix -> ModelInsert
+emptyModelInsert currentTime =
+    { duration = ""
+    , comment = ""
+    , start = formatTimeForInputDateTimeLocal currentTime
+    , error = Nothing
+    }
+
+
+modelInsert : Model -> ModelInsert
+modelInsert model =
+    model.insert
+        |> Maybe.withDefault (emptyModelInsert model.currentTime)
+
+
+modelEdit : Periode.Periode -> ModelEdit
+modelEdit periode =
+    { id = periode.id
+    , start = formatTimeForInputDateTimeLocal periode.start
+    , duration = periode.duration |> durationToString
+    , comment = periode.comment
+    , error = Nothing
+    }
+
+
+stringToDuration : String -> Result String Duration.Duration
+stringToDuration =
+    String.toFloat
+        >> Result.fromMaybe "Duration has to be a number"
+        >> Result.map Duration.minutes
+
+
+durationToString : Duration.Duration -> String
+durationToString =
+    Duration.inMinutes
+        >> String.fromFloat
+
+
+fetchDataCommand : Permission -> Cmd Msg
+fetchDataCommand perm =
+    case perm of
+        PermissionNone ->
+            Cmd.none
+
+        _ ->
+            Periode.fetch ReceivedData
 
 
 
@@ -516,81 +538,66 @@ permissionFromJWT token =
         |> Result.withDefault PermissionNone
 
 
-sendPassword : (Result Http.Error String -> Msg) -> String -> Cmd Msg
-sendPassword result pass =
+authRequest : (Result Http.Error String -> Msg) -> String -> Cmd Msg
+authRequest result pass =
     Http.post
         { url = "/api/auth"
-        , body = Http.jsonBody (passwordEncoder pass)
+        , body =
+            Http.jsonBody (Encode.object [ ( "password", Encode.string pass ) ])
         , expect = Http.expectString result
         }
 
 
-passwordEncoder : String -> Encode.Value
-passwordEncoder pass =
-    Encode.object
-        [ ( "password", Encode.string pass ) ]
+
+-- Action requests
 
 
-
--- Start Stop
-
-
-sendStartStop : String -> (Result Http.Error () -> Msg) -> String -> Cmd Msg
-sendStartStop startStop result comment =
+startStopRequest : String -> (Result Http.Error () -> Msg) -> String -> Cmd Msg
+startStopRequest startStop result comment =
     Http.post
         { url = "/api/" ++ startStop
-        , body = Http.jsonBody (commentEncoder comment)
+        , body =
+            Http.jsonBody
+                (Encode.object
+                    [ ( "comment", Encode.string comment ) ]
+                )
         , expect = Http.expectWhatever result
         }
 
 
-commentEncoder : String -> Encode.Value
-commentEncoder comment =
-    Encode.object
-        [ ( "comment", Encode.string comment ) ]
-
-
-
--- Insert
-
-
-emptyInsert : Time.Posix -> Insert
-emptyInsert currentTime =
-    { formDuration = ""
-    , formComment = ""
-    , formStart = posix2timevalue currentTime
-    , error = Nothing
-    }
-
-
-sendInsert : (Result Http.Error () -> Msg) -> Time.Posix -> Duration.Duration -> String -> Cmd Msg
-sendInsert result start duration comment =
+addPeriodeRequest : (Result Http.Error () -> Msg) -> Time.Posix -> Duration.Duration -> String -> Cmd Msg
+addPeriodeRequest result start duration comment =
     Http.post
         { url = "/api/periode"
-        , body = Http.jsonBody (insertEncoder start duration comment)
+        , body = Http.jsonBody (periodeEncoder start duration comment)
         , expect = Http.expectWhatever result
         }
 
 
-sendEdit : (Result Http.Error () -> Msg) -> Periode.ID -> Maybe Time.Posix -> Maybe Duration.Duration -> Maybe String -> Cmd Msg
-sendEdit result id start mayDuration mayComment =
+editPeriodeRequest : (Result Http.Error () -> Msg) -> Periode.ID -> Time.Posix -> Duration.Duration -> String -> Cmd Msg
+editPeriodeRequest result id start duration comment =
     Http.request
         { method = "PUT"
         , headers = []
         , url = "/api/periode/" ++ Periode.idToString id
-        , body = Http.jsonBody (editEncoder start mayDuration mayComment)
+        , body = Http.jsonBody (periodeEncoder start duration comment)
         , expect = Http.expectWhatever result
         , timeout = Nothing
         , tracker = Nothing
         }
 
 
+periodeEncoder : Time.Posix -> Duration.Duration -> String -> Encode.Value
+periodeEncoder start duration comment =
+    Encode.object
+        [ ( "start", (Time.posixToMillis start // 1000) |> Encode.int )
+        , ( "duration", (Duration.inSeconds duration |> round) |> Encode.int )
+        , ( "comment", Encode.string comment )
+        ]
 
--- Periode Actions
 
-
-sendDelete : (Result Http.Error () -> Msg) -> Periode.ID -> Cmd Msg
-sendDelete result id =
+deletePeriodeRequest : (Result Http.Error () -> Msg) -> Periode.ID -> Cmd Msg
+deletePeriodeRequest result id =
     Http.request
         { method = "DELETE"
         , headers = []
@@ -602,103 +609,90 @@ sendDelete result id =
         }
 
 
-insertEncoder : Time.Posix -> Duration.Duration -> String -> Encode.Value
-insertEncoder start duration comment =
-    Encode.object
-        [ ( "start", (Time.posixToMillis start // 1000) |> Encode.int )
-        , ( "duration", (Duration.inSeconds duration |> round) |> Encode.int )
-        , ( "comment", Encode.string comment )
-        ]
-
-
-editEncoder : Maybe Time.Posix -> Maybe Duration.Duration -> Maybe String -> Encode.Value
-editEncoder mayStart mayDuration mayComment =
-    let
-        encodedStart =
-            Maybe.map (\start -> ( "start", (Time.posixToMillis start // 1000) |> Encode.int )) mayStart
-
-        encodedDuration =
-            Maybe.map (\duration -> ( "duration", (Duration.inSeconds duration |> round) |> Encode.int )) mayDuration
-
-        encodedComment =
-            Maybe.map (\comment -> ( "comment", Encode.string comment )) mayComment
-    in
-    [ encodedStart, encodedDuration, encodedComment ]
-        |> List.filterMap identity
-        |> Encode.object
-
-
 
 -- view Helpers
 
 
-intToPadding2String : Int -> String
-intToPadding2String n =
-    let
-        str =
-            String.fromInt n
+formatTimeForInputDateTimeLocal : Time.Posix -> String
+formatTimeForInputDateTimeLocal time =
+    -- YYYY
+    toPaddedString 4 (Time.toYear timeZone time)
+        ++ "-"
+        -- MM
+        ++ toPaddedString 2 (YearMonth.monthToInt (Time.toMonth timeZone time))
+        ++ "-"
+        -- DD
+        ++ toPaddedString 2 (Time.toDay timeZone time)
+        ++ "T"
+        -- HH
+        ++ toPaddedString 2 (Time.toHour timeZone time)
+        ++ ":"
+        -- mm
+        ++ toPaddedString 2 (Time.toMinute timeZone time)
 
-        formatted =
-            if String.length str < 2 then
-                "0" ++ str
 
-            else
-                str
-    in
-    formatted
+formatTimeForUser : Time.Posix -> String
+formatTimeForUser time =
+    -- YYYY
+    toPaddedString 4 (Time.toYear timeZone time)
+        ++ "-"
+        -- MM
+        ++ toPaddedString 2 (YearMonth.monthToInt (Time.toMonth timeZone time))
+        ++ "-"
+        -- DD
+        ++ toPaddedString 2 (Time.toDay timeZone time)
+        ++ " "
+        -- HH
+        ++ toPaddedString 2 (Time.toHour timeZone time)
+        ++ ":"
+        -- mm
+        ++ toPaddedString 2 (Time.toMinute timeZone time)
 
 
-centToString : Int -> String
-centToString euroCent =
-    let
-        euro =
-            euroCent // 100
-
-        euroString =
-            intToFormattedString euro
-
-        cent =
-            remainderBy 100 euroCent
-    in
-    euroString ++ "," ++ intToPadding2String cent ++ " €"
+toPaddedString : Int -> Int -> String
+toPaddedString digits value =
+    String.padLeft digits '0' (String.fromInt value)
 
 
 {-| intToFormattedString converts an int to a string that has a . at every third
 place.
 -}
-intToFormattedString : Int -> String
-intToFormattedString int =
-    String.fromInt int
+toFormattedString : Int -> String
+toFormattedString int =
+    int
+        |> String.fromInt
         |> String.foldr
-            (\c list ->
+            (\c acc ->
                 let
                     last =
-                        List.head list |> Maybe.withDefault ""
+                        List.head acc |> Maybe.withDefault ""
                 in
                 if String.length last == 3 then
-                    String.fromChar c :: list
+                    String.fromChar c :: acc
 
                 else
-                    String.cons c last :: List.drop 1 list
+                    String.cons c last :: List.drop 1 acc
             )
             []
         |> String.join "."
+
+
+centToString : Int -> String
+centToString euroCent =
+    let
+        euroString =
+            toFormattedString (euroCent // 100)
+
+        cent =
+            remainderBy 100 euroCent
+    in
+    euroString ++ "," ++ toPaddedString 2 cent ++ " €"
 
 
 durationToMonyString : Duration.Duration -> String
 durationToMonyString duration =
     Mony.durationToCent duration
         |> centToString
-
-
-canWrite : Permission -> Html Msg -> Html Msg
-canWrite permission html =
-    case permission of
-        PermissionWrite ->
-            html
-
-        _ ->
-            text ""
 
 
 combineDurations : List Duration.Duration -> Duration.Duration
@@ -715,12 +709,23 @@ durationToTimeString duration =
         ( hours, minutes ) =
             Mony.durationInHourMinutes duration
     in
-    String.fromInt hours ++ ":" ++ intToPadding2String minutes
+    String.fromInt hours ++ ":" ++ toPaddedString 2 minutes
 
 
-posixToString : Time.Posix -> String
-posixToString time =
-    Time.Format.format Time.Format.Config.Config_de_de.config "%Y-%m-%d %H:%M" timeZone time
+canWrite : Permission -> Html Msg -> Html Msg
+canWrite permission html =
+    case permission of
+        PermissionWrite ->
+            html
+
+        _ ->
+            text ""
+
+
+htmlList : List (Html msg) -> Html msg
+htmlList list =
+    div []
+        list
 
 
 
@@ -729,35 +734,40 @@ posixToString time =
 
 view : Model -> Html Msg
 view model =
-    case model.errMsg of
+    case model.error of
         Just err ->
             div [] [ text err ]
 
         Nothing ->
             case model.permission of
                 PermissionNone ->
-                    viewLogin model.formPassword
+                    viewLogin model.formLoginPassword
 
                 _ ->
-                    div []
-                        [ viewCurrent model.current model.formComment model.currentTime |> canWrite model.permission
-                        , viewInsert model.formInsert |> canWrite model.permission
-                        , viewBody model
-                        , viewFooter
-                        ]
+                    viewPage model
 
 
 viewLogin : String -> Html Msg
 viewLogin pass =
-    div []
+    htmlList
         [ h5 [] [ text "Login" ]
         , input
             [ type_ "password"
             , value pass
-            , onInput InsertLoginPassword
+            , onInput InsertedLoginPassword
             ]
             []
-        , button [ class "btn btn-primary", onClick ClickLogin ] [ text "Anmelden" ]
+        , button [ class "btn btn-primary", onClick ClickedLogin ] [ text "Anmelden" ]
+        ]
+
+
+viewPage : Model -> Html Msg
+viewPage model =
+    htmlList
+        [ canWrite model.permission <| viewCurrent model.currentTime model.current model.formComment
+        , canWrite model.permission <| viewInsert model.insert
+        , viewBody model
+        , viewFooter
         ]
 
 
@@ -766,20 +776,18 @@ type StartStop
     | Stop
 
 
-viewCurrent : Periode.Current -> String -> Time.Posix -> Html Msg
-viewCurrent current insertedComment currentTime =
+viewCurrent : Time.Posix -> Periode.Current -> String -> Html Msg
+viewCurrent currentTime current insertedComment =
     case current of
         Periode.Stopped ->
             viewStartStopForm Start insertedComment
 
-        Periode.Started start serverComment ->
-            let
-                mony =
-                    Duration.from start currentTime |> durationToMonyString
-            in
-            div []
+        Periode.Started startTime _ ->
+            htmlList
                 [ viewStartStopForm Stop insertedComment
-                , div [] [ text ("running since " ++ posixToString start ++ ": " ++ serverComment ++ ": " ++ mony) ]
+                , viewStartStopInfo
+                    startTime
+                    (Duration.from startTime currentTime |> durationToMonyString)
                 ]
 
 
@@ -789,54 +797,59 @@ viewStartStopForm startStop comment =
         ( event, buttonText ) =
             case startStop of
                 Start ->
-                    ( ClickStart
+                    ( ClickedStart
                     , "Start"
                     )
 
                 Stop ->
-                    ( ClickStop
+                    ( ClickedStop
                     , "Stop"
                     )
     in
-    div []
+    htmlList
         [ button [ class "btn btn-primary", onClick event ] [ text buttonText ]
         , input
             [ id "comment"
             , type_ "text"
             , value comment
-            , onInput InsertComment
+            , onInput InsertedCurrentComment
             ]
             []
         ]
 
 
-viewInsert : Maybe Insert -> Html Msg
+viewStartStopInfo : Time.Posix -> String -> Html Msg
+viewStartStopInfo startTime mony =
+    text ("Gestartet um " ++ formatTimeForUser startTime ++ " = " ++ mony)
+
+
+viewInsert : Maybe ModelInsert -> Html Msg
 viewInsert maybeInsert =
     case maybeInsert of
         Nothing ->
-            div [ class "btn btn-secondary", onClick ClickAdd ] [ text "Add" ]
+            div [ class "btn btn-secondary", onClick ClickedAddPeriode ] [ text "Einfügen" ]
 
         Just insert ->
-            div []
-                [ input [ type_ "datetime-local", value insert.formStart, onInput InsertStart ] []
+            htmlList
+                [ input [ type_ "datetime-local", value insert.start, onInput InsertedAddPeriodeStartTime ] []
                 , input
-                    [ id "duration"
-                    , type_ "text"
-                    , placeholder "minutes"
-                    , value insert.formDuration
-                    , onInput InsertAddDuration
+                    [ type_ "text"
+                    , placeholder "minuten"
+                    , value insert.duration
+                    , onInput InsertedAddPeriodeDuration
                     ]
                     []
-                , button [ class "btn btn-secondary", onClick ClickUntilNow, title "Set start minutes before now" ] [ text "↺" ]
+                , button [ class "btn btn-secondary", onClick ClickedAddPeriodeUntilNow, title "Setze Start auf jetzt beenden" ] [ text "↺" ]
                 , input
                     [ id "comment"
                     , type_ "text"
-                    , placeholder "comment"
-                    , value insert.formComment
-                    , onInput InsertAddComment
+                    , placeholder "Kommentar"
+                    , value insert.comment
+                    , onInput InsertedAddPeriodeComment
                     ]
                     []
-                , button [ class "btn btn-primary", onClick ClickInsert ] [ text "Insert" ]
+                , button [ class "btn btn-primary", onClick ClickedAddPeriodeSubmit ] [ text "Insert" ]
+                , button [ type_ "button", class "btn btn-danger", onClick ClickedAddPeriodeAbort ] [ text "✖" ]
                 , div [] [ text <| Maybe.withDefault "" insert.error ]
                 ]
 
@@ -848,17 +861,22 @@ type ViewBody
 
 viewBody : Model -> Html Msg
 viewBody model =
-    div []
-        [ ul [ class "nav nav-tabs" ]
-            [ navLink ViewMonthly model.viewBody
-            , navLink ViewPeriodes model.viewBody
-            ]
+    htmlList
+        [ viewNavigation model.viewBody
         , case model.viewBody of
-            ViewMonthly ->
-                viewMonthly timeZone model.periodes
-
             ViewPeriodes ->
-                viewPeriodes timeZone model.formYearMonth model.periodeAction model.permission model.periodes
+                viewPeriodes model.permission model.formYearMonth model.periodeAction model.periodes
+
+            ViewMonthly ->
+                viewMonthly model.periodes
+        ]
+
+
+viewNavigation : ViewBody -> Html Msg
+viewNavigation body =
+    ul [ class "nav nav-tabs" ]
+        [ navLink ViewPeriodes body
+        , navLink ViewMonthly body
         ]
 
 
@@ -880,59 +898,25 @@ navLink myViewBody activeViewBody =
                 ViewPeriodes ->
                     "Zeiten"
     in
-    li [ class "nav-item" ] [ a [ class linkClass, href "#", onClick (ClickBodyNav myViewBody) ] [ text viewText ] ]
+    li [ class "nav-item" ] [ a [ class linkClass, href "#", onClick (ClickedBodyNav myViewBody) ] [ text viewText ] ]
 
 
-viewMonthly : Time.Zone -> List Periode.Periode -> Html Msg
-viewMonthly zone periodes =
-    div []
-        [ table [ class "table" ]
-            (tr []
-                [ th [ class "month" ] [ text "Monat" ]
-                , th [ class "time" ] [ text "Zeiten" ]
-                , th [ class "mony" ] [ text "Euro" ]
-                ]
-                :: (Periode.sort periodes
-                        |> Periode.byYearMonth zone
-                        |> List.map viewMonthlyLine
-                   )
-            )
-        ]
-
-
-viewMonthlyLine : ( String, List Periode.Periode ) -> Html Msg
-viewMonthlyLine ( yearMonthText, periodes ) =
-    let
-        duration =
-            List.map .duration periodes
-                |> combineDurations
-    in
-    tr []
-        [ td [] [ text yearMonthText ]
-        , td [ class "time" ] [ text <| durationToTimeString duration ]
-        , td [ class "mony" ] [ text <| durationToMonyString duration ]
-        ]
-
-
-viewPeriodes : Time.Zone -> YearMonthSelect -> Action -> Permission -> List Periode.Periode -> Html Msg
-viewPeriodes zone selected edit permission periodes =
+viewPeriodes : Permission -> YearMonthSelect -> ModelPeriodeAction -> List Periode.Periode -> Html Msg
+viewPeriodes permission selected action periodes =
     let
         sorted =
             Periode.sort periodes
 
-        filtered =
-            Periode.filterYearMonth timeZone selected sorted
-
-        tableBody =
-            viewPeriodeSummary permission filtered :: List.map (viewPeriodeLine edit permission) filtered
+        yearMonthSelect =
+            sorted
+                |> List.map .start
+                |> YearMonth.viewYearMonthSelect timeZone selected SelectedYearMonthFilter
     in
-    div []
-        [ sorted
-            |> List.map .start
-            |> YearMonth.viewYearMonthSelect zone selected SelectYearMonth
+    htmlList
+        [ yearMonthSelect
         , table [ class "table" ]
             [ viewPeriodeHeader permission
-            , tbody [] tableBody
+            , viewPeriodeBody permission selected action sorted
             ]
         ]
 
@@ -945,28 +929,46 @@ viewPeriodeHeader permission =
             , th [ scope "col", class "time" ] [ text "Dauer" ]
             , th [ scope "col" ] [ text "Euros" ]
             , th [ scope "col" ] [ text "Comment" ]
-            , th [ scope "col", class "actions buttons" ] [ text "#" ] |> canWrite permission
+            , canWrite permission <| th [ scope "col", class "actions buttons" ] [ text "" ]
             ]
         ]
+
+
+viewPeriodeBody : Permission -> YearMonthSelect -> ModelPeriodeAction -> List Periode.Periode -> Html Msg
+viewPeriodeBody permission selected action periodes =
+    let
+        filtered =
+            Periode.filterYearMonth timeZone selected periodes
+
+        summary =
+            viewPeriodeSummary permission filtered
+
+        periodeLines =
+            List.map (viewPeriodeLine permission action) filtered
+    in
+    tbody []
+        (summary :: periodeLines)
 
 
 viewPeriodeSummary : Permission -> List Periode.Periode -> Html Msg
 viewPeriodeSummary permission periodes =
     let
         duration =
-            List.map .duration periodes |> combineDurations
+            periodes
+                |> List.map .duration
+                |> combineDurations
     in
     tr []
         [ td [] [ text "Gesamt" ]
         , td [] [ text <| durationToTimeString duration ]
         , td [] [ text <| durationToMonyString duration ]
         , td [] [ text "" ]
-        , td [] [ text "" ] |> canWrite permission
+        , canWrite permission <| td [] [ text "" ]
         ]
 
 
-viewPeriodeLine : Action -> Permission -> Periode.Periode -> Html Msg
-viewPeriodeLine action permission periode =
+viewPeriodeLine : Permission -> ModelPeriodeAction -> Periode.Periode -> Html Msg
+viewPeriodeLine permission action periode =
     case ( action, permission ) of
         ( ActionEdit edit, PermissionWrite ) ->
             if edit.id == periode.id then
@@ -975,8 +977,8 @@ viewPeriodeLine action permission periode =
             else
                 viewPeriodeShowLine permission periode
 
-        ( ActionDelete id, PermissionWrite ) ->
-            if id == periode.id then
+        ( ActionDelete p, PermissionWrite ) ->
+            if periode == p then
                 viewPeriodeDeleteLine periode
 
             else
@@ -988,25 +990,23 @@ viewPeriodeLine action permission periode =
 
 viewPeriodeShowLine : Permission -> Periode.Periode -> Html Msg
 viewPeriodeShowLine permission periode =
-    tr []
-        [ td [] [ text <| posixToString periode.start ]
-        , td [] [ text <| durationToTimeString periode.duration ]
-        , td [] [ text <| durationToMonyString periode.duration ]
-        , td [] [ text periode.comment ]
-        , td [ class "buttons" ]
-            [ button [ type_ "button", class "btn btn-info", onClick (ClickContinue periode.id) ] [ text "→" ]
-            , button [ type_ "button", class "btn btn-warning", onClick (ClickEdit periode) ] [ text "✎" ]
-            , button [ type_ "button", class "btn btn-danger", onClick (ClickDelete periode.id) ] [ text "✖" ]
-            ]
-            |> canWrite permission
-        ]
+    viewPeriodeShowElements
+        periode
+        (canWrite permission <| viewActionButtons periode)
 
 
-viewPeriodeEditLine : Edit -> Html Msg
+viewPeriodeDeleteLine : Periode.Periode -> Html Msg
+viewPeriodeDeleteLine periode =
+    viewPeriodeShowElements
+        periode
+        (viewConfirmButtons "Löschen?")
+
+
+viewPeriodeEditLine : ModelEdit -> Html Msg
 viewPeriodeEditLine edit =
     let
         monyString =
-            case stringToDuration edit.minutes of
+            case stringToDuration edit.duration of
                 Ok duration ->
                     durationToMonyString duration
 
@@ -1015,49 +1015,90 @@ viewPeriodeEditLine edit =
     in
     tr []
         [ td []
-            [ input [ type_ "datetime-local", value edit.start, onInput InsertStartEdit ] []
+            [ input [ type_ "datetime-local", value edit.start, onInput InsertedActionEditStartTime ] []
             ]
         , td []
             [ input
-                [ id "edit-duration"
-                , type_ "text"
-                , placeholder "minutes"
-                , value edit.minutes
-                , onInput InsertEditDuration
+                [ type_ "text"
+                , placeholder "Minuten"
+                , value edit.duration
+                , onInput InsertedActionEditDuration
                 ]
                 []
             ]
         , td [] [ text monyString ]
         , td []
             [ input
-                [ id "edit-comment"
-                , type_ "text"
-                , placeholder "comment"
+                [ type_ "text"
+                , placeholder "Kommentar"
                 , value edit.comment
-                , onInput InsertEditComment
+                , onInput InsertedActionEditComment
                 ]
                 []
             ]
-        , td [ class "buttons" ]
-            [ text "Edit?"
-            , button [ type_ "button", class "btn btn-danger", onClick ClickActionAbort ] [ text "✖" ]
-            , button [ type_ "button", class "btn btn-success", onClick ClickEditSubmit ] [ text "⏎" ]
-            ]
+        , viewConfirmButtons "Bearbeiten?"
         ]
 
 
-viewPeriodeDeleteLine : Periode.Periode -> Html Msg
-viewPeriodeDeleteLine periode =
+viewPeriodeShowElements : Periode.Periode -> Html Msg -> Html Msg
+viewPeriodeShowElements periode buttons =
     tr []
-        [ td [] [ text <| posixToString periode.start ]
+        [ td [] [ text <| formatTimeForUser periode.start ]
         , td [] [ text <| durationToTimeString periode.duration ]
         , td [] [ text <| durationToMonyString periode.duration ]
         , td [] [ text periode.comment ]
-        , td [ class "buttons" ]
-            [ text "Delete?"
-            , button [ type_ "button", class "btn btn-danger", onClick ClickActionAbort ] [ text "✖" ]
-            , button [ type_ "button", class "btn btn-success", onClick (ClickDeleteSubmit periode.id) ] [ text "⏎" ]
+        , buttons
+        ]
+
+
+viewActionButtons : Periode.Periode -> Html Msg
+viewActionButtons periode =
+    td [ class "buttons" ]
+        [ button [ type_ "button", class "btn btn-info", onClick (ClickedActionContinue periode) ] [ text "→" ]
+        , button [ type_ "button", class "btn btn-warning", onClick (ClickedActionEdit periode) ] [ text "✎" ]
+        , button [ type_ "button", class "btn btn-danger", onClick (ClickedActionDelete periode) ] [ text "✖" ]
+        ]
+
+
+viewConfirmButtons : String -> Html Msg
+viewConfirmButtons message =
+    td [ class "buttons" ]
+        [ text message
+        , button [ type_ "button", class "btn btn-danger", onClick ClickedActionAbort ] [ text "✖" ]
+        , button [ type_ "button", class "btn btn-success", onClick ClickedActionSubmit ] [ text "⏎" ]
+        ]
+
+
+viewMonthly : List Periode.Periode -> Html Msg
+viewMonthly periodes =
+    let
+        lines =
+            Periode.sort periodes
+                |> Periode.byYearMonth timeZone
+                |> List.map viewMonthlyLine
+    in
+    table [ class "table" ]
+        (tr []
+            [ th [ class "month" ] [ text "Monat" ]
+            , th [ class "time" ] [ text "Zeiten" ]
+            , th [ class "mony" ] [ text "Euro" ]
             ]
+            :: lines
+        )
+
+
+viewMonthlyLine : ( String, List Periode.Periode ) -> Html Msg
+viewMonthlyLine ( yearMonth, periodes ) =
+    let
+        duration =
+            periodes
+                |> List.map .duration
+                |> combineDurations
+    in
+    tr []
+        [ td [] [ text yearMonth ]
+        , td [ class "time" ] [ text <| durationToTimeString duration ]
+        , td [ class "mony" ] [ text <| durationToMonyString duration ]
         ]
 
 
@@ -1066,73 +1107,10 @@ viewFooter =
     footer [ class "fixed-bottom container" ]
         [ a [ href "https://github.com/ostcar/timer" ] [ text "github" ]
         , text " · "
-        , a [ href "#", class "link-primary", onClick ClickLogout ] [ text "logout" ]
+        , a [ href "#", class "link-primary", onClick ClickedLogout ] [ text "logout" ]
         ]
 
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    Time.every 1000 BrowserTick
-
-
-posix2timevalue : Time.Posix -> String
-posix2timevalue time =
-    ---- YYYY
-    toPaddedString 4 (Time.toYear timeZone time)
-        ++ "-"
-        -- MM
-        ++ toPaddedString 2 (fromMonth (Time.toMonth timeZone time))
-        ++ "-"
-        -- DD
-        ++ toPaddedString 2 (Time.toDay timeZone time)
-        ++ "T"
-        -- HH
-        ++ toPaddedString 2 (Time.toHour timeZone time)
-        ++ ":"
-        -- mm
-        ++ toPaddedString 2 (Time.toMinute timeZone time)
-
-
-toPaddedString : Int -> Int -> String
-toPaddedString digits time =
-    String.padLeft digits '0' (String.fromInt time)
-
-
-fromMonth : Time.Month -> Int
-fromMonth month =
-    case month of
-        Time.Jan ->
-            1
-
-        Time.Feb ->
-            2
-
-        Time.Mar ->
-            3
-
-        Time.Apr ->
-            4
-
-        Time.May ->
-            5
-
-        Time.Jun ->
-            6
-
-        Time.Jul ->
-            7
-
-        Time.Aug ->
-            8
-
-        Time.Sep ->
-            9
-
-        Time.Oct ->
-            10
-
-        Time.Nov ->
-            11
-
-        Time.Dec ->
-            12
+    Time.every 1000 CurrentTime
