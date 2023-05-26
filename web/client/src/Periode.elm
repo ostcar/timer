@@ -145,21 +145,16 @@ byYearMonth zone periodes =
                     YearMonth.fromPosix zone periode.start
                         |> YearMonth.toString
             in
-            toIndexedList ( myIdx, periode ) acc
+            case acc of
+                ( idx, elements ) :: rest ->
+                    if idx == myIdx then
+                        ( idx, periode :: elements ) :: rest
+
+                    else
+                        ( myIdx, [ periode ] ) :: acc
+
+                [] ->
+                    [ ( myIdx, [ periode ] ) ]
         )
         []
         periodes
-
-
-toIndexedList : ( comparable, a ) -> List ( comparable, List a ) -> List ( comparable, List a )
-toIndexedList ( myIdx, myElement ) elements =
-    case elements of
-        ( idx, filteredElements ) :: rest ->
-            if idx == myIdx then
-                ( idx, myElement :: filteredElements ) :: rest
-
-            else
-                ( idx, filteredElements ) :: toIndexedList ( myIdx, myElement ) rest
-
-        [] ->
-            [ ( myIdx, [ myElement ] ) ]
