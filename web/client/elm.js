@@ -9928,43 +9928,36 @@ var $author$project$YearMonth$fromPosix = F2(
 			A2($elm$time$Time$toYear, zone, time),
 			A2($elm$time$Time$toMonth, zone, time));
 	});
-var $author$project$Periode$toIndexedList = F2(
+var $author$project$Periode$toIndexedList2 = F2(
 	function (_v0, elements) {
 		var myIdx = _v0.a;
 		var myElement = _v0.b;
-		var _v1 = A3(
-			$elm$core$List$foldl,
-			F2(
-				function (_v2, _v3) {
-					var idx = _v2.a;
-					var filteredElements = _v2.b;
-					var acc = _v3.a;
-					var found = _v3.b;
-					return _Utils_eq(idx, myIdx) ? _Utils_Tuple2(
-						A2(
-							$elm$core$List$cons,
-							_Utils_Tuple2(
-								idx,
-								A2($elm$core$List$cons, myElement, filteredElements)),
-							acc),
-						true) : _Utils_Tuple2(
-						A2(
-							$elm$core$List$cons,
-							_Utils_Tuple2(idx, filteredElements),
-							acc),
-						found);
-				}),
-			_Utils_Tuple2(_List_Nil, false),
-			elements);
-		var createdList = _v1.a;
-		var contains = _v1.b;
-		return contains ? createdList : A2(
-			$elm$core$List$cons,
-			_Utils_Tuple2(
-				myIdx,
-				_List_fromArray(
-					[myElement])),
-			elements);
+		if (elements.b) {
+			var _v2 = elements.a;
+			var idx = _v2.a;
+			var filteredElements = _v2.b;
+			var rest = elements.b;
+			return _Utils_eq(idx, myIdx) ? A2(
+				$elm$core$List$cons,
+				_Utils_Tuple2(
+					idx,
+					A2($elm$core$List$cons, myElement, filteredElements)),
+				rest) : A2(
+				$elm$core$List$cons,
+				_Utils_Tuple2(idx, filteredElements),
+				A2(
+					$author$project$Periode$toIndexedList2,
+					_Utils_Tuple2(myIdx, myElement),
+					rest));
+		} else {
+			return _List_fromArray(
+				[
+					_Utils_Tuple2(
+					myIdx,
+					_List_fromArray(
+						[myElement]))
+				]);
+		}
 	});
 var $author$project$YearMonth$monthToString = function (month) {
 	switch (month.$) {
@@ -10012,7 +10005,7 @@ var $author$project$Periode$byYearMonth = F2(
 					var myIdx = $author$project$YearMonth$toString(
 						A2($author$project$YearMonth$fromPosix, zone, periode.start));
 					return A2(
-						$author$project$Periode$toIndexedList,
+						$author$project$Periode$toIndexedList2,
 						_Utils_Tuple2(myIdx, periode),
 						acc);
 				}),

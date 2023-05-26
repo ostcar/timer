@@ -153,21 +153,13 @@ byYearMonth zone periodes =
 
 toIndexedList : ( comparable, a ) -> List ( comparable, List a ) -> List ( comparable, List a )
 toIndexedList ( myIdx, myElement ) elements =
-    let
-        ( createdList, contains ) =
-            List.foldl
-                (\( idx, filteredElements ) ( acc, found ) ->
-                    if idx == myIdx then
-                        ( ( idx, myElement :: filteredElements ) :: acc, True )
+    case elements of
+        ( idx, filteredElements ) :: rest ->
+            if idx == myIdx then
+                ( idx, myElement :: filteredElements ) :: rest
 
-                    else
-                        ( ( idx, filteredElements ) :: acc, found )
-                )
-                ( [], False )
-                elements
-    in
-    if contains then
-        createdList
+            else
+                ( idx, filteredElements ) :: toIndexedList ( myIdx, myElement ) rest
 
-    else
-        ( myIdx, [ myElement ] ) :: elements
+        [] ->
+            [ ( myIdx, [ myElement ] ) ]
