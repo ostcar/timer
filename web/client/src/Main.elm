@@ -36,7 +36,7 @@ main =
 
 type alias Model =
     { periodes : List Periode.Periode
-    , periodeAction : ModelPeriodeAction -- TODO: Make it a list
+    , periodeAction : ModelPeriodeAction
     , current : Periode.Current
     , insert : Maybe ModelInsert
     , permission : Permission
