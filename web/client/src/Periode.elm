@@ -101,12 +101,12 @@ idDecoder =
 
 timeDecoder : Decoder Time.Posix
 timeDecoder =
-    Decode.map (\n -> Time.millisToPosix (n * 1000)) int
+    Decode.map (\n -> n * 1000 |> Time.millisToPosix ) int
 
 
 durationDecoder : Decoder Duration.Duration
 durationDecoder =
-    Decode.map (\n -> Duration.seconds (toFloat n)) int
+    Decode.map (\n -> n |> toFloat |> Duration.seconds) int
 
 
 fetch : (Result Http.Error State -> msg) -> Cmd msg
