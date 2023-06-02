@@ -15,8 +15,11 @@ centPerMinute =
 
 durationInHourMinutes : Duration.Duration -> ( Int, Int )
 durationInHourMinutes duration =
-    ( Duration.inHours duration |> floor
-    , Duration.inMinutes duration |> ceiling |> modBy 60
+    let 
+        minutes = Duration.inMinutes duration |> ceiling 
+    in
+    ( minutes // 60
+    , minutes |> modBy 60
     )
 
 
