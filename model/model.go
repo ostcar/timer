@@ -31,6 +31,7 @@ type Periode struct {
 	Start    time.Time
 	Duration time.Duration
 	Comment  Maybe[string]
+	Billed   bool
 }
 
 // Start starts the timer.
@@ -71,9 +72,9 @@ func (m *Model) Insert(start time.Time, duration time.Duration, comment Maybe[st
 }
 
 // Edit changes an existing periode.
-func (m *Model) Edit(id int, start Maybe[sticky.JSONTime], duration Maybe[sticky.JSONDuration], comment Maybe[string]) Event {
-	log.Printf("Log event for id %d", id)
-	return eventEditV2{ID: id, Start: start, Duration: duration, Comment: comment}
+func (m *Model) Edit(id int, start Maybe[sticky.JSONTime], duration Maybe[sticky.JSONDuration], comment Maybe[string], billed Maybe[bool]) Event {
+	log.Printf("edit event for id %d", id)
+	return eventEditV2{ID: id, Start: start, Duration: duration, Comment: comment, Billed: billed}
 }
 
 // List returns all periodes.
@@ -83,6 +84,12 @@ func (m *Model) List() []Periode {
 		periodes = append(periodes, p)
 	}
 	return periodes
+}
+
+// Billed set the billed status of many periodes.
+func (m *Model) Billed(ids []int, billed bool) Event {
+	log.Printf("billed event for ids %v", ids)
+	return eventBilled{IDs: ids, Billed: billed}
 }
 
 // Running tells if the timer is currently running.

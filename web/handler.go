@@ -43,6 +43,7 @@ func registerHandlers(router *mux.Router, s *sticky.Sticky[model.Model], cfg con
 	handleStart(router, s, cfg)
 	handleStop(router, s, cfg)
 	handlePeriode(router, s, cfg)
+	handleBilled(router, s, cfg)
 }
 
 type responselogger struct {
@@ -136,15 +137,16 @@ func handlePeriode(router *mux.Router, s *sticky.Sticky[model.Model], cfg config
 	pathList := pathPrefixAPI + "/periode"
 	pathSingle := pathList + "/{id}"
 
-	type periode struct {
-		ID       int                 `json:"id"`
-		Start    int64               `json:"start"`
-		Duration int64               `json:"duration"`
-		Comment  model.Maybe[string] `json:"comment"`
-	}
-
 	// List Handler
 	router.Path(pathList).Methods("GET").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		type periode struct {
+			ID       int                 `json:"id"`
+			Start    int64               `json:"start"`
+			Duration int64               `json:"duration"`
+			Comment  model.Maybe[string] `json:"comment"`
+			Billed   bool                `json:"billed"`
+		}
+
 		if !canRead(r, cfg) {
 			w.WriteHeader(403)
 			return
@@ -160,6 +162,7 @@ func handlePeriode(router *mux.Router, s *sticky.Sticky[model.Model], cfg config
 					Start:    p.Start.Unix(),
 					Duration: int64(p.Duration.Seconds()),
 					Comment:  p.Comment,
+					Billed:   p.Billed,
 				}
 			}
 
@@ -237,6 +240,7 @@ func handlePeriode(router *mux.Router, s *sticky.Sticky[model.Model], cfg config
 			Start    model.Maybe[int64]  `json:"start"`
 			Duration model.Maybe[int64]  `json:"duration"`
 			Comment  model.Maybe[string] `json:"comment"`
+			Billed   model.Maybe[bool]   `json:"billed"`
 		}
 
 		if err := json.NewDecoder(r.Body).Decode(&content); err != nil {
@@ -255,7 +259,7 @@ func handlePeriode(router *mux.Router, s *sticky.Sticky[model.Model], cfg config
 		}
 
 		err := s.Write(func(m model.Model) sticky.Event[model.Model] {
-			return m.Edit(id, start, duration, content.Comment)
+			return m.Edit(id, start, duration, content.Comment, content.Billed)
 		})
 		if err != nil {
 			handleError(w, err)
@@ -274,6 +278,36 @@ func handlePeriode(router *mux.Router, s *sticky.Sticky[model.Model], cfg config
 
 		err := s.Write(func(m model.Model) sticky.Event[model.Model] {
 			return m.Delete(id)
+		})
+		if err != nil {
+			handleError(w, err)
+			return
+		}
+	})
+}
+
+func handleBilled(router *mux.Router, s *sticky.Sticky[model.Model], cfg config.Config) {
+	path := pathPrefixAPI + "/billed"
+
+	// List Handler
+	router.Path(path).Methods("POST").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !canWrite(r, cfg) {
+			w.WriteHeader(403)
+			return
+		}
+
+		var content struct {
+			IDs    []int `json:"ids"`
+			Billed bool  `json:"billed"`
+		}
+
+		if err := json.NewDecoder(r.Body).Decode(&content); err != nil {
+			handleError(w, err)
+			return
+		}
+
+		err := s.Write(func(m model.Model) sticky.Event[model.Model] {
+			return m.Billed(content.IDs, content.Billed)
 		})
 		if err != nil {
 			handleError(w, err)

@@ -31,6 +31,9 @@ func GetEvent(eventType string) Event {
 	case eventDelete{}.Name():
 		return &eventDelete{}
 
+	case eventBilled{}.Name():
+		return &eventBilled{}
+
 	default:
 		return nil
 	}
@@ -252,6 +255,7 @@ type eventEditV2 struct {
 	Start    Maybe[sticky.JSONTime]     `json:"start"`
 	Duration Maybe[sticky.JSONDuration] `json:"duration"`
 	Comment  Maybe[string]              `json:"comment"`
+	Billed   Maybe[bool]                `json:"billed"`
 }
 
 func (e eventEditV2) Name() string {
@@ -287,7 +291,48 @@ func (e eventEditV2) Execute(model Model, eventTime time.Time) Model {
 		p.Comment = e.Comment
 	}
 
+	if billed, ok := e.Billed.Value(); ok {
+		p.Billed = billed
+	}
+
 	model.periodes[e.ID] = p
+
+	return model
+}
+
+type eventBilled struct {
+	IDs    []int `json:"ids"`
+	Billed bool  `json:"billed"`
+}
+
+func (e eventBilled) Name() string {
+	return "billed"
+}
+
+func (e eventBilled) Validate(model Model) error {
+	if len(e.IDs) == 0 {
+		return fmt.Errorf("At least one ID is required")
+	}
+
+	for i, id := range e.IDs {
+		if id <= 0 {
+			return fmt.Errorf("all ids have to be greater then 0. %dth id is %d", i, id)
+		}
+
+		if _, ok := model.periodes[id]; !ok {
+			return fmt.Errorf("%dth id %d is unknown unknown", i, id)
+		}
+	}
+
+	return nil
+}
+
+func (e eventBilled) Execute(model Model, eventTime time.Time) Model {
+	for _, id := range e.IDs {
+		p := model.periodes[id]
+		p.Billed = e.Billed
+		model.periodes[id] = p
+	}
 
 	return model
 }
