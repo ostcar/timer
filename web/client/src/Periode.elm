@@ -1,9 +1,10 @@
-module Periode exposing (Current(..), ID, Periode, State, byYearMonth, fetch, filterYearMonth, idToString, sort, stateComment)
+module Periode exposing (Current(..), ID, Periode, State, byYearMonth, fetch, filterYearMonth, idEncoder, idToString, sort, stateComment)
 
 import Duration
 import Http
 import Json.Decode as Decode exposing (Decoder, bool, int, string)
 import Json.Decode.Pipeline exposing (optional, required)
+import Json.Encode as Encode
 import Time
 import YearMonth exposing (YearMonthSelect(..))
 
@@ -18,6 +19,7 @@ type alias Periode =
     , start : Time.Posix
     , duration : Duration.Duration
     , comment : String
+    , billed : Bool
     }
 
 
@@ -28,6 +30,7 @@ periodeDecoder =
         |> required "start" timeDecoder
         |> required "duration" durationDecoder
         |> optional "comment" string ""
+        |> required "billed" bool
 
 
 periodeListDecoder : Decoder (List Periode)
@@ -99,9 +102,14 @@ idDecoder =
     Decode.map ID int
 
 
+idEncoder : ID -> Encode.Value
+idEncoder (ID id) =
+    Encode.int id
+
+
 timeDecoder : Decoder Time.Posix
 timeDecoder =
-    Decode.map (\n -> n * 1000 |> Time.millisToPosix ) int
+    Decode.map (\n -> n * 1000 |> Time.millisToPosix) int
 
 
 durationDecoder : Decoder Duration.Duration

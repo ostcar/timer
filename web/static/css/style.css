@@ -1,15 +1,34 @@
-th.time {
+th.start {
+    padding-right: 7em;
+    width: 5px;
+}
+
+th.duration {
     width: 1px;
 }
 
-th.action {
+th.euro {
+    padding-right: 2em;
+    width: 5px;
+}
+
+th.billed {
+    width: 1px;
+}
+
+th.actions {
+    padding-right: 10em;
     text-align: end;
+}
+
+table input {
+    width: 100%;
 }
 
 .btn {
     margin: 5px;
 }
 
-td.buttons, th.buttons, th.mony, td.mony, th.time, td.time  {
+td.buttons, th.buttons, th.mony, td.mony, th.time, td.time, td.billed  {
     text-align: right;
 }

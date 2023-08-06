@@ -41,6 +41,7 @@ type alias Model =
     , insert : Maybe ModelInsert
     , permission : Permission
     , currentTime : Time.Posix
+    , hideBilled : Bool
     , viewBody : ViewBody
     , error : Maybe String
     , formComment : String
@@ -53,6 +54,8 @@ type ModelPeriodeAction
     = ActionNone
     | ActionEdit ModelEdit
     | ActionDelete Periode.Periode
+    | ActionBilled ( String, List Periode.Periode )
+    | ActionUnBilled ( String, List Periode.Periode )
 
 
 type alias ModelInsert =
@@ -67,6 +70,7 @@ type alias ModelEdit =
     { id : Periode.ID
     , start : String
     , duration : String
+    , billed : Bool
     , comment : String
     , error : Maybe String
     }
@@ -85,6 +89,7 @@ type Msg
       -- Navigation
     | SelectedYearMonthFilter String
     | ClickedBodyNav ViewBody
+    | CheckedHideBilled Bool
       -- Current Periode
     | ClickedStart
     | ClickedStop
@@ -105,7 +110,10 @@ type Msg
     | ClickedActionAbort
     | InsertedActionEditStartTime String
     | InsertedActionEditDuration String
+    | CheckedActionEditBilled Bool
     | InsertedActionEditComment String
+    | ClickedActionBilled ( String, List Periode.Periode )
+    | ClickedActionUnBilled ( String, List Periode.Periode )
 
 
 init : ( String, Int ) -> ( Model, Cmd Msg )
@@ -126,6 +134,7 @@ emptyModel permission time =
     , current = Periode.Stopped
     , permission = permission
     , currentTime = time
+    , hideBilled = False
     , viewBody = ViewPeriodes
     , error = Nothing
     , formComment = ""
@@ -213,6 +222,11 @@ update msg model =
 
         ClickedBodyNav value ->
             ( { model | viewBody = value }
+            , Cmd.none
+            )
+
+        CheckedHideBilled hide ->
+            ( { model | hideBilled = hide }
             , Cmd.none
             )
 
@@ -349,7 +363,7 @@ update msg model =
 
                         editCmd =
                             Result.map2
-                                (\duration start -> editPeriodeRequest ReceivedActionResponse ep.id start duration ep.comment)
+                                (\duration start -> editPeriodeRequest ReceivedActionResponse ep.id start duration ep.billed ep.comment)
                                 mayDuration
                                 mayStart
                     in
@@ -365,8 +379,18 @@ update msg model =
                             )
 
                 ActionDelete periode ->
-                    ( model
+                    ( { model | periodeAction = ActionNone }
                     , deletePeriodeRequest ReceivedActionResponse periode.id
+                    )
+
+                ActionBilled ( _, periodes ) ->
+                    ( { model | periodeAction = ActionNone }
+                    , billPeriodesRequest ReceivedActionResponse (List.map .id periodes) True
+                    )
+
+                ActionUnBilled ( _, periodes ) ->
+                    ( { model | periodeAction = ActionNone }
+                    , billPeriodesRequest ReceivedActionResponse (List.map .id periodes) False
                     )
 
                 _ ->
@@ -414,6 +438,28 @@ update msg model =
                     ( model
                     , Cmd.none
                     )
+
+        CheckedActionEditBilled billed ->
+            case model.periodeAction of
+                ActionEdit ep ->
+                    ( { model | periodeAction = ActionEdit { ep | billed = billed } }
+                    , Cmd.none
+                    )
+
+                _ ->
+                    ( model
+                    , Cmd.none
+                    )
+
+        ClickedActionBilled periodes ->
+            ( { model | periodeAction = ActionBilled periodes }
+            , Cmd.none
+            )
+
+        ClickedActionUnBilled periodes ->
+            ( { model | periodeAction = ActionUnBilled periodes }
+            , Cmd.none
+            )
 
 
 handleError : (x -> a) -> Result x a -> a
@@ -476,6 +522,7 @@ modelEdit periode =
     { id = periode.id
     , start = formatTimeForInputDateTimeLocal periode.start
     , duration = periode.duration |> durationToString
+    , billed = periode.billed
     , comment = periode.comment
     , error = Nothing
     }
@@ -569,29 +616,30 @@ addPeriodeRequest : (Result Http.Error () -> Msg) -> Time.Posix -> Duration.Dura
 addPeriodeRequest result start duration comment =
     Http.post
         { url = "/api/periode"
-        , body = Http.jsonBody (periodeEncoder start duration comment)
+        , body = Http.jsonBody (periodeEncoder start duration False comment)
         , expect = Http.expectWhatever result
         }
 
 
-editPeriodeRequest : (Result Http.Error () -> Msg) -> Periode.ID -> Time.Posix -> Duration.Duration -> String -> Cmd Msg
-editPeriodeRequest result id start duration comment =
+editPeriodeRequest : (Result Http.Error () -> Msg) -> Periode.ID -> Time.Posix -> Duration.Duration -> Bool -> String -> Cmd Msg
+editPeriodeRequest result id start duration billed comment =
     Http.request
         { method = "PUT"
         , headers = []
         , url = "/api/periode/" ++ Periode.idToString id
-        , body = Http.jsonBody (periodeEncoder start duration comment)
+        , body = Http.jsonBody (periodeEncoder start duration billed comment)
         , expect = Http.expectWhatever result
         , timeout = Nothing
         , tracker = Nothing
         }
 
 
-periodeEncoder : Time.Posix -> Duration.Duration -> String -> Encode.Value
-periodeEncoder start duration comment =
+periodeEncoder : Time.Posix -> Duration.Duration -> Bool -> String -> Encode.Value
+periodeEncoder start duration billed comment =
     Encode.object
         [ ( "start", (Time.posixToMillis start // 1000) |> Encode.int )
         , ( "duration", (Duration.inSeconds duration |> round) |> Encode.int )
+        , ( "billed", Encode.bool billed )
         , ( "comment", Encode.string comment )
         ]
 
@@ -607,6 +655,27 @@ deletePeriodeRequest result id =
         , timeout = Nothing
         , tracker = Nothing
         }
+
+
+billPeriodesRequest : (Result Http.Error () -> Msg) -> List Periode.ID -> Bool -> Cmd Msg
+billPeriodesRequest result ids billed =
+    Http.request
+        { method = "POST"
+        , headers = []
+        , url = "/api/billed"
+        , body = Http.jsonBody (billedEncoder ids billed)
+        , expect = Http.expectWhatever result
+        , timeout = Nothing
+        , tracker = Nothing
+        }
+
+
+billedEncoder : List Periode.ID -> Bool -> Encode.Value
+billedEncoder ids billed =
+    Encode.object
+        [ ( "ids", Encode.list Periode.idEncoder ids )
+        , ( "billed", Encode.bool billed )
+        ]
 
 
 
@@ -729,6 +798,62 @@ combineDurations durations =
         |> List.map Duration.inMilliseconds
         |> List.foldl (+) 0
         |> Duration.milliseconds
+
+
+type CombinedBool
+    = CombinedTrue
+    | CombinedSome
+    | CombinedFalse
+    | CombinedEmpty
+
+
+combineBool : List Bool -> CombinedBool
+combineBool bools =
+    List.foldl
+        (\v acc ->
+            case acc of
+                CombinedEmpty ->
+                    if v then
+                        CombinedTrue
+
+                    else
+                        CombinedFalse
+
+                CombinedSome ->
+                    CombinedSome
+
+                CombinedTrue ->
+                    if v then
+                        CombinedTrue
+
+                    else
+                        CombinedSome
+
+                CombinedFalse ->
+                    if v then
+                        CombinedSome
+
+                    else
+                        CombinedFalse
+        )
+        CombinedEmpty
+        bools
+
+
+combinedBoolToString : CombinedBool -> String
+combinedBoolToString bools =
+    case bools of
+        CombinedTrue ->
+            boolToString True
+
+        CombinedFalse ->
+            boolToString False
+
+        CombinedEmpty ->
+            "??"
+
+        CombinedSome ->
+            "Teilweise"
 
 
 durationToTimeString : Duration.Duration -> String
@@ -893,10 +1018,10 @@ viewBody model =
         [ viewNavigation model.viewBody
         , case model.viewBody of
             ViewPeriodes ->
-                viewPeriodes model.permission model.formYearMonth model.periodeAction model.periodes
+                viewPeriodes model.permission model.formYearMonth model.periodeAction model.hideBilled model.periodes
 
             ViewMonthly ->
-                viewMonthly model.periodes
+                viewMonthly model.permission model.periodeAction model.hideBilled model.periodes
         ]
 
 
@@ -929,11 +1054,13 @@ navLink myViewBody activeViewBody =
     li [ class "nav-item" ] [ a [ class linkClass, href "#", onClick (ClickedBodyNav myViewBody) ] [ text viewText ] ]
 
 
-viewPeriodes : Permission -> YearMonthSelect -> ModelPeriodeAction -> List Periode.Periode -> Html Msg
-viewPeriodes permission selected action periodes =
+viewPeriodes : Permission -> YearMonthSelect -> ModelPeriodeAction -> Bool -> List Periode.Periode -> Html Msg
+viewPeriodes permission selected action hideBilled periodes =
     let
         sorted =
-            Periode.sort periodes
+            periodes
+                |> List.filter (\p -> not (hideBilled && p.billed))
+                |> Periode.sort
 
         yearMonthSelect =
             sorted
@@ -941,7 +1068,8 @@ viewPeriodes permission selected action periodes =
                 |> YearMonth.viewYearMonthSelect timeZone selected SelectedYearMonthFilter
     in
     htmlList
-        [ yearMonthSelect
+        [ viewHideBilledCheckbox hideBilled
+        , yearMonthSelect
         , table [ class "table" ]
             [ viewPeriodeHeader permission
             , viewPeriodeBody permission selected action sorted
@@ -953,11 +1081,12 @@ viewPeriodeHeader : Permission -> Html Msg
 viewPeriodeHeader permission =
     thead []
         [ tr []
-            [ th [ scope "col", class "time" ] [ text "Start" ]
-            , th [ scope "col", class "time" ] [ text "Dauer" ]
-            , th [ scope "col" ] [ text "Euros" ]
-            , th [ scope "col" ] [ text "Comment" ]
-            , canWrite permission <| th [ scope "col", class "actions buttons" ] [ text "" ]
+            [ th [ scope "col", class "start" ] [ text "Start" ]
+            , th [ scope "col", class "duration" ] [ text "Dauer" ]
+            , th [ scope "col", class "euro" ] [ text "Euros" ]
+            , th [ scope "col", class "billed" ] [ text "Abgerechnet" ]
+            , th [ scope "col", class "comment" ] [ text "Kommentar" ]
+            , canWrite permission <| th [ scope "col", class "actions" ] [ text "" ]
             ]
         ]
 
@@ -990,6 +1119,7 @@ viewPeriodeSummary permission periodes =
         [ td [] [ text "Gesamt" ]
         , td [] [ text <| durationToTimeString duration ]
         , td [] [ text <| durationToMonyString duration ]
+        , td [] [ text "" ]
         , td [] [ text "" ]
         , canWrite permission <| td [] [ text "" ]
         ]
@@ -1027,7 +1157,7 @@ viewPeriodeDeleteLine : Periode.Periode -> Html Msg
 viewPeriodeDeleteLine periode =
     viewPeriodeShowElements
         periode
-        (viewConfirmButtons "Löschen?")
+        (td [ class "buttons" ] (viewConfirmButtons "Löschen?"))
 
 
 viewPeriodeEditLine : ModelEdit -> Html Msg
@@ -1048,6 +1178,7 @@ viewPeriodeEditLine edit =
         , td []
             [ input
                 [ type_ "text"
+                , class "duration-edit"
                 , placeholder "Minuten"
                 , value edit.duration
                 , onInput InsertedActionEditDuration
@@ -1057,6 +1188,14 @@ viewPeriodeEditLine edit =
         , td [] [ text monyString ]
         , td []
             [ input
+                [ type_ "checkbox"
+                , checked edit.billed
+                , onCheck CheckedActionEditBilled
+                ]
+                []
+            ]
+        , td []
+            [ input
                 [ type_ "text"
                 , placeholder "Kommentar"
                 , value edit.comment
@@ -1064,7 +1203,7 @@ viewPeriodeEditLine edit =
                 ]
                 []
             ]
-        , viewConfirmButtons "Bearbeiten?"
+        , td [ class "buttons" ] (viewConfirmButtons "Bearbeiten?")
         ]
 
 
@@ -1074,9 +1213,19 @@ viewPeriodeShowElements periode buttons =
         [ td [] [ text <| formatTimeForUser periode.start ]
         , td [] [ text <| durationToTimeString periode.duration ]
         , td [] [ text <| durationToMonyString periode.duration ]
+        , td [] [ text <| boolToString periode.billed ]
         , td [] [ text periode.comment ]
         , buttons
         ]
+
+
+boolToString : Bool -> String
+boolToString b =
+    if b then
+        "☑"
+
+    else
+        "-"
 
 
 viewActionButtons : Periode.Periode -> Html Msg
@@ -1088,46 +1237,116 @@ viewActionButtons periode =
         ]
 
 
-viewConfirmButtons : String -> Html Msg
+viewConfirmButtons : String -> List (Html Msg)
 viewConfirmButtons message =
-    td [ class "buttons" ]
-        [ text message
-        , button [ type_ "button", class "btn btn-danger", onClick ClickedActionAbort ] [ text "✖" ]
-        , button [ type_ "button", class "btn btn-success", onClick ClickedActionSubmit ] [ text "⏎" ]
-        ]
+    [ text message
+    , button [ type_ "button", class "btn btn-danger", onClick ClickedActionAbort ] [ text "✖" ]
+    , button [ type_ "button", class "btn btn-success", onClick ClickedActionSubmit ] [ text "⏎" ]
+    ]
 
 
-viewMonthly : List Periode.Periode -> Html Msg
-viewMonthly periodes =
+viewMonthly : Permission -> ModelPeriodeAction -> Bool -> List Periode.Periode -> Html Msg
+viewMonthly permission action hideBilled periodes =
     let
         lines =
             Periode.sort periodes
                 |> Periode.byYearMonth timeZone
-                |> List.map viewMonthlyLine
+                |> List.map (viewMonthlyLine permission action hideBilled)
     in
-    table [ class "table" ]
-        (tr []
-            [ th [ class "month" ] [ text "Monat" ]
-            , th [ class "time" ] [ text "Zeiten" ]
-            , th [ class "mony" ] [ text "Euro" ]
+    div []
+        [ viewHideBilledCheckbox hideBilled
+        , table [ class "table" ]
+            [ tbody []
+                (tr []
+                    [ th [ class "month" ] [ text "Monat" ]
+                    , th [ class "time" ] [ text "Zeiten" ]
+                    , th [ class "mony" ] [ text "Euro" ]
+                    , th [ class "billed" ] [ text "Abgerechnet" ]
+                    , canWrite permission <| th [ scope "col", class "actions" ] [ text "" ]
+                    ]
+                    :: lines
+                )
             ]
-            :: lines
-        )
+        ]
 
 
-viewMonthlyLine : ( String, List Periode.Periode ) -> Html Msg
-viewMonthlyLine ( yearMonth, periodes ) =
+viewHideBilledCheckbox : Bool -> Html Msg
+viewHideBilledCheckbox current =
+    div []
+        [ input
+            [ type_ "checkbox"
+            , checked current
+            , onCheck CheckedHideBilled
+            ]
+            []
+        , text "Abgerechnete ausbländen"
+        ]
+
+
+viewMonthlyLine : Permission -> ModelPeriodeAction -> Bool -> ( String, List Periode.Periode ) -> Html Msg
+viewMonthlyLine permission action hideBilled ( yearMonth, periodes ) =
     let
         duration =
             periodes
                 |> List.map .duration
                 |> combineDurations
+
+        billed =
+            periodes
+                |> List.map .billed
+                |> combineBool
     in
-    tr []
-        [ td [] [ text yearMonth ]
-        , td [ class "time" ] [ text <| durationToTimeString duration ]
-        , td [ class "mony" ] [ text <| durationToMonyString duration ]
-        ]
+    if billed == CombinedTrue && hideBilled then
+        text ""
+
+    else
+        tr []
+            [ td [] [ text yearMonth ]
+            , td [ class "time" ] [ text <| durationToTimeString duration ]
+            , td [ class "mony" ] [ text <| durationToMonyString duration ]
+            , td [ class "billed" ] [ text <| combinedBoolToString billed ]
+            , canWrite permission <| td [ class "buttons" ] (viewMonthlyLineButtons yearMonth action periodes billed)
+            ]
+
+
+viewMonthlyLineButtons : String -> ModelPeriodeAction -> List Periode.Periode -> CombinedBool -> List (Html Msg)
+viewMonthlyLineButtons yearMonth action periodes bools =
+    let
+        actionButtons =
+            let
+                buttonTrue =
+                    button [ type_ "button", class "btn btn-warning", onClick (ClickedActionBilled ( yearMonth, periodes )) ] [ text <| boolToString True ]
+
+                buttonFalse =
+                    button [ type_ "button", class "btn btn-warning", onClick (ClickedActionUnBilled ( yearMonth, periodes )) ] [ text <| boolToString False ]
+            in
+            case bools of
+                CombinedTrue ->
+                    [ buttonFalse ]
+
+                CombinedFalse ->
+                    [ buttonTrue ]
+
+                _ ->
+                    [ buttonTrue, buttonFalse ]
+    in
+    case action of
+        ActionBilled ( ym, _ ) ->
+            if ym == yearMonth then
+                viewConfirmButtons (yearMonth ++ " abrechnen?")
+
+            else
+                actionButtons
+
+        ActionUnBilled ( ym, _ ) ->
+            if ym == yearMonth then
+                viewConfirmButtons (yearMonth ++ " nicht abrechnen?")
+
+            else
+                actionButtons
+
+        _ ->
+            actionButtons
 
 
 viewFooter : Html Msg
