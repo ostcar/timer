@@ -56,7 +56,7 @@ type ModelPeriodeAction
 
 
 type alias ModelInsert =
-    { start : String
+    { start : String -- This is the local time formatted for the datetime-local element. It does not have a timezone.
     , duration : String
     , comment : String
     , error : Maybe String
@@ -294,7 +294,7 @@ update msg model =
                         |> Result.mapError (\_ -> "Duration is wrong")
 
                 mayStart =
-                    Iso8601.toTime insert.start
+                    localStringToPosix timeZone insert.start
                         |> Result.mapError (\_ -> "Start is wrong")
 
                 insertCmd =
@@ -344,7 +344,7 @@ update msg model =
                                 |> Result.mapError (\_ -> "Duration is wrong")
 
                         mayStart =
-                            Iso8601.toTime ep.start
+                            localStringToPosix timeZone ep.start
                                 |> Result.mapError (\_ -> "Start is wrong")
 
                         editCmd =
@@ -647,6 +647,34 @@ formatTimeForUser time =
         ++ ":"
         -- mm
         ++ toPaddedString 2 (Time.toMinute timeZone time)
+
+
+millisFromPosix : Time.Zone -> Time.Posix -> Int
+millisFromPosix zone posix =
+    Time.toHour zone posix * 3600000 + Time.toMinute zone posix * 60000 + Time.toSecond zone posix * 1000 + Time.toMillis zone posix
+
+
+localStringToPosix : Time.Zone -> String -> Result String Time.Posix
+localStringToPosix tz str =
+    case Iso8601.toTime str of
+        Ok wrongPosix ->
+            let
+                utcMilli =
+                    millisFromPosix Time.utc wrongPosix
+
+                localMilli =
+                    millisFromPosix tz wrongPosix
+
+                diff =
+                    utcMilli - localMilli
+
+                correctPosix =
+                    Time.posixToMillis wrongPosix |> (+) diff |> Time.millisToPosix
+            in
+            Ok correctPosix
+
+        Err _ ->
+            Err "Invalid time string"
 
 
 toPaddedString : Int -> Int -> String
