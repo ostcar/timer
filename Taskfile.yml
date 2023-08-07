@@ -24,6 +24,25 @@ tasks:
     deps:
       - client
 
+  server-prod:
+    cmds:
+      - CGO_ENABLED=0 go build
+    sources:
+      - main.go
+      - config/*
+      - model/*
+      - sticky/*
+      - web/*
+      - web/client/elm.js
+      - web/client/index.html
+      - web/static/*/*
+      
+    generates:
+      - timer
+    
+    deps:
+      - client-prod
+
   client:
     dir: web/client
     cmds:
@@ -56,7 +75,7 @@ tasks:
   prod:
     cmds:
       - task: client-prod
-      - task: server
+      - task: server-prod
   
 
   start:

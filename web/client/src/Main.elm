@@ -134,7 +134,7 @@ emptyModel permission time =
     , current = Periode.Stopped
     , permission = permission
     , currentTime = time
-    , hideBilled = False
+    , hideBilled = True
     , viewBody = ViewPeriodes
     , error = Nothing
     , formComment = ""
@@ -1275,11 +1275,12 @@ viewHideBilledCheckbox current =
     div []
         [ input
             [ type_ "checkbox"
+            , id "hideBilled"
             , checked current
             , onCheck CheckedHideBilled
             ]
             []
-        , text "Abgerechnete ausbländen"
+        , label [ for "hideBilled" ] [ text "Abgerechnete ausblenden" ]
         ]
 
 
