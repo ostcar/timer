@@ -1248,10 +1248,12 @@ viewConfirmButtons message =
 viewMonthly : Permission -> ModelPeriodeAction -> Bool -> List Periode.Periode -> Html Msg
 viewMonthly permission action hideBilled periodes =
     let
-        lines =
+        ( lines, mony ) =
             Periode.sort periodes
                 |> Periode.byYearMonth timeZone
                 |> List.map (viewMonthlyLine permission action hideBilled)
+                |> List.unzip
+        monySum = List.foldl (+) 0 mony
     in
     div []
         [ viewHideBilledCheckbox hideBilled
@@ -1265,6 +1267,14 @@ viewMonthly permission action hideBilled periodes =
                     , canWrite permission <| th [ scope "col", class "actions" ] [ text "" ]
                     ]
                     :: lines
+                    ++ [ tr []
+                            [ td [] [ text "Gesamt" ]
+                            , td [] [ text "" ]
+                            , td [ class "mony" ] [ text <| centToString monySum ]
+                            , td [] [ text "" ]
+                            , canWrite permission <| td [] [ text "" ]
+                            ]
+                       ]
                 )
             ]
         ]
@@ -1284,7 +1294,7 @@ viewHideBilledCheckbox current =
         ]
 
 
-viewMonthlyLine : Permission -> ModelPeriodeAction -> Bool -> ( String, List Periode.Periode ) -> Html Msg
+viewMonthlyLine : Permission -> ModelPeriodeAction -> Bool -> ( String, List Periode.Periode ) -> ( Html Msg, Int )
 viewMonthlyLine permission action hideBilled ( yearMonth, periodes ) =
     let
         duration =
@@ -1298,16 +1308,18 @@ viewMonthlyLine permission action hideBilled ( yearMonth, periodes ) =
                 |> combineBool
     in
     if billed == CombinedTrue && hideBilled then
-        text ""
+        ( text "", 0 )
 
     else
-        tr []
+        ( tr []
             [ td [] [ text yearMonth ]
             , td [ class "time" ] [ text <| durationToTimeString duration ]
             , td [ class "mony" ] [ text <| durationToMonyString duration ]
             , td [ class "billed" ] [ text <| combinedBoolToString billed ]
             , canWrite permission <| td [ class "buttons" ] (viewMonthlyLineButtons yearMonth action periodes billed)
             ]
+        , Mony.durationToCent duration
+        )
 
 
 viewMonthlyLineButtons : String -> ModelPeriodeAction -> List Periode.Periode -> CombinedBool -> List (Html Msg)
